@@ -2,7 +2,6 @@ import { headers } from "next/headers"
 import { NextResponse } from "next/server"
 import Stripe from "stripe"
 import { createClient } from "@/lib/supabase/server"
-import { PRODUCTS } from "@/lib/products"
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!)
 
@@ -40,26 +39,24 @@ export async function POST(req: Request) {
 
       // Extract order data from metadata
       const userId = session.metadata?.userId
-      const cartItemsEncoded = session.metadata?.cartItems || ""
 
-      // Parse cart items from compact format: "productId:qty,productId:qty"
-      const cartItemPairs = cartItemsEncoded.split(",").filter(Boolean)
-      const items = cartItemPairs.map((pair) => {
-        const [productId, quantity] = pair.split(":")
-        const product = PRODUCTS.find((p) => p.id === productId)
-        if (!product) {
-          throw new Error(`Product not found: ${productId}`)
-        }
+      // Retrieve line items from Stripe session
+      const lineItems = await stripe.checkout.sessions.listLineItems(session.id, {
+        expand: ['data.price.product']
+      })
+
+      const items = lineItems.data.map((item) => {
+        const product = item.price?.product as Stripe.Product
         return {
-          productId: product.id,
-          name: product.name,
-          quantity: Number.parseInt(quantity, 10),
-          priceInCents: product.price,
-          image: product.image,
+          productId: product?.id || 'unknown',
+          name: item.description || product?.name || 'Unknown Product',
+          quantity: item.quantity || 1,
+          priceInCents: item.amount_total || 0,
+          image: product?.images?.[0] || null,
         }
       })
 
-      const totalInCents = items.reduce((sum, item) => sum + item.priceInCents * item.quantity, 0)
+      const totalInCents = items.reduce((sum, item) => sum + item.priceInCents, 0)
 
       // Save order to Supabase
       const supabase = await createClient()

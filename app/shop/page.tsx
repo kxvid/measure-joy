@@ -11,7 +11,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { PRODUCTS, getCameras, getAccessories, type Product } from "@/lib/products"
+import { type Product } from "@/lib/products"
 import { Search, SlidersHorizontal, X, Grid3X3, LayoutGrid, TrendingUp, Loader2 } from "lucide-react"
 
 const brands = [

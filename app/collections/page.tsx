@@ -1,8 +1,11 @@
+"use client"
+
+import { useState, useEffect } from "react"
 import Link from "next/link"
 import { Header } from "@/components/header"
 import { Footer } from "@/components/footer"
-import { PRODUCTS } from "@/lib/products"
-import { ArrowRight } from "lucide-react"
+import { type Product } from "@/lib/products"
+import { ArrowRight, Loader2 } from "lucide-react"
 
 const collections = [
   {
@@ -50,6 +53,35 @@ const collections = [
 ]
 
 export default function CollectionsPage() {
+  const [products, setProducts] = useState<Product[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+
+  useEffect(() => {
+    async function fetchProducts() {
+      try {
+        setIsLoading(true)
+        const res = await fetch("/api/products")
+        if (res.ok) {
+          const data = await res.json()
+          setProducts(data)
+        }
+      } catch (error) {
+        console.error("Failed to fetch products:", error)
+      } finally {
+        setIsLoading(false)
+      }
+    }
+    fetchProducts()
+  }, [])
+
+  const getCount = (query: string) => {
+    return products.filter((p) => p.name.toLowerCase().includes(query.toLowerCase())).length
+  }
+
+  const getYearCount = (year: string) => {
+    return products.filter((p) => p.year === year).length
+  }
+
   return (
     <main className="min-h-screen bg-background">
       <Header />
@@ -65,41 +97,47 @@ export default function CollectionsPage() {
         </div>
 
         {/* Collections grid */}
-        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {collections.map((collection) => {
-            const count = PRODUCTS.filter((p) => p.name.toLowerCase().includes(collection.query.toLowerCase())).length
+        {isLoading ? (
+          <div className="flex justify-center items-center py-20">
+            <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+          </div>
+        ) : (
+          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {collections.map((collection) => {
+              const count = getCount(collection.query)
 
-            return (
-              <Link
-                key={collection.id}
-                href={`/shop?brand=${collection.query}`}
-                className="group relative aspect-[4/3] rounded-lg overflow-hidden bg-secondary"
-              >
-                <img
-                  src={collection.image || "/placeholder.svg"}
-                  alt={collection.name}
-                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-foreground/80 via-foreground/20 to-transparent" />
-                <div className="absolute bottom-0 left-0 right-0 p-6 text-background">
-                  <h2 className="text-xl font-bold">{collection.name}</h2>
-                  <p className="text-sm text-background/80 mt-1">{collection.description}</p>
-                  <div className="flex items-center justify-between mt-4">
-                    <span className="text-sm">{count} cameras</span>
-                    <ArrowRight className="h-4 w-4 group-hover:translate-x-1 transition-transform" />
+              return (
+                <Link
+                  key={collection.id}
+                  href={`/shop?brand=${collection.query}`}
+                  className="group relative aspect-[4/3] rounded-lg overflow-hidden bg-secondary"
+                >
+                  <img
+                    src={collection.image || "/placeholder.svg"}
+                    alt={collection.name}
+                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-foreground/80 via-foreground/20 to-transparent" />
+                  <div className="absolute bottom-0 left-0 right-0 p-6 text-background">
+                    <h2 className="text-xl font-bold">{collection.name}</h2>
+                    <p className="text-sm text-background/80 mt-1">{collection.description}</p>
+                    <div className="flex items-center justify-between mt-4">
+                      <span className="text-sm">{count} cameras</span>
+                      <ArrowRight className="h-4 w-4 group-hover:translate-x-1 transition-transform" />
+                    </div>
                   </div>
-                </div>
-              </Link>
-            )
-          })}
-        </div>
+                </Link>
+              )
+            })}
+          </div>
+        )}
 
         {/* Era section */}
         <section className="mt-16 lg:mt-24">
           <h2 className="text-2xl font-bold mb-8 text-center">Shop by Era</h2>
           <div className="grid grid-cols-3 gap-4 lg:gap-6">
             {["2005", "2006", "2007"].map((year) => {
-              const count = PRODUCTS.filter((p) => p.year === year).length
+              const count = getYearCount(year)
               return (
                 <Link
                   key={year}
