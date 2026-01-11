@@ -1,13 +1,34 @@
 "use client"
 
+import { useState, useEffect } from "react"
 import Link from "next/link"
 import { ProductCard } from "@/components/product-card"
-import { getFeaturedProducts } from "@/lib/products"
-import { ArrowRight } from "lucide-react"
+import { type Product } from "@/lib/products"
+import { ArrowRight, Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 
 export function FeaturedProducts() {
-  const products = getFeaturedProducts()
+  const [products, setProducts] = useState<Product[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+
+  useEffect(() => {
+    async function fetchProducts() {
+      try {
+        setIsLoading(true)
+        const res = await fetch("/api/products")
+        if (res.ok) {
+          const data = await res.json()
+          // Take first 6 products for featured section
+          setProducts(data.slice(0, 6))
+        }
+      } catch (error) {
+        console.error("Failed to fetch featured products:", error)
+      } finally {
+        setIsLoading(false)
+      }
+    }
+    fetchProducts()
+  }, [])
 
   return (
     <section className="py-12 lg:py-20 bg-background">
@@ -35,11 +56,21 @@ export function FeaturedProducts() {
         </div>
 
         {/* Product grid */}
-        <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 lg:gap-5">
-          {products.map((product) => (
-            <ProductCard key={product.id} product={product} />
-          ))}
-        </div>
+        {isLoading ? (
+          <div className="flex justify-center items-center py-20">
+            <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+          </div>
+        ) : products.length > 0 ? (
+          <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 lg:gap-5">
+            {products.map((product) => (
+              <ProductCard key={product.id} product={product} />
+            ))}
+          </div>
+        ) : (
+          <div className="text-center py-20 text-muted-foreground">
+            No products available yet.
+          </div>
+        )}
 
         {/* Bottom CTA - mobile */}
         <div className="mt-8 lg:hidden">
