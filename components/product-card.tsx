@@ -4,11 +4,12 @@ import type React from "react"
 import { useState } from "react"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
-import { Check, Plus, Star, Flame } from "lucide-react"
+import { Check, Plus, Star, Flame, Eye } from "lucide-react"
 import { type Product, formatPrice } from "@/lib/products"
 import { useCart } from "@/lib/cart-context"
 import { UpsellDrawer } from "@/components/upsell-drawer"
 import { WishlistButton } from "@/components/wishlist-button"
+import { QuickViewModal } from "@/components/quick-view-modal"
 
 interface ProductCardProps {
   product: Product
@@ -18,6 +19,7 @@ export function ProductCard({ product }: ProductCardProps) {
   const [isHovered, setIsHovered] = useState(false)
   const [justAdded, setJustAdded] = useState(false)
   const [showUpsell, setShowUpsell] = useState(false)
+  const [showQuickView, setShowQuickView] = useState(false)
   const { addItem } = useCart()
 
   const handleAddToCart = (e: React.MouseEvent) => {
@@ -29,6 +31,12 @@ export function ProductCard({ product }: ProductCardProps) {
       setShowUpsell(true)
     }
     setTimeout(() => setJustAdded(false), 1500)
+  }
+
+  const handleQuickView = (e: React.MouseEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    setShowQuickView(true)
   }
 
   const hoverImage = product.images[1] || product.images[0]
@@ -54,18 +62,16 @@ export function ProductCard({ product }: ProductCardProps) {
           <img
             src={product.images[0] || "/placeholder.svg"}
             alt={product.name}
-            className={`absolute inset-0 w-full h-full object-cover transition-all duration-500 ${
-              isHovered ? "opacity-0 scale-105" : "opacity-100 scale-100"
-            }`}
+            className={`absolute inset-0 w-full h-full object-cover transition-all duration-500 ${isHovered ? "opacity-0 scale-105" : "opacity-100 scale-100"
+              }`}
           />
 
           {/* Hover image */}
           <img
             src={hoverImage || "/placeholder.svg"}
             alt={`${product.name} alternate view`}
-            className={`absolute inset-0 w-full h-full object-cover transition-all duration-500 ${
-              isHovered ? "opacity-100 scale-100" : "opacity-0 scale-110"
-            }`}
+            className={`absolute inset-0 w-full h-full object-cover transition-all duration-500 ${isHovered ? "opacity-100 scale-100" : "opacity-0 scale-110"
+              }`}
           />
 
           <div className="absolute top-2 left-2 flex flex-col gap-1.5 z-10">
@@ -123,17 +129,30 @@ export function ProductCard({ product }: ProductCardProps) {
             />
           </div>
 
-          {/* Quick add button */}
+          {/* Quick View button */}
           <div
-            className={`absolute bottom-2 right-2 transition-all duration-300 z-10 ${
-              isHovered ? "opacity-100 translate-y-0" : "opacity-0 translate-y-2"
-            }`}
+            className={`absolute bottom-2 left-12 transition-all duration-300 z-10 ${isHovered ? "opacity-100" : "opacity-0"
+              }`}
           >
             <Button
               size="icon"
-              className={`h-10 w-10 shadow-lg transition-all ${
-                justAdded ? "bg-pop-green hover:bg-pop-green" : "bg-foreground hover:bg-foreground/90"
+              variant="ghost"
+              className="h-9 w-9 bg-white/90 hover:bg-white shadow-md"
+              onClick={handleQuickView}
+            >
+              <Eye className="h-4 w-4" />
+            </Button>
+          </div>
+
+          {/* Quick add button */}
+          <div
+            className={`absolute bottom-2 right-2 transition-all duration-300 z-10 ${isHovered ? "opacity-100 translate-y-0" : "opacity-0 translate-y-2"
               }`}
+          >
+            <Button
+              size="icon"
+              className={`h-10 w-10 shadow-lg transition-all ${justAdded ? "bg-pop-green hover:bg-pop-green" : "bg-foreground hover:bg-foreground/90"
+                }`}
               onClick={handleAddToCart}
             >
               {justAdded ? <Check className="h-4 w-4 text-white" /> : <Plus className="h-4 w-4 text-background" />}
@@ -181,6 +200,7 @@ export function ProductCard({ product }: ProductCardProps) {
       </Link>
 
       <UpsellDrawer open={showUpsell} onClose={() => setShowUpsell(false)} addedProduct={product} />
+      <QuickViewModal product={product} open={showQuickView} onClose={() => setShowQuickView(false)} />
     </>
   )
 }
