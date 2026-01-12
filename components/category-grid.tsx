@@ -113,7 +113,7 @@ export function CategoryGrid() {
                   <img
                     src={cat.image || "/placeholder.svg"}
                     alt={`${cat.name} ${cat.subtitle}`}
-                    className="w-full h-full object-contain drop-shadow-2xl group-hover:scale-105 transition-transform duration-500"
+                    className="w-full h-full object-contain mix-blend-multiply opacity-90 drop-shadow-2xl group-hover:scale-105 group-hover:opacity-100 transition-all duration-500"
                   />
                 </div>
 
@@ -160,7 +160,7 @@ export function CategoryGrid() {
                   <img
                     src={cat.image || "/placeholder.svg"}
                     alt={`${cat.name} ${cat.subtitle}`}
-                    className="w-full h-full object-contain drop-shadow-2xl group-hover:scale-105 transition-transform duration-500"
+                    className="w-full h-full object-contain mix-blend-multiply opacity-90 drop-shadow-2xl group-hover:scale-105 group-hover:opacity-100 transition-all duration-500"
                   />
                 </div>
 
