@@ -49,6 +49,7 @@ export async function startCheckoutSession(items: CheckoutItem[], userId?: strin
     redirect_on_completion: "never",
     line_items: stripeLineItems,
     mode: "payment",
+    allow_promotion_codes: true,
     shipping_address_collection: {
       allowed_countries: ["US", "CA", "GB", "AU"],
     },
@@ -86,6 +87,7 @@ export async function startSingleProductCheckout(productId: string, userId?: str
       },
     ],
     mode: "payment",
+    allow_promotion_codes: true,
     shipping_address_collection: {
       allowed_countries: ["US", "CA", "GB", "AU"],
     },
