@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button"
 import { useCart } from "@/lib/cart-context"
 import { formatPrice } from "@/lib/products"
 import { Progress } from "@/components/ui/progress"
+import { CartRecommendations } from "@/components/cart-recommendations"
 
 interface CartDrawerProps {
   open: boolean
@@ -151,6 +152,9 @@ export function CartDrawer({ open, onClose }: CartDrawerProps) {
                   </div>
                 )
               })}
+
+              {/* Cross-sell recommendations */}
+              <CartRecommendations cartItems={items} onClose={onClose} />
             </div>
 
             <div className="border-t-2 border-border bg-secondary/30 backdrop-blur-sm">

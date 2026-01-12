@@ -5,6 +5,7 @@ import { CategoryGrid } from "@/components/category-grid"
 import { FeaturedProducts } from "@/components/featured-products"
 import { AnimatedCategories } from "@/components/animated-categories"
 import { TestimonialsSection } from "@/components/testimonials-section"
+import { TrustStory } from "@/components/trust-story"
 import { TrustBanner } from "@/components/trust-banner"
 import { Newsletter } from "@/components/newsletter"
 import { Footer } from "@/components/footer"
@@ -19,6 +20,7 @@ export default function Home() {
       <FeaturedProducts />
       <AnimatedCategories />
       <TestimonialsSection />
+      <TrustStory />
       <TrustBanner />
       <Newsletter />
       <Footer />

@@ -3,6 +3,7 @@ import type { Metadata } from "next"
 import { DM_Sans, Space_Mono } from "next/font/google"
 import { Analytics } from "@vercel/analytics/next"
 import { CartProvider } from "@/lib/cart-context"
+import { ExitIntentPopup } from "@/components/exit-intent-popup"
 import "./globals.css"
 
 const _dmSans = DM_Sans({ subsets: ["latin"], variable: "--font-dm-sans" })
@@ -44,7 +45,10 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={`font-sans antialiased ${_dmSans.variable} ${_spaceMono.variable}`}>
-        <CartProvider>{children}</CartProvider>
+        <CartProvider>
+          {children}
+          <ExitIntentPopup />
+        </CartProvider>
         <Analytics />
       </body>
     </html>
