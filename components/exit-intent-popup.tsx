@@ -14,24 +14,33 @@ export function ExitIntentPopup() {
     const [error, setError] = useState("")
 
     useEffect(() => {
-        // Check if we've already shown the popup in this session
-        if (sessionStorage.getItem("exitPopupShown")) return
+        // Check if user has already seen the popup or subscribed
+        if (typeof window === "undefined") return
+        if (localStorage.getItem("welcomePopupShown")) return
+        if (localStorage.getItem("subscribedEmail")) return
 
+        // Show popup to new visitors after 3 seconds
+        const showTimer = setTimeout(() => {
+            setShowPopup(true)
+            localStorage.setItem("welcomePopupShown", "true")
+        }, 3000)
+
+        // Also trigger on exit intent (moving mouse to top)
         const handleMouseLeave = (e: MouseEvent) => {
-            // Only trigger when mouse leaves toward the top of the page
-            if (e.clientY <= 10) {
+            if (e.clientY <= 10 && !localStorage.getItem("welcomePopupShown")) {
                 setShowPopup(true)
-                sessionStorage.setItem("exitPopupShown", "true")
+                localStorage.setItem("welcomePopupShown", "true")
             }
         }
 
-        // Add slight delay before enabling to prevent immediate trigger
-        const timer = setTimeout(() => {
+        // Add exit intent listener after 5 seconds (so it doesn't interfere with early popup)
+        const exitTimer = setTimeout(() => {
             document.addEventListener("mouseleave", handleMouseLeave)
-        }, 5000) // 5 second delay
+        }, 8000)
 
         return () => {
-            clearTimeout(timer)
+            clearTimeout(showTimer)
+            clearTimeout(exitTimer)
             document.removeEventListener("mouseleave", handleMouseLeave)
         }
     }, [])
@@ -47,15 +56,16 @@ export function ExitIntentPopup() {
             const res = await fetch("/api/subscribe", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ email, source: "exit_intent" }),
+                body: JSON.stringify({ email, source: "welcome_popup" }),
             })
 
             const data = await res.json()
 
             if (res.ok) {
                 setSubmitted(true)
+                localStorage.setItem("subscribedEmail", email)
                 // Auto-close after success
-                setTimeout(() => setShowPopup(false), 3000)
+                setTimeout(() => setShowPopup(false), 4000)
             } else {
                 setError(data.error || "Something went wrong")
             }
@@ -81,7 +91,7 @@ export function ExitIntentPopup() {
             />
 
             {/* Popup */}
-            <div className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-md z-[101] animate-in zoom-in-95 fade-in duration-300">
+            <div className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-md mx-4 z-[101] animate-in zoom-in-95 fade-in duration-300">
                 <div className="bg-background border-4 border-foreground shadow-2xl relative overflow-hidden">
                     {/* Corner decorations */}
                     <div className="absolute top-0 left-0 w-8 h-8 bg-pop-yellow" />
@@ -93,6 +103,7 @@ export function ExitIntentPopup() {
                     <button
                         onClick={handleClose}
                         className="absolute top-3 right-3 p-1 hover:bg-secondary rounded-full transition-colors z-10"
+                        aria-label="Close popup"
                     >
                         <X className="h-5 w-5" />
                     </button>
@@ -104,7 +115,10 @@ export function ExitIntentPopup() {
                                     <Sparkles className="h-8 w-8 text-foreground" />
                                 </div>
                                 <h3 className="text-2xl font-black uppercase mb-2">You're In!</h3>
-                                <p className="text-muted-foreground">Check your inbox for your 10% off code.</p>
+                                <p className="text-muted-foreground mb-4">Check your inbox for your 10% off code.</p>
+                                <p className="text-sm font-mono bg-secondary inline-block px-4 py-2 rounded-lg">
+                                    Code: <span className="font-bold text-pop-pink">WELCOME10</span>
+                                </p>
                             </div>
                         ) : (
                             <>
@@ -113,10 +127,10 @@ export function ExitIntentPopup() {
                                 </div>
 
                                 <h3 className="text-2xl lg:text-3xl font-black uppercase tracking-tight mb-2">
-                                    Wait! Get <span className="text-pop-pink">10% Off</span>
+                                    Welcome! Get <span className="text-pop-pink">10% Off</span>
                                 </h3>
                                 <p className="text-muted-foreground mb-6">
-                                    Don't leave empty-handed! Join our list and get a discount on your first camera.
+                                    Join our list and unlock your exclusive discount on vintage Y2K cameras.
                                 </p>
 
                                 <form onSubmit={handleSubmit} className="space-y-3">
@@ -140,7 +154,7 @@ export function ExitIntentPopup() {
                                                 Claiming...
                                             </>
                                         ) : (
-                                            "Claim My 10% Off"
+                                            "Unlock 10% Off"
                                         )}
                                     </Button>
                                 </form>
@@ -151,9 +165,9 @@ export function ExitIntentPopup() {
 
                                 <button
                                     onClick={handleClose}
-                                    className="text-xs text-muted-foreground mt-4 hover:underline"
+                                    className="text-xs text-muted-foreground mt-4 hover:underline block mx-auto"
                                 >
-                                    No thanks, I'll pay full price
+                                    No thanks, I'll browse first
                                 </button>
                             </>
                         )}
