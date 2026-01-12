@@ -2,24 +2,36 @@
 
 import { useEffect, useState } from "react"
 import Link from "next/link"
-import { products, formatPrice, type Product } from "@/lib/products"
+import { formatPrice, type Product } from "@/lib/products"
 import { Clock } from "lucide-react"
 
 export function RecentlyViewed({ currentProductId }: { currentProductId?: string }) {
   const [viewedProducts, setViewedProducts] = useState<Product[]>([])
 
   useEffect(() => {
-    // Get recently viewed from localStorage
-    const viewed = JSON.parse(localStorage.getItem("recentlyViewed") || "[]") as string[]
+    async function fetchRecentlyViewed() {
+      // Get recently viewed IDs from localStorage
+      const viewed = JSON.parse(localStorage.getItem("recentlyViewed") || "[]") as string[]
+      const viewedIds = viewed.filter((id) => id !== currentProductId).slice(0, 4)
 
-    // Filter out current product and get product data
-    const recentProducts = viewed
-      .filter((id) => id !== currentProductId)
-      .slice(0, 4)
-      .map((id) => products.find((p) => p.id === id))
-      .filter(Boolean) as Product[]
+      if (viewedIds.length === 0) return
 
-    setViewedProducts(recentProducts)
+      try {
+        // Fetch all products and filter to recently viewed
+        const res = await fetch("/api/products")
+        if (res.ok) {
+          const allProducts: Product[] = await res.json()
+          const recentProducts = viewedIds
+            .map((id) => allProducts.find((p) => p.id === id))
+            .filter(Boolean) as Product[]
+          setViewedProducts(recentProducts)
+        }
+      } catch (error) {
+        console.error("Failed to fetch recently viewed products:", error)
+      }
+    }
+
+    fetchRecentlyViewed()
   }, [currentProductId])
 
   // Track current product view

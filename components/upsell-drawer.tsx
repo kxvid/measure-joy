@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet"
 import { Separator } from "@/components/ui/separator"
-import { type Product, formatPrice, getUpsellsForCamera } from "@/lib/products"
+import { type Product, formatPrice } from "@/lib/products"
 import { useCart } from "@/lib/cart-context"
 import { Check, Plus, ShoppingBag, ArrowRight, Package } from "lucide-react"
 import Link from "next/link"
@@ -20,7 +20,8 @@ export function UpsellDrawer({ open, onClose, addedProduct }: UpsellDrawerProps)
   const { addItem, totalItems, totalPrice } = useCart()
   const [addedUpsells, setAddedUpsells] = useState<Set<string>>(new Set())
 
-  const upsells = addedProduct.category === "camera" ? getUpsellsForCamera(addedProduct) : []
+  // TODO: Implement dynamic upsells from Stripe when upsell relationships are defined
+  const upsells: Product[] = []
 
   const freeShippingThreshold = 10000 // $100
   const remainingForFreeShipping = Math.max(freeShippingThreshold - totalPrice, 0)
@@ -81,9 +82,8 @@ export function UpsellDrawer({ open, onClose, addedProduct }: UpsellDrawerProps)
                   return (
                     <div
                       key={upsell.id}
-                      className={`flex gap-4 p-4 rounded-xl border transition-colors ${
-                        isAdded ? "border-green-200 bg-green-50" : "border-border hover:border-accent/50"
-                      }`}
+                      className={`flex gap-4 p-4 rounded-xl border transition-colors ${isAdded ? "border-green-200 bg-green-50" : "border-border hover:border-accent/50"
+                        }`}
                     >
                       <div className="w-16 h-16 rounded-lg overflow-hidden bg-secondary flex-shrink-0">
                         <img

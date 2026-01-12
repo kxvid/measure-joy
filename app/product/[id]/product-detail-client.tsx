@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { formatPrice, getUpsellsForCamera, type Product } from "@/lib/products"
+import { formatPrice, type Product } from "@/lib/products"
 import { useCart } from "@/lib/cart-context"
 import { ProductCard } from "@/components/product-card"
 import { UpsellDrawer } from "@/components/upsell-drawer"
@@ -46,7 +46,8 @@ export function ProductDetailClient({ product, relatedProducts }: ProductDetailC
     setAddedUpsells((prev) => new Set([...prev, upsell.id]))
   }
 
-  const upsells = product.category === "camera" ? getUpsellsForCamera(product) : []
+  // TODO: Implement dynamic upsells from Stripe when upsell relationships are defined
+  const upsells: Product[] = []
 
   // Extended specs for display
   const allSpecs = [
@@ -104,13 +105,12 @@ export function ProductDetailClient({ product, relatedProducts }: ProductDetailC
                 <span className="font-mono text-sm text-muted-foreground">{product.year}</span>
                 <Badge
                   variant="outline"
-                  className={`${
-                    product.condition === "Excellent" || product.condition === "New"
+                  className={`${product.condition === "Excellent" || product.condition === "New"
                       ? "border-green-200 bg-green-50 text-green-700"
                       : product.condition === "Good" || product.condition === "Very Good"
                         ? "border-amber-200 bg-amber-50 text-amber-700"
                         : ""
-                  }`}
+                    }`}
                 >
                   {product.condition}
                 </Badge>
@@ -208,9 +208,8 @@ export function ProductDetailClient({ product, relatedProducts }: ProductDetailC
                       return (
                         <div
                           key={upsell.id}
-                          className={`flex items-center gap-3 p-3 rounded-xl border bg-background transition-colors ${
-                            isAdded ? "border-green-200 bg-green-50" : "border-border hover:border-accent/50"
-                          }`}
+                          className={`flex items-center gap-3 p-3 rounded-xl border bg-background transition-colors ${isAdded ? "border-green-200 bg-green-50" : "border-border hover:border-accent/50"
+                            }`}
                         >
                           <div className="w-12 h-12 rounded-lg overflow-hidden bg-secondary flex-shrink-0">
                             <img

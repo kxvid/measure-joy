@@ -4,7 +4,7 @@ import { useState, useEffect } from "react"
 import { createClient } from "@/lib/supabase/client"
 import { useRouter } from "next/navigation"
 import { getWishlist, removeFromWishlist } from "@/lib/wishlist"
-import { getProductById, formatPrice } from "@/lib/products"
+import { formatPrice, type Product } from "@/lib/products"
 import { Header } from "@/components/header"
 import { Footer } from "@/components/footer"
 import { Button } from "@/components/ui/button"
@@ -14,7 +14,7 @@ import Link from "next/link"
 import { useCart } from "@/lib/cart-context"
 
 export default function WishlistPage() {
-  const [wishlistIds, setWishlistIds] = useState<string[]>([])
+  const [wishlistProducts, setWishlistProducts] = useState<Product[]>([])
   const [loading, setLoading] = useState(true)
   const [isAuthenticated, setIsAuthenticated] = useState(false)
   const { addItem } = useCart()
@@ -33,8 +33,23 @@ export default function WishlistPage() {
       }
 
       setIsAuthenticated(true)
+
+      // Get wishlist IDs and fetch products
       const ids = await getWishlist()
-      setWishlistIds(ids)
+      if (ids.length > 0) {
+        try {
+          const res = await fetch("/api/products")
+          if (res.ok) {
+            const allProducts: Product[] = await res.json()
+            const products = ids
+              .map((id) => allProducts.find((p) => p.id === id))
+              .filter(Boolean) as Product[]
+            setWishlistProducts(products)
+          }
+        } catch (error) {
+          console.error("Failed to fetch wishlist products:", error)
+        }
+      }
       setLoading(false)
     }
 
@@ -43,14 +58,11 @@ export default function WishlistPage() {
 
   const handleRemove = async (productId: string) => {
     await removeFromWishlist(productId)
-    setWishlistIds((prev) => prev.filter((id) => id !== productId))
+    setWishlistProducts((prev) => prev.filter((p) => p.id !== productId))
   }
 
-  const handleAddToCart = (productId: string) => {
-    const product = getProductById(productId)
-    if (product) {
-      addItem(product)
-    }
+  const handleAddToCart = (product: Product) => {
+    addItem(product)
   }
 
   if (!isAuthenticated || loading) {
@@ -66,8 +78,6 @@ export default function WishlistPage() {
       </main>
     )
   }
-
-  const wishlistProducts = wishlistIds.map((id) => getProductById(id)).filter(Boolean)
 
   return (
     <main className="min-h-screen bg-background">
@@ -113,7 +123,7 @@ export default function WishlistPage() {
                         <Button
                           size="sm"
                           className="flex-1 rounded-xl text-xs h-8"
-                          onClick={() => handleAddToCart(product!.id)}
+                          onClick={() => handleAddToCart(product!)}
                         >
                           <ShoppingCart className="h-3 w-3 mr-1" />
                           Add to Cart
