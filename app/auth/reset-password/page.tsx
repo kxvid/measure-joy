@@ -22,11 +22,47 @@ export default function ResetPasswordPage() {
   const router = useRouter()
 
   useEffect(() => {
-    // Check if we have a valid session from the reset link
     const supabase = createClient()
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setIsValidSession(!!session)
+
+    // Supabase password reset flow:
+    // 1. User clicks link in email
+    // 2. Supabase redirects to this page with tokens in URL hash
+    // 3. onAuthStateChange fires with PASSWORD_RECOVERY event
+    // 4. User can then update their password
+
+    // Listen for the PASSWORD_RECOVERY event
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      console.log("[ResetPassword] Auth event:", event)
+
+      if (event === "PASSWORD_RECOVERY") {
+        // User clicked the reset link and we have a valid recovery session
+        setIsValidSession(true)
+      } else if (event === "SIGNED_IN" && session) {
+        // Already signed in with valid session (recovery complete)
+        setIsValidSession(true)
+      }
     })
+
+    // Also check if there's already a valid session (in case of page refresh)
+    const checkSession = async () => {
+      const { data: { session } } = await supabase.auth.getSession()
+      if (session) {
+        setIsValidSession(true)
+      } else {
+        // Give the auth listener a moment to catch the recovery event
+        setTimeout(() => {
+          if (isValidSession === null) {
+            setIsValidSession(false)
+          }
+        }, 2000)
+      }
+    }
+
+    checkSession()
+
+    return () => {
+      subscription.unsubscribe()
+    }
   }, [])
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -51,8 +87,12 @@ export default function ResetPasswordPage() {
       const { error } = await supabase.auth.updateUser({ password })
       if (error) throw error
       setSuccess(true)
+
+      // Sign out after password reset so they can log in fresh
+      await supabase.auth.signOut()
+
       setTimeout(() => {
-        router.push("/account")
+        router.push("/auth/login")
       }, 2000)
     } catch (error: unknown) {
       setError(error instanceof Error ? error.message : "An error occurred")
@@ -66,7 +106,10 @@ export default function ResetPasswordPage() {
       <main className="min-h-screen bg-background">
         <Header />
         <div className="flex min-h-[calc(100vh-200px)] w-full items-center justify-center">
-          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+          <div className="text-center">
+            <Loader2 className="h-8 w-8 animate-spin text-muted-foreground mx-auto" />
+            <p className="mt-4 text-sm text-muted-foreground">Verifying reset link...</p>
+          </div>
         </div>
         <Footer />
       </main>
@@ -82,9 +125,12 @@ export default function ResetPasswordPage() {
             <Card className="border-0 shadow-xl text-center">
               <CardHeader className="pb-2">
                 <CardTitle className="text-2xl">Invalid or expired link</CardTitle>
-                <CardDescription>This password reset link is no longer valid</CardDescription>
+                <CardDescription>This password reset link is no longer valid or has expired.</CardDescription>
               </CardHeader>
-              <CardContent>
+              <CardContent className="space-y-4">
+                <p className="text-sm text-muted-foreground">
+                  Password reset links expire after 24 hours. Please request a new one.
+                </p>
                 <Button asChild className="rounded-xl">
                   <a href="/auth/forgot-password">Request a new link</a>
                 </Button>
@@ -109,7 +155,7 @@ export default function ResetPasswordPage() {
                   <Check className="h-7 w-7 text-pop-green" />
                 </div>
                 <CardTitle className="text-2xl">Password updated!</CardTitle>
-                <CardDescription>Redirecting you to your account...</CardDescription>
+                <CardDescription>Redirecting you to sign in...</CardDescription>
               </CardHeader>
             </Card>
           </div>
@@ -145,6 +191,7 @@ export default function ResetPasswordPage() {
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
                       className="h-12 rounded-xl"
+                      placeholder="At least 6 characters"
                     />
                   </div>
                   <div className="grid gap-2">
@@ -156,6 +203,7 @@ export default function ResetPasswordPage() {
                       value={confirmPassword}
                       onChange={(e) => setConfirmPassword(e.target.value)}
                       className="h-12 rounded-xl"
+                      placeholder="Re-enter your password"
                     />
                   </div>
                   {error && <div className="bg-destructive/10 text-destructive text-sm p-3 rounded-xl">{error}</div>}

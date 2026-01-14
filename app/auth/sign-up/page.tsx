@@ -14,7 +14,7 @@ import { Footer } from "@/components/footer"
 import { ArrowLeft, Camera, Check } from "lucide-react"
 
 function getSiteUrl() {
-  // In production, use the Vercel URL or custom domain
+  // Production URL for Measure Joy
   if (process.env.NEXT_PUBLIC_SITE_URL) {
     return process.env.NEXT_PUBLIC_SITE_URL
   }
@@ -22,11 +22,12 @@ function getSiteUrl() {
   if (process.env.NEXT_PUBLIC_VERCEL_URL) {
     return `https://${process.env.NEXT_PUBLIC_VERCEL_URL}`
   }
-  // Fallback to window.location.origin (works in production)
-  if (typeof window !== "undefined") {
+  // Default to production domain when not on localhost
+  if (typeof window !== "undefined" && window.location.hostname !== "localhost") {
     return window.location.origin
   }
-  return "http://localhost:3000"
+  // Hardcoded production URL for email confirmations
+  return "https://www.measurejoy.org"
 }
 
 export default function SignUpPage() {

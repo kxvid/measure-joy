@@ -13,16 +13,19 @@ import { Footer } from "@/components/footer"
 import { ArrowLeft, Mail, Check } from "lucide-react"
 
 function getSiteUrl() {
+  // Production URL for Measure Joy
   if (process.env.NEXT_PUBLIC_SITE_URL) {
     return process.env.NEXT_PUBLIC_SITE_URL
   }
   if (process.env.NEXT_PUBLIC_VERCEL_URL) {
     return `https://${process.env.NEXT_PUBLIC_VERCEL_URL}`
   }
-  if (typeof window !== "undefined") {
+  // Default to production domain
+  if (typeof window !== "undefined" && window.location.hostname !== "localhost") {
     return window.location.origin
   }
-  return "http://localhost:3000"
+  // Hardcoded production URL for password reset emails
+  return "https://www.measurejoy.org"
 }
 
 export default function ForgotPasswordPage() {
