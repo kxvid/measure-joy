@@ -10,58 +10,84 @@ import { useRouter } from "next/navigation"
 import { useState, useEffect } from "react"
 import { Header } from "@/components/header"
 import { Footer } from "@/components/footer"
-import { Lock, Check, Loader2 } from "lucide-react"
+import { Lock, Check, Loader2, AlertTriangle } from "lucide-react"
+import Link from "next/link"
+
+type PageState = "loading" | "invalid" | "ready" | "success"
 
 export default function ResetPasswordPage() {
   const [password, setPassword] = useState("")
   const [confirmPassword, setConfirmPassword] = useState("")
   const [error, setError] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(false)
-  const [success, setSuccess] = useState(false)
-  const [isValidSession, setIsValidSession] = useState<boolean | null>(null)
+  const [pageState, setPageState] = useState<PageState>("loading")
   const router = useRouter()
 
   useEffect(() => {
     const supabase = createClient()
+    let mounted = true
 
-    // Supabase password reset flow:
-    // 1. User clicks link in email
-    // 2. Supabase redirects to this page with tokens in URL hash
-    // 3. onAuthStateChange fires with PASSWORD_RECOVERY event
-    // 4. User can then update their password
+    const initializeAuth = async () => {
+      console.log("[ResetPassword] Initializing...")
 
-    // Listen for the PASSWORD_RECOVERY event
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      console.log("[ResetPassword] Auth event:", event)
+      // Listen for auth events - Supabase will process the URL hash tokens
+      const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+        console.log("[ResetPassword] Auth event:", event, "Session:", !!session)
 
-      if (event === "PASSWORD_RECOVERY") {
-        // User clicked the reset link and we have a valid recovery session
-        setIsValidSession(true)
-      } else if (event === "SIGNED_IN" && session) {
-        // Already signed in with valid session (recovery complete)
-        setIsValidSession(true)
-      }
-    })
+        if (!mounted) return
 
-    // Also check if there's already a valid session (in case of page refresh)
-    const checkSession = async () => {
+        if (event === "PASSWORD_RECOVERY") {
+          // Recovery token was processed, user can now update password
+          console.log("[ResetPassword] PASSWORD_RECOVERY event - ready to update password")
+          setPageState("ready")
+        } else if (event === "SIGNED_IN" && session) {
+          // User is signed in (recovery session established)
+          setPageState("ready")
+        } else if (event === "SIGNED_OUT") {
+          // Session ended
+          setPageState("invalid")
+        }
+      })
+
+      // Check if there's already a session (for page refreshes during recovery)
       const { data: { session } } = await supabase.auth.getSession()
+
       if (session) {
-        setIsValidSession(true)
+        console.log("[ResetPassword] Existing session found")
+        setPageState("ready")
       } else {
-        // Give the auth listener a moment to catch the recovery event
-        setTimeout(() => {
-          if (isValidSession === null) {
-            setIsValidSession(false)
-          }
-        }, 2000)
+        // Check if there are tokens in the URL hash
+        const hash = window.location.hash
+        if (hash && (hash.includes("access_token") || hash.includes("type=recovery"))) {
+          console.log("[ResetPassword] Tokens in URL, waiting for Supabase to process...")
+          // Supabase will process these and fire PASSWORD_RECOVERY event
+          // Give it a moment
+          setTimeout(() => {
+            if (mounted && pageState === "loading") {
+              // If still loading after timeout, check session again
+              supabase.auth.getSession().then(({ data: { session: s } }) => {
+                if (mounted) {
+                  setPageState(s ? "ready" : "invalid")
+                }
+              })
+            }
+          }, 3000)
+        } else {
+          console.log("[ResetPassword] No tokens or session - invalid access")
+          setPageState("invalid")
+        }
+      }
+
+      return () => {
+        mounted = false
+        subscription.unsubscribe()
       }
     }
 
-    checkSession()
+    initializeAuth()
 
     return () => {
-      subscription.unsubscribe()
+      mounted = false
     }
   }, [])
 
@@ -86,29 +112,33 @@ export default function ResetPasswordPage() {
     try {
       const { error } = await supabase.auth.updateUser({ password })
       if (error) throw error
-      setSuccess(true)
 
-      // Sign out after password reset so they can log in fresh
+      // Password updated successfully
+      setPageState("success")
+
+      // Sign out so they can log in with new password
       await supabase.auth.signOut()
 
+      // Redirect to login after a moment
       setTimeout(() => {
         router.push("/auth/login")
-      }, 2000)
-    } catch (error: unknown) {
-      setError(error instanceof Error ? error.message : "An error occurred")
+      }, 2500)
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Failed to update password")
     } finally {
       setIsLoading(false)
     }
   }
 
-  if (isValidSession === null) {
+  // Loading state
+  if (pageState === "loading") {
     return (
       <main className="min-h-screen bg-background">
         <Header />
         <div className="flex min-h-[calc(100vh-200px)] w-full items-center justify-center">
           <div className="text-center">
-            <Loader2 className="h-8 w-8 animate-spin text-muted-foreground mx-auto" />
-            <p className="mt-4 text-sm text-muted-foreground">Verifying reset link...</p>
+            <Loader2 className="h-10 w-10 animate-spin text-accent mx-auto" />
+            <p className="mt-4 text-muted-foreground">Verifying your reset link...</p>
           </div>
         </div>
         <Footer />
@@ -116,7 +146,8 @@ export default function ResetPasswordPage() {
     )
   }
 
-  if (!isValidSession) {
+  // Invalid/expired link
+  if (pageState === "invalid") {
     return (
       <main className="min-h-screen bg-background">
         <Header />
@@ -124,16 +155,26 @@ export default function ResetPasswordPage() {
           <div className="w-full max-w-md">
             <Card className="border-0 shadow-xl text-center">
               <CardHeader className="pb-2">
-                <CardTitle className="text-2xl">Invalid or expired link</CardTitle>
-                <CardDescription>This password reset link is no longer valid or has expired.</CardDescription>
+                <div className="w-14 h-14 bg-destructive/10 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                  <AlertTriangle className="h-7 w-7 text-destructive" />
+                </div>
+                <CardTitle className="text-2xl">Invalid or Expired Link</CardTitle>
+                <CardDescription>
+                  This password reset link is no longer valid.
+                </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
                 <p className="text-sm text-muted-foreground">
-                  Password reset links expire after 24 hours. Please request a new one.
+                  Password reset links expire after 24 hours for security. Please request a new one.
                 </p>
-                <Button asChild className="rounded-xl">
-                  <a href="/auth/forgot-password">Request a new link</a>
-                </Button>
+                <div className="flex flex-col gap-2">
+                  <Button asChild className="rounded-xl">
+                    <Link href="/auth/forgot-password">Request New Link</Link>
+                  </Button>
+                  <Button asChild variant="outline" className="rounded-xl">
+                    <Link href="/auth/login">Back to Sign In</Link>
+                  </Button>
+                </div>
               </CardContent>
             </Card>
           </div>
@@ -143,7 +184,8 @@ export default function ResetPasswordPage() {
     )
   }
 
-  if (success) {
+  // Success state
+  if (pageState === "success") {
     return (
       <main className="min-h-screen bg-background">
         <Header />
@@ -154,9 +196,16 @@ export default function ResetPasswordPage() {
                 <div className="w-14 h-14 bg-pop-green/20 rounded-2xl flex items-center justify-center mx-auto mb-4">
                   <Check className="h-7 w-7 text-pop-green" />
                 </div>
-                <CardTitle className="text-2xl">Password updated!</CardTitle>
-                <CardDescription>Redirecting you to sign in...</CardDescription>
+                <CardTitle className="text-2xl">Password Updated!</CardTitle>
+                <CardDescription>
+                  Your password has been changed successfully.
+                </CardDescription>
               </CardHeader>
+              <CardContent>
+                <p className="text-sm text-muted-foreground">
+                  Redirecting you to sign in...
+                </p>
+              </CardContent>
             </Card>
           </div>
         </div>
@@ -165,6 +214,7 @@ export default function ResetPasswordPage() {
     )
   }
 
+  // Ready to update password
   return (
     <main className="min-h-screen bg-background">
       <Header />
@@ -176,8 +226,10 @@ export default function ResetPasswordPage() {
               <div className="w-14 h-14 bg-accent/10 rounded-2xl flex items-center justify-center mx-auto mb-4">
                 <Lock className="h-7 w-7 text-accent" />
               </div>
-              <CardTitle className="text-2xl">Set new password</CardTitle>
-              <CardDescription>Enter your new password below</CardDescription>
+              <CardTitle className="text-2xl">Set New Password</CardTitle>
+              <CardDescription>
+                Enter your new password below
+              </CardDescription>
             </CardHeader>
             <CardContent>
               <form onSubmit={handleSubmit}>
@@ -192,10 +244,11 @@ export default function ResetPasswordPage() {
                       onChange={(e) => setPassword(e.target.value)}
                       className="h-12 rounded-xl"
                       placeholder="At least 6 characters"
+                      autoFocus
                     />
                   </div>
                   <div className="grid gap-2">
-                    <Label htmlFor="confirm-password">Confirm New Password</Label>
+                    <Label htmlFor="confirm-password">Confirm Password</Label>
                     <Input
                       id="confirm-password"
                       type="password"
@@ -206,9 +259,24 @@ export default function ResetPasswordPage() {
                       placeholder="Re-enter your password"
                     />
                   </div>
-                  {error && <div className="bg-destructive/10 text-destructive text-sm p-3 rounded-xl">{error}</div>}
-                  <Button type="submit" className="w-full h-12 rounded-xl" disabled={isLoading}>
-                    {isLoading ? "Updating..." : "Update password"}
+                  {error && (
+                    <div className="bg-destructive/10 text-destructive text-sm p-3 rounded-xl">
+                      {error}
+                    </div>
+                  )}
+                  <Button
+                    type="submit"
+                    className="w-full h-12 rounded-xl"
+                    disabled={isLoading}
+                  >
+                    {isLoading ? (
+                      <>
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        Updating...
+                      </>
+                    ) : (
+                      "Update Password"
+                    )}
                   </Button>
                 </div>
               </form>

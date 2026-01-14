@@ -5,7 +5,6 @@ import { Analytics } from "@vercel/analytics/next"
 import { CartProvider } from "@/lib/cart-context"
 import { ExitIntentPopup } from "@/components/exit-intent-popup"
 import { SocialProofToasts } from "@/components/social-proof-toasts"
-import { AuthRecoveryHandler } from "@/components/auth-recovery-handler"
 import "./globals.css"
 
 const _dmSans = DM_Sans({ subsets: ["latin"], variable: "--font-dm-sans" })
@@ -48,7 +47,6 @@ export default function RootLayout({
     <html lang="en">
       <body className={`font-sans antialiased ${_dmSans.variable} ${_spaceMono.variable}`}>
         <CartProvider>
-          <AuthRecoveryHandler />
           {children}
           <ExitIntentPopup />
           <SocialProofToasts />
@@ -58,4 +56,3 @@ export default function RootLayout({
     </html>
   )
 }
-
