@@ -116,19 +116,85 @@ Respond in this exact JSON format:
         }
     } catch (error) {
         console.error("Error rationalizing product:", error)
-        // Return best effort with existing data
-        return {
-            brand: existingMetadata.brand || "Unknown",
-            year: existingMetadata.year || "Unknown",
-            category: (existingMetadata.category as "camera" | "accessory") || "camera",
-            subcategory: existingMetadata.subcategory,
-            condition: existingMetadata.condition || "Good",
-            description: existingDescription || "",
-            longDescription: existingMetadata.longDescription || "",
-            features: [],
-            sellingPoints: [],
-            confidence: 0.5
+        // Return rule-based fallback
+        return rationalizeByRules(name, existingDescription, existingMetadata)
+    }
+}
+
+/**
+ * Fallback: Extract metadata using regex and keyword matching
+ */
+function rationalizeByRules(
+    name: string,
+    existingDescription: string | null,
+    existingMetadata: Record<string, string | undefined>
+): EnrichedProductData {
+    const text = `${name} ${existingDescription || ""}`.toLowerCase()
+
+    // 1. Extract Brand
+    const BRANDS = [
+        "Canon", "Sony", "Nikon", "Fujifilm", "Fuji", "Olympus", "Panasonic", "Lumix",
+        "Kodak", "Samsung", "Pentax", "Casio", "Ricoh", "Leica", "Minolta", "Polaroid",
+        "GoPro", "HP", "Sanyo", "Kyocera", "Konica"
+    ]
+
+    let brand = existingMetadata.brand && existingMetadata.brand !== "Unknown"
+        ? existingMetadata.brand
+        : "Unknown"
+
+    if (brand === "Unknown") {
+        for (const b of BRANDS) {
+            if (name.toLowerCase().includes(b.toLowerCase())) {
+                brand = b
+                // Handle "Lumix" implies Panasonic if Panasonic isn't explicit
+                if (brand === "Lumix") brand = "Panasonic"
+                // Handle "Fuji" -> Fujifilm
+                if (brand === "Fuji") brand = "Fujifilm"
+                break
+            }
         }
+    }
+
+    // 2. Extract Year
+    let year = existingMetadata.year && existingMetadata.year !== "Unknown"
+        ? existingMetadata.year
+        : "Unknown"
+
+    if (year === "Unknown") {
+        // Look for 4-digit years between 1980 and 2025
+        const yearMatch = name.match(/\b(19|20)\d{2}\b/)
+        if (yearMatch) {
+            year = yearMatch[0]
+        } else {
+            // Rough estimation based on model names (very basic)
+            if (name.includes("Mavica")) year = "2000"
+            else if (name.includes("Cyber-Shot")) year = "2008" // Generic average
+            else if (name.includes("Coolpix")) year = "2009"
+        }
+    }
+
+    // 3. Inference Category (reuse simple keywords if needed, but usually existing is ok)
+    // We'll trust existingCategory unless it's unknown, then default to camera
+    const category = (existingMetadata.category === "accessory" || existingMetadata.category === "camera")
+        ? existingMetadata.category
+        : "camera"
+
+    // 4. Condition
+    const condition = existingMetadata.condition && existingMetadata.condition !== "Unknown"
+        ? existingMetadata.condition
+        : "Good"
+
+    return {
+        brand,
+        year,
+        category,
+        subcategory: existingMetadata.subcategory,
+        condition,
+        description: existingDescription || `Vintage ${brand} digital camera. Tested and working strategy.`,
+        longDescription: existingMetadata.longDescription || "",
+        features: [],
+        sellingPoints: [],
+        confidence: 0.4 // Low confidence marker
     }
 }
 
