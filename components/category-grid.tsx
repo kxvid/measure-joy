@@ -9,7 +9,7 @@ const categories = [
     href: "/shop?category=camera",
     bgColor: "bg-pop-yellow",
     textColor: "text-pop-pink",
-    image: "/category-point-shoot.jpg",
+    image: "/category-point-shoot-v2.png",
   },
   {
     name: "PREMIUM",
@@ -17,7 +17,7 @@ const categories = [
     href: "/shop?category=camera",
     bgColor: "bg-pop-pink",
     textColor: "text-pop-yellow",
-    image: "/category-premium.jpg",
+    image: "/category-premium-v2.png",
   },
   {
     name: "MEMORY",
@@ -25,7 +25,7 @@ const categories = [
     href: "/shop?category=accessory&sub=memory",
     bgColor: "bg-pop-teal",
     textColor: "text-pop-yellow",
-    image: "/category-memory.jpg",
+    image: "/category-memory-v2.png",
   },
 ]
 
@@ -36,7 +36,7 @@ const bottomCategories = [
     href: "/shop?category=accessory&sub=case",
     bgColor: "bg-pop-pink",
     textColor: "text-foreground",
-    image: "/category-cases.jpg",
+    image: "/category-cases-v2.png",
   },
   {
     name: "STRAPS &",
@@ -44,7 +44,7 @@ const bottomCategories = [
     href: "/shop?category=accessory",
     bgColor: "bg-pop-yellow",
     textColor: "text-pop-teal",
-    image: "/category-straps.jpg",
+    image: "/category-straps-v2.png",
   },
 ]
 
@@ -96,29 +96,30 @@ export function CategoryGrid() {
 
                 <div className="p-2 sm:p-3 md:p-4 lg:p-6 flex-shrink-0">
                   <h3
-                    className={`text-xs sm:text-base md:text-xl lg:text-3xl xl:text-4xl font-black ${cat.textColor} leading-tight tracking-tight`}
+                    className={`text-xs sm:text-base md:text-xl lg:text-3xl xl:text-4xl font-black ${cat.textColor} leading-tight tracking-tight uppercase`}
                     style={{ WebkitFontSmoothing: "antialiased" }}
                   >
-                    {cat.name}
-                  </h3>
-                  <h3
-                    className={`text-xs sm:text-base md:text-xl lg:text-3xl xl:text-4xl font-black ${cat.textColor} leading-tight tracking-tight`}
-                    style={{ WebkitFontSmoothing: "antialiased" }}
-                  >
-                    {cat.subtitle}
+                    <span className="block">{cat.name}</span>
+                    <span className="block opacity-90">{cat.subtitle}</span>
                   </h3>
                 </div>
 
-                <div className="flex-1 px-3 sm:px-4 md:px-6 lg:px-8 pb-3 sm:pb-4 md:pb-6 lg:pb-8 flex items-center justify-center min-h-[120px] sm:min-h-[160px] md:min-h-[200px] lg:min-h-[280px]">
-                  <img
-                    src={cat.image || "/placeholder.svg"}
-                    alt={`${cat.name} ${cat.subtitle}`}
-                    className="w-full h-full object-contain mix-blend-multiply opacity-90 drop-shadow-2xl group-hover:scale-105 group-hover:opacity-100 transition-all duration-500"
-                  />
+                <div className="flex-1 px-3 sm:px-4 md:px-6 lg:px-8 pb-3 sm:pb-4 md:pb-6 lg:pb-8 flex items-center justify-center min-h-[140px] sm:min-h-[180px] md:min-h-[240px] lg:min-h-[320px]">
+                  <div className="relative w-full h-full flex items-center justify-center aspect-square">
+                    <img
+                      src={cat.image || "/placeholder.svg"}
+                      alt={`${cat.name} ${cat.subtitle}`}
+                      className="w-full h-full object-contain mix-blend-multiply opacity-95 drop-shadow-2xl animate-float transition-all duration-700 ease-out group-hover:scale-110 group-hover:rotate-3"
+                      style={{
+                        animationDelay: `${categories.indexOf(cat) * 0.3}s`,
+                        animationDuration: `${4 + categories.indexOf(cat) * 0.5}s`
+                      }}
+                    />
+                  </div>
                 </div>
 
-                <div className="pb-2 sm:pb-3 md:pb-4 lg:pb-6 flex justify-center">
-                  <span className="bg-foreground text-background text-[8px] sm:text-[10px] md:text-xs lg:text-sm font-bold px-3 py-1 sm:px-4 sm:py-1.5 md:px-6 md:py-2 lg:px-8 lg:py-2.5 uppercase tracking-wider group-hover:bg-background group-hover:text-foreground transition-colors shadow-md">
+                <div className="pb-3 sm:pb-4 md:pb-6 lg:pb-8 flex justify-center">
+                  <span className="bg-foreground text-background text-[10px] sm:text-xs md:text-sm font-bold px-4 py-1.5 sm:px-6 sm:py-2 md:px-10 md:py-3 uppercase tracking-widest group-hover:bg-background group-hover:text-foreground transition-all duration-300 shadow-lg group-hover:shadow-[0_0_30px_rgba(255,255,255,0.4)] relative overflow-hidden after:content-[''] after:absolute after:inset-0 after:bg-white/10 after:translate-x-[-100%] after:skew-x-[-15deg] group-hover:after:animate-[shimmer_2s_infinite]">
                     Shop
                   </span>
                 </div>
@@ -134,7 +135,7 @@ export function CategoryGrid() {
               <Link
                 key={cat.name}
                 href={cat.href}
-                className={`group relative ${cat.bgColor} overflow-hidden flex flex-col`}
+                className={`group relative ${cat.bgColor} overflow-hidden flex flex-col border-foreground/5 hover:z-10 transition-transform duration-500 hover:-translate-y-1`}
               >
                 <CornerTriangle position="tl" color={cat.textColor} />
                 <CornerTriangle position="tr" color={cat.textColor} />
@@ -143,29 +144,30 @@ export function CategoryGrid() {
 
                 <div className="p-2 sm:p-3 md:p-4 lg:p-6 flex-shrink-0">
                   <h3
-                    className={`text-xs sm:text-lg md:text-2xl lg:text-4xl xl:text-5xl font-black ${cat.textColor} leading-tight tracking-tight`}
+                    className={`text-sm sm:text-lg md:text-2xl lg:text-4xl xl:text-5xl font-black ${cat.textColor} leading-tight tracking-tight uppercase text-balance`}
                     style={{ WebkitFontSmoothing: "antialiased" }}
                   >
-                    {cat.name}
-                  </h3>
-                  <h3
-                    className={`text-xs sm:text-lg md:text-2xl lg:text-4xl xl:text-5xl font-black ${cat.textColor} leading-tight tracking-tight`}
-                    style={{ WebkitFontSmoothing: "antialiased" }}
-                  >
-                    {cat.subtitle}
+                    <span className="block">{cat.name}</span>
+                    <span className="block opacity-90">{cat.subtitle}</span>
                   </h3>
                 </div>
 
-                <div className="flex-1 px-3 sm:px-6 md:px-8 lg:px-12 pb-3 sm:pb-6 md:pb-8 lg:pb-12 flex items-center justify-center min-h-[100px] sm:min-h-[140px] md:min-h-[180px] lg:min-h-[220px]">
-                  <img
-                    src={cat.image || "/placeholder.svg"}
-                    alt={`${cat.name} ${cat.subtitle}`}
-                    className="w-full h-full object-contain mix-blend-multiply opacity-90 drop-shadow-2xl group-hover:scale-105 group-hover:opacity-100 transition-all duration-500"
-                  />
+                <div className="flex-1 px-4 sm:px-8 md:px-12 lg:px-16 pb-4 sm:pb-8 md:pb-12 lg:pb-16 flex items-center justify-center min-h-[120px] sm:min-h-[160px] md:min-h-[220px] lg:min-h-[300px]">
+                  <div className="relative w-full h-full flex items-center justify-center aspect-[4/3]">
+                    <img
+                      src={cat.image || "/placeholder.svg"}
+                      alt={`${cat.name} ${cat.subtitle}`}
+                      className="w-full h-full object-contain mix-blend-multiply opacity-95 drop-shadow-2xl animate-float transition-all duration-700 ease-out group-hover:scale-110 group-hover:-rotate-3"
+                      style={{
+                        animationDelay: `${(bottomCategories.indexOf(cat) + 3) * 0.4}s`,
+                        animationDuration: `${5 + bottomCategories.indexOf(cat) * 0.5}s`
+                      }}
+                    />
+                  </div>
                 </div>
 
-                <div className="pb-2 sm:pb-3 md:pb-4 lg:pb-6 flex justify-center">
-                  <span className="bg-foreground text-background text-[8px] sm:text-[10px] md:text-xs lg:text-sm font-bold px-3 py-1 sm:px-4 sm:py-1.5 md:px-6 md:py-2 lg:px-8 lg:py-2.5 uppercase tracking-wider group-hover:bg-background group-hover:text-foreground transition-colors shadow-md">
+                <div className="pb-3 sm:pb-4 md:pb-6 lg:pb-8 flex justify-center">
+                  <span className="bg-foreground text-background text-[10px] sm:text-xs md:text-sm font-bold px-4 py-1.5 sm:px-6 sm:py-2 md:px-10 md:py-3 uppercase tracking-widest group-hover:bg-background group-hover:text-foreground transition-all duration-300 shadow-lg relative overflow-hidden after:content-[''] after:absolute after:inset-0 after:bg-white/10 after:translate-x-[-100%] after:skew-x-[-15deg] group-hover:after:animate-[shimmer_2s_infinite]">
                     Shop
                   </span>
                 </div>

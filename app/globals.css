@@ -134,6 +134,7 @@
   * {
     @apply border-border outline-ring/50;
   }
+
   body {
     @apply bg-background text-foreground antialiased;
   }
@@ -153,6 +154,7 @@ html {
   0% {
     transform: translateX(0);
   }
+
   100% {
     transform: translateX(-50%);
   }
@@ -162,6 +164,7 @@ html {
   0% {
     transform: translateX(-50%);
   }
+
   100% {
     transform: translateX(0);
   }
@@ -182,10 +185,12 @@ html {
 
 /* Bounce animation for playful elements */
 @keyframes bounce-subtle {
+
   0%,
   100% {
     transform: translateY(0);
   }
+
   50% {
     transform: translateY(-5px);
   }
@@ -195,12 +200,14 @@ html {
   animation: bounce-subtle 2s ease-in-out infinite;
 }
 
-/* Pulse glow for CTAs */
+/* Pulse glow for CTAs and badges */
 @keyframes pulse-glow {
+
   0%,
   100% {
     box-shadow: 0 0 0 0 oklch(0.65 0.22 25 / 0.4);
   }
+
   50% {
     box-shadow: 0 0 20px 5px oklch(0.65 0.22 25 / 0.2);
   }
@@ -210,23 +217,78 @@ html {
   animation: pulse-glow 2s ease-in-out infinite;
 }
 
+/* Premium shimmer effect */
+@keyframes shimmer {
+  0% {
+    transform: translateX(-100%) skewX(-15deg);
+  }
+
+  100% {
+    transform: translateX(200%) skewX(-15deg);
+  }
+}
+
+.animate-shimmer {
+  position: relative;
+  overflow: hidden;
+}
+
+.animate-shimmer::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 50%;
+  height: 100%;
+  background: linear-gradient(to right,
+      transparent,
+      rgba(255, 255, 255, 0.2),
+      transparent);
+  animation: shimmer 2s infinite;
+}
+
+/* Floating animation for product images */
+@keyframes float {
+
+  0%,
+  100% {
+    transform: translateY(0) rotate(0);
+  }
+
+  50% {
+    transform: translateY(-10px) rotate(1deg);
+  }
+}
+
+.animate-float {
+  animation: float 4s ease-in-out infinite;
+}
+
+/* Advanced tech-inspired dot and grid pattern */
+.bg-dot-pattern {
+  background-image:
+    radial-gradient(var(--foreground) 1px, transparent 1px),
+    linear-gradient(to right, oklch(0.15 0.02 45 / 0.03) 1px, transparent 1px),
+    linear-gradient(to bottom, oklch(0.15 0.02 45 / 0.03) 1px, transparent 1px);
+  background-size: 24px 24px, 48px 48px, 48px 48px;
+  background-position: 0 0;
+  opacity: 0.8;
+  /* Higher opacity since patterns are subtle */
+}
+
 /* Diagonal stripes pattern */
 .stripes-yellow {
-  background: repeating-linear-gradient(
-    -45deg,
-    oklch(0.92 0.2 95),
-    oklch(0.92 0.2 95) 8px,
-    oklch(0.15 0.02 45) 8px,
-    oklch(0.15 0.02 45) 16px
-  );
+  background: repeating-linear-gradient(-45deg,
+      oklch(0.92 0.2 95),
+      oklch(0.92 0.2 95) 8px,
+      oklch(0.15 0.02 45) 8px,
+      oklch(0.15 0.02 45) 16px);
 }
 
 .stripes-pink {
-  background: repeating-linear-gradient(
-    -45deg,
-    oklch(0.7 0.22 350),
-    oklch(0.7 0.22 350) 8px,
-    oklch(0.15 0.02 45) 8px,
-    oklch(0.15 0.02 45) 16px
-  );
+  background: repeating-linear-gradient(-45deg,
+      oklch(0.7 0.22 350),
+      oklch(0.7 0.22 350) 8px,
+      oklch(0.15 0.02 45) 8px,
+      oklch(0.15 0.02 45) 16px);
 }
