@@ -1,5 +1,5 @@
-import { createClient } from "@/lib/supabase/client"
-import { createClient as createServerClient } from "@/lib/supabase/server"
+// import { createClient } from "@/lib/supabase/client"
+// import { createClient as createServerClient } from "@/lib/supabase/server"
 
 export interface OrderItem {
   productId: string
@@ -30,32 +30,13 @@ export interface Order {
   created_at: string
 }
 
-// Get user's orders (client-side)
-export async function getOrders(): Promise<Order[]> {
-  const supabase = createClient()
-
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-  if (!user) return []
-
-  const { data, error } = await supabase
-    .from("orders")
-    .select("*")
-    .eq("user_id", user.id)
-    .order("created_at", { ascending: false })
-
-  if (error) {
-    console.error("Error fetching orders:", error)
-    return []
-  }
-
-  return data || []
-}
-
 // Get user's orders (server-side)
+import { createAdminClient } from "@/lib/supabase/admin"
+
+// ... types keep existing ...
+
 export async function getOrdersServer(userId: string): Promise<Order[]> {
-  const supabase = await createServerClient()
+  const supabase = createAdminClient()
 
   const { data, error } = await supabase
     .from("orders")
@@ -72,15 +53,15 @@ export async function getOrdersServer(userId: string): Promise<Order[]> {
 }
 
 // Get a specific order
-export async function getOrder(orderId: string): Promise<Order | null> {
-  const supabase = createClient()
+export async function getOrder(orderId: string, userId: string): Promise<Order | null> {
+  const supabase = createAdminClient()
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-  if (!user) return null
-
-  const { data, error } = await supabase.from("orders").select("*").eq("id", orderId).eq("user_id", user.id).single()
+  const { data, error } = await supabase
+    .from("orders")
+    .select("*")
+    .eq("id", orderId)
+    .eq("user_id", userId)
+    .single()
 
   if (error) {
     console.error("Error fetching order:", error)
@@ -89,3 +70,10 @@ export async function getOrder(orderId: string): Promise<Order | null> {
 
   return data
 }
+
+// Deprecated: Client-side fetcher removed as it depends on RLS
+export async function getOrders(): Promise<Order[]> {
+  console.warn("getOrders() client-side is deprecated. Use getOrdersServer() in a Server Component.")
+  return []
+}
+

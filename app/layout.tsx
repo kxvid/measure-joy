@@ -1,12 +1,11 @@
 import type React from "react"
 import type { Metadata } from "next"
-import { Suspense } from "react"
+import { ClerkProvider } from "@clerk/nextjs"
 import { DM_Sans, Space_Mono } from "next/font/google"
 import { Analytics } from "@vercel/analytics/next"
 import { CartProvider } from "@/lib/cart-context"
 import { ExitIntentPopup } from "@/components/exit-intent-popup"
 import { SocialProofToasts } from "@/components/social-proof-toasts"
-import { AuthCodeHandler } from "@/components/auth-code-handler"
 import "./globals.css"
 
 const _dmSans = DM_Sans({ subsets: ["latin"], variable: "--font-dm-sans" })
@@ -46,19 +45,17 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <html lang="en">
-      <body className={`font-sans antialiased ${_dmSans.variable} ${_spaceMono.variable}`}>
-        <CartProvider>
-          {/* Handle Supabase PKCE auth codes (password reset, email confirm) */}
-          <Suspense fallback={null}>
-            <AuthCodeHandler />
-          </Suspense>
-          {children}
-          <ExitIntentPopup />
-          <SocialProofToasts />
-        </CartProvider>
-        <Analytics />
-      </body>
-    </html>
+    <ClerkProvider>
+      <html lang="en">
+        <body className={`font-sans antialiased ${_dmSans.variable} ${_spaceMono.variable}`}>
+          <CartProvider>
+            {children}
+            <ExitIntentPopup />
+            <SocialProofToasts />
+          </CartProvider>
+          <Analytics />
+        </body>
+      </html>
+    </ClerkProvider>
   )
 }

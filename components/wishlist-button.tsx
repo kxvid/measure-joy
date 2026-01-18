@@ -5,8 +5,8 @@ import type React from "react"
 import { useState, useEffect } from "react"
 import { Heart } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { createClient } from "@/lib/supabase/client"
-import { isInWishlist, toggleWishlist } from "@/lib/wishlist"
+import { useAuth } from "@clerk/nextjs"
+import { isInWishlist, toggleWishlist } from "@/app/actions/wishlist"
 import { useRouter } from "next/navigation"
 
 interface WishlistButtonProps {
@@ -24,34 +24,30 @@ export function WishlistButton({
   className = "",
   showText = false,
 }: WishlistButtonProps) {
+  const { isLoaded, userId } = useAuth()
   const [isWishlisted, setIsWishlisted] = useState(false)
   const [loading, setLoading] = useState(false)
-  const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null)
   const router = useRouter()
 
   useEffect(() => {
-    const checkAuth = async () => {
-      const supabase = createClient()
-      const {
-        data: { user },
-      } = await supabase.auth.getUser()
-      setIsAuthenticated(!!user)
+    if (!userId) return
 
-      if (user) {
-        const inWishlist = await isInWishlist(productId)
-        setIsWishlisted(inWishlist)
-      }
+    const checkWishlist = async () => {
+      const inWishlist = await isInWishlist(productId)
+      setIsWishlisted(inWishlist)
     }
 
-    checkAuth()
-  }, [productId])
+    checkWishlist()
+  }, [productId, userId])
 
   const handleToggle = async (e: React.MouseEvent) => {
     e.preventDefault()
     e.stopPropagation()
 
-    if (!isAuthenticated) {
-      router.push("/auth/login")
+    if (!isLoaded) return
+
+    if (!userId) {
+      router.push("/sign-in")
       return
     }
 

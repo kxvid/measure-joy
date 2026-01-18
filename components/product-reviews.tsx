@@ -1,11 +1,10 @@
-"use client"
-
 import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { StarRating } from "@/components/star-rating"
 import { ReviewForm } from "@/components/review-form"
-import { getProductReviews, calculateReviewStats, type Review, type ReviewStats } from "@/lib/reviews"
-import { createClient } from "@/lib/supabase/client"
+import { getReviews, getReviewsStats } from "@/app/actions/reviews"
+import { type Review, type ReviewStats } from "@/lib/reviews"
+import { useAuth, useUser } from "@clerk/nextjs" // Use useUser to detect login state more easily for hydration
 import { User, MessageSquare, ThumbsUp, Shield } from "lucide-react"
 import Link from "next/link"
 
@@ -18,32 +17,33 @@ export function ProductReviews({ productId }: ProductReviewsProps) {
   const [stats, setStats] = useState<ReviewStats | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [showForm, setShowForm] = useState(false)
-  const [user, setUser] = useState<any>(null)
+  const { isSignedIn, user } = useUser()
+  const userId = user?.id
   const [hasReviewed, setHasReviewed] = useState(false)
 
   const fetchReviews = async () => {
     setIsLoading(true)
-    const data = await getProductReviews(productId)
-    setReviews(data)
-    setStats(calculateReviewStats(data))
+    try {
+      const [data, reviewStats] = await Promise.all([
+        getReviews(productId),
+        getReviewsStats(productId)
+      ])
+
+      setReviews(data)
+      setStats(reviewStats)
+
+      if (userId) {
+        setHasReviewed(data.some((r) => r.user_id === userId))
+      }
+    } catch (err) {
+      console.error("Failed to load reviews", err)
+    }
     setIsLoading(false)
   }
 
   useEffect(() => {
     fetchReviews()
-
-    // Check auth status
-    const supabase = createClient()
-    supabase.auth.getUser().then(({ data }) => {
-      setUser(data.user)
-      if (data.user) {
-        // Check if user already reviewed
-        getProductReviews(productId).then((reviews) => {
-          setHasReviewed(reviews.some((r) => r.user_id === data.user?.id))
-        })
-      }
-    })
-  }, [productId])
+  }, [productId, userId])
 
   const handleReviewSuccess = () => {
     setShowForm(false)
@@ -109,7 +109,7 @@ export function ProductReviews({ productId }: ProductReviewsProps) {
 
           {/* Write review button */}
           <div className="mt-6">
-            {user ? (
+            {isSignedIn ? (
               hasReviewed ? (
                 <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-xl text-sm text-center">
                   You've already reviewed this product
@@ -122,7 +122,7 @@ export function ProductReviews({ productId }: ProductReviewsProps) {
             ) : (
               <div className="space-y-3">
                 <Button asChild className="w-full rounded-xl">
-                  <Link href="/auth/login">Sign in to Review</Link>
+                  <Link href="/sign-in">Sign in to Review</Link>
                 </Button>
                 <p className="text-xs text-center text-muted-foreground">You need an account to leave a review</p>
               </div>

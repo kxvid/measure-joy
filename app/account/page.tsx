@@ -1,26 +1,24 @@
+import { currentUser } from "@clerk/nextjs/server"
 import { redirect } from "next/navigation"
-import { createClient } from "@/lib/supabase/server"
-import { getOrdersServer } from "@/lib/orders"
+import { getOrders } from "@/app/actions/orders"
 import { Header } from "@/components/header"
 import { Footer } from "@/components/footer"
+import { AccountDashboardSections } from "@/components/account-dashboard-sections"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Separator } from "@/components/ui/separator"
-import { User, Package, Heart, Settings, ChevronRight } from "lucide-react"
+import { User, Package, Heart, Settings, ChevronRight, LogOut, Wrench, Clock } from "lucide-react"
 import Link from "next/link"
-import { SignOutButton } from "@/components/sign-out-button"
-import { formatPrice } from "@/lib/products"
+import { SignOutButton } from "@clerk/nextjs"
 
 export default async function AccountPage() {
-  const supabase = await createClient()
-  const { data, error } = await supabase.auth.getUser()
+  const user = await currentUser()
 
-  if (error || !data?.user) {
-    redirect("/auth/login")
+  if (!user) {
+    redirect("/sign-in")
   }
 
-  const user = data.user
-  const orders = await getOrdersServer(user.id)
+  const orders = await getOrders()
   const recentOrders = orders.slice(0, 3)
 
   return (
@@ -47,16 +45,16 @@ export default async function AccountPage() {
             <CardContent className="space-y-4">
               <div className="grid gap-1">
                 <span className="text-sm text-muted-foreground">Email</span>
-                <span className="font-medium">{user.email}</span>
+                <span className="font-medium">{user.emailAddresses[0]?.emailAddress}</span>
               </div>
               <div className="grid gap-1">
                 <span className="text-sm text-muted-foreground">Name</span>
-                <span className="font-medium">{user.user_metadata?.full_name || "Not set"}</span>
+                <span className="font-medium">{user.firstName ? `${user.firstName} ${user.lastName || ""}` : "Not set"}</span>
               </div>
               <div className="grid gap-1">
                 <span className="text-sm text-muted-foreground">Member since</span>
                 <span className="font-medium">
-                  {new Date(user.created_at).toLocaleDateString("en-US", {
+                  {new Date(user.createdAt).toLocaleDateString("en-US", {
                     month: "long",
                     year: "numeric",
                   })}
@@ -108,13 +106,47 @@ export default async function AccountPage() {
                     </div>
                     <ChevronRight className="h-4 w-4 text-muted-foreground group-hover:translate-x-0.5 transition-transform" />
                   </Link>
+
                   <Separator className="my-2" />
-                  <SignOutButton />
+
+                  {/* Additional Features requested by user */}
+                  <Link
+                    href="/repair"
+                    className="flex items-center justify-between px-3 py-2.5 rounded-xl hover:bg-secondary transition-colors group"
+                  >
+                    <div className="flex items-center gap-3">
+                      <Wrench className="h-4 w-4 text-muted-foreground" />
+                      <span className="text-sm font-medium">Repairs & Services</span>
+                    </div>
+                    <ChevronRight className="h-4 w-4 text-muted-foreground group-hover:translate-x-0.5 transition-transform" />
+                  </Link>
+                  <Link
+                    href="/shop"
+                    className="flex items-center justify-between px-3 py-2.5 rounded-xl hover:bg-secondary transition-colors group"
+                  >
+                    <div className="flex items-center gap-3">
+                      <Clock className="h-4 w-4 text-muted-foreground" />
+                      <span className="text-sm font-medium">Recently Viewed</span>
+                    </div>
+                    <ChevronRight className="h-4 w-4 text-muted-foreground group-hover:translate-x-0.5 transition-transform" />
+                  </Link>
+
+                  <Separator className="my-2" />
+
+                  <SignOutButton>
+                    <button className="flex w-full items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-destructive/10 transition-colors text-destructive">
+                      <LogOut className="h-4 w-4" />
+                      <span className="text-sm font-medium">Sign Out</span>
+                    </button>
+                  </SignOutButton>
                 </nav>
               </CardContent>
             </Card>
           </div>
         </div>
+
+        {/* Recently Viewed & Recently Ordered Sections */}
+        <AccountDashboardSections orders={orders} />
 
         {/* Recent Orders Preview */}
         <Card className="mt-6 border-2">
@@ -138,38 +170,17 @@ export default async function AccountPage() {
             {recentOrders.length > 0 ? (
               <div className="space-y-4">
                 {recentOrders.map((order) => (
-                  <Link
-                    key={order.id}
-                    href={`/account/orders/${order.id}`}
-                    className="flex items-center gap-4 p-3 rounded-xl hover:bg-secondary transition-colors"
-                  >
-                    <div className="flex -space-x-2">
-                      {order.items.slice(0, 3).map((item: any, idx: number) => (
-                        <div
-                          key={idx}
-                          className="w-10 h-10 rounded-lg border-2 border-background bg-secondary overflow-hidden"
-                        >
-                          <img
-                            src={item.image || "/placeholder.svg?height=40&width=40&query=camera"}
-                            alt={item.name}
-                            className="w-full h-full object-cover"
-                          />
-                        </div>
-                      ))}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="font-medium text-sm truncate">
-                        {order.items.length} item{order.items.length > 1 ? "s" : ""}
+                  <div key={order.id} className="flex items-center justify-between p-4 border rounded-xl hover:bg-secondary/50 transition-colors">
+                    <div>
+                      <p className="font-medium">Order #{order.id.slice(0, 8).toUpperCase()}</p>
+                      <p className="text-sm text-muted-foreground">
+                        {new Date(order.created_at).toLocaleDateString()} • {order.items.length} items
                       </p>
-                      <p className="text-xs text-muted-foreground">{new Date(order.created_at).toLocaleDateString()}</p>
                     </div>
-                    <div className="text-right">
-                      <p className="font-bold text-sm">{formatPrice(order.total_cents)}</p>
-                      <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                        {order.status}
-                      </span>
-                    </div>
-                  </Link>
+                    <Button asChild variant="ghost" size="sm" className="rounded-lg">
+                      <Link href={`/account/orders/${order.id}`}>View Details</Link>
+                    </Button>
+                  </div>
                 ))}
               </div>
             ) : (

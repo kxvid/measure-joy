@@ -1,7 +1,9 @@
 import { redirect, notFound } from "next/navigation"
-import { createClient } from "@/lib/supabase/server"
+import { currentUser } from "@clerk/nextjs/server"
+import { getOrderById, getOrderTracking } from "@/app/actions/orders"
 import { Header } from "@/components/header"
 import { Footer } from "@/components/footer"
+import { OrderTrackingTimeline } from "@/components/order-tracking-timeline"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { ChevronLeft, Package, MapPin, CreditCard } from "lucide-react"
 import Link from "next/link"
@@ -9,23 +11,20 @@ import { formatPrice } from "@/lib/products"
 
 export default async function OrderDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
-  const supabase = await createClient()
-  const { data: userData, error: userError } = await supabase.auth.getUser()
+  const user = await currentUser()
 
-  if (userError || !userData?.user) {
-    redirect("/auth/login")
+  if (!user) {
+    redirect("/sign-in")
   }
 
-  const { data: order, error: orderError } = await supabase
-    .from("orders")
-    .select("*")
-    .eq("id", id)
-    .eq("user_id", userData.user.id)
-    .single()
+  const order = await getOrderById(id)
 
-  if (orderError || !order) {
+  if (!order) {
     notFound()
   }
+
+  // Fetch tracking information
+  const tracking = await getOrderTracking(id)
 
   const shippingAddress = order.shipping_address as {
     name: string
@@ -64,13 +63,12 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ id
             </p>
           </div>
           <span
-            className={`inline-flex items-center px-3 py-1.5 rounded-full text-sm font-medium ${
-              order.status === "completed"
-                ? "bg-green-100 text-green-800"
-                : order.status === "pending"
-                  ? "bg-yellow-100 text-yellow-800"
-                  : "bg-gray-100 text-gray-800"
-            }`}
+            className={`inline-flex items-center px-3 py-1.5 rounded-full text-sm font-medium ${order.status === "completed"
+              ? "bg-green-100 text-green-800"
+              : order.status === "pending"
+                ? "bg-yellow-100 text-yellow-800"
+                : "bg-gray-100 text-gray-800"
+              }`}
           >
             {order.status.charAt(0).toUpperCase() + order.status.slice(1)}
           </span>
@@ -78,7 +76,14 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ id
 
         <div className="grid lg:grid-cols-3 gap-6">
           {/* Order items */}
-          <div className="lg:col-span-2">
+          <div className="lg:col-span-2 space-y-6">
+            {/* Order Tracking Timeline */}
+            <OrderTrackingTimeline
+              tracking={tracking}
+              orderStatus={order.status}
+              orderCreatedAt={order.created_at}
+            />
+
             <Card className="border-2">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">

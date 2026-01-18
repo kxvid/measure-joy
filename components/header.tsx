@@ -2,11 +2,11 @@
 
 import { useState, useEffect } from "react"
 import Link from "next/link"
-import { Menu, X, ShoppingBag, Search, User, ChevronDown, Heart } from "lucide-react"
+import { Menu, X, ShoppingBag, Search, ChevronDown, Heart } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { useCart } from "@/lib/cart-context"
-import { createClient } from "@/lib/supabase/client"
 import { CartDrawer } from "@/components/cart-drawer"
+import { SignedIn, SignedOut, UserButton } from "@clerk/nextjs"
 
 const navigation = [
   {
@@ -23,7 +23,6 @@ const navigation = [
 export function Header() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [scrolled, setScrolled] = useState(false)
-  const [user, setUser] = useState<{ email?: string } | null>(null)
   const [cartOpen, setCartOpen] = useState(false)
   const { totalItems } = useCart()
 
@@ -33,27 +32,11 @@ export function Header() {
     return () => window.removeEventListener("scroll", handleScroll)
   }, [])
 
-  useEffect(() => {
-    const supabase = createClient()
-    supabase.auth.getUser().then(({ data }) => {
-      setUser(data.user)
-    })
-
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
-      setUser(session?.user ?? null)
-    })
-
-    return () => subscription.unsubscribe()
-  }, [])
-
   return (
     <>
       <header
-        className={`sticky top-0 z-40 transition-all duration-300 ${
-          scrolled ? "bg-background/95 backdrop-blur-xl border-b-2 border-foreground" : "bg-background"
-        }`}
+        className={`sticky top-0 z-40 transition-all duration-300 ${scrolled ? "bg-background/95 backdrop-blur-xl border-b-2 border-foreground" : "bg-background"
+          }`}
       >
         <nav className="mx-auto flex max-w-7xl items-center justify-between px-4 py-3 lg:px-6">
           {/* Mobile menu button */}
@@ -68,11 +51,10 @@ export function Header() {
               <Link
                 key={item.name}
                 href={item.href}
-                className={`px-4 py-2 text-xs font-bold uppercase tracking-wider transition-colors ${
-                  item.featured
+                className={`px-4 py-2 text-xs font-bold uppercase tracking-wider transition-colors ${item.featured
                     ? "bg-foreground text-background hover:bg-pop-pink"
                     : "text-foreground/70 hover:text-foreground hover:bg-secondary"
-                }`}
+                  }`}
               >
                 {item.name}
               </Link>
@@ -90,7 +72,7 @@ export function Header() {
             </div>
           </Link>
 
-          {/* Right side actions - Added wishlist heart icon */}
+          {/* Right side actions */}
           <div className="flex items-center gap-1">
             <Button variant="ghost" size="icon" className="hidden sm:flex" asChild>
               <Link href="/shop">
@@ -99,22 +81,48 @@ export function Header() {
               </Link>
             </Button>
 
-            {/* Wishlist link - only show when logged in */}
-            {user && (
+            {/* Wishlist link - only show when signed in */}
+            <SignedIn>
               <Button variant="ghost" size="icon" className="hidden sm:flex" asChild>
                 <Link href="/account/wishlist">
                   <Heart className="h-5 w-5" />
                   <span className="sr-only">Wishlist</span>
                 </Link>
               </Button>
-            )}
+            </SignedIn>
 
-            <Button variant="ghost" size="icon" asChild>
-              <Link href={user ? "/account" : "/auth/login"}>
-                <User className="h-5 w-5" />
-                <span className="sr-only">{user ? "Account" : "Login"}</span>
-              </Link>
-            </Button>
+            {/* User button - Clerk handles sign in/out */}
+            <SignedIn>
+              <UserButton
+                afterSignOutUrl="/"
+                appearance={{
+                  elements: {
+                    avatarBox: "w-8 h-8"
+                  }
+                }}
+              />
+            </SignedIn>
+            <SignedOut>
+              <Button variant="ghost" size="icon" asChild>
+                <Link href="/sign-in">
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    width="20"
+                    height="20"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2" />
+                    <circle cx="12" cy="7" r="4" />
+                  </svg>
+                  <span className="sr-only">Sign In</span>
+                </Link>
+              </Button>
+            </SignedOut>
 
             <Button variant="ghost" size="icon" className="relative" onClick={() => setCartOpen(true)}>
               <ShoppingBag className="h-5 w-5" />
@@ -150,7 +158,7 @@ export function Header() {
                     <ChevronDown className="h-5 w-5 -rotate-90" />
                   </Link>
                 ))}
-                {user && (
+                <SignedIn>
                   <Link
                     href="/account/wishlist"
                     className="flex items-center justify-between py-4 text-xl font-bold text-foreground uppercase tracking-wide hover:text-pop-pink transition-colors border-b border-border"
@@ -159,15 +167,25 @@ export function Header() {
                     Wishlist
                     <Heart className="h-5 w-5" />
                   </Link>
-                )}
-                <Link
-                  href={user ? "/account" : "/auth/login"}
-                  className="flex items-center justify-between py-4 text-xl font-bold text-foreground uppercase tracking-wide hover:text-pop-pink transition-colors border-b border-border"
-                  onClick={() => setMobileMenuOpen(false)}
-                >
-                  {user ? "Account" : "Sign In"}
-                  <ChevronDown className="h-5 w-5 -rotate-90" />
-                </Link>
+                  <Link
+                    href="/account"
+                    className="flex items-center justify-between py-4 text-xl font-bold text-foreground uppercase tracking-wide hover:text-pop-pink transition-colors border-b border-border"
+                    onClick={() => setMobileMenuOpen(false)}
+                  >
+                    Account
+                    <ChevronDown className="h-5 w-5 -rotate-90" />
+                  </Link>
+                </SignedIn>
+                <SignedOut>
+                  <Link
+                    href="/sign-in"
+                    className="flex items-center justify-between py-4 text-xl font-bold text-foreground uppercase tracking-wide hover:text-pop-pink transition-colors border-b border-border"
+                    onClick={() => setMobileMenuOpen(false)}
+                  >
+                    Sign In
+                    <ChevronDown className="h-5 w-5 -rotate-90" />
+                  </Link>
+                </SignedOut>
               </nav>
 
               {/* Mobile promo */}

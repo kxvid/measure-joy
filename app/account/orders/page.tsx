@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation"
-import { createClient } from "@/lib/supabase/server"
-import { getOrdersServer } from "@/lib/orders"
+import { currentUser } from "@clerk/nextjs/server"
+import { getOrders } from "@/app/actions/orders"
 import { Header } from "@/components/header"
 import { Footer } from "@/components/footer"
 import { Button } from "@/components/ui/button"
@@ -10,14 +10,13 @@ import Link from "next/link"
 import { formatPrice } from "@/lib/products"
 
 export default async function OrdersPage() {
-  const supabase = await createClient()
-  const { data, error } = await supabase.auth.getUser()
+  const user = await currentUser()
 
-  if (error || !data?.user) {
-    redirect("/auth/login")
+  if (!user) {
+    redirect("/sign-in")
   }
 
-  const orders = await getOrdersServer(data.user.id)
+  const orders = await getOrders()
 
   return (
     <main className="min-h-screen bg-background">
@@ -60,13 +59,12 @@ export default async function OrdersPage() {
                         </div>
                         <div className="flex items-center gap-3">
                           <span
-                            className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${
-                              order.status === "completed"
+                            className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${order.status === "completed"
                                 ? "bg-green-100 text-green-800"
                                 : order.status === "pending"
                                   ? "bg-yellow-100 text-yellow-800"
                                   : "bg-gray-100 text-gray-800"
-                            }`}
+                              }`}
                           >
                             {order.status.charAt(0).toUpperCase() + order.status.slice(1)}
                           </span>

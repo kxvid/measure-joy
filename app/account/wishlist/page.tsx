@@ -1,9 +1,10 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { createClient } from "@/lib/supabase/client"
+// import { createClient } from "@/lib/supabase/client" 
+import { useAuth } from "@clerk/nextjs"
 import { useRouter } from "next/navigation"
-import { getWishlist, removeFromWishlist } from "@/lib/wishlist"
+import { getWishlist, removeFromWishlist } from "@/app/actions/wishlist"
 import { formatPrice, type Product } from "@/lib/products"
 import { Header } from "@/components/header"
 import { Footer } from "@/components/footer"
@@ -16,26 +17,22 @@ import { useCart } from "@/lib/cart-context"
 export default function WishlistPage() {
   const [wishlistProducts, setWishlistProducts] = useState<Product[]>([])
   const [loading, setLoading] = useState(true)
-  const [isAuthenticated, setIsAuthenticated] = useState(false)
+  const { isLoaded, userId } = useAuth()
   const { addItem } = useCart()
   const router = useRouter()
 
   useEffect(() => {
-    const checkAuthAndFetch = async () => {
-      const supabase = createClient()
-      const {
-        data: { user },
-      } = await supabase.auth.getUser()
+    if (!isLoaded) return
 
-      if (!user) {
-        router.push("/auth/login")
-        return
-      }
+    if (!userId) {
+      router.push("/sign-in")
+      return
+    }
 
-      setIsAuthenticated(true)
-
-      // Get wishlist IDs and fetch products
+    const fetchWishlist = async () => {
+      // Get wishlist IDs via Server Action
       const ids = await getWishlist()
+
       if (ids.length > 0) {
         try {
           const res = await fetch("/api/products")
@@ -53,19 +50,20 @@ export default function WishlistPage() {
       setLoading(false)
     }
 
-    checkAuthAndFetch()
-  }, [router])
+    fetchWishlist()
+  }, [isLoaded, userId, router])
 
   const handleRemove = async (productId: string) => {
-    await removeFromWishlist(productId)
+    // Optimistic update
     setWishlistProducts((prev) => prev.filter((p) => p.id !== productId))
+    await removeFromWishlist(productId)
   }
 
   const handleAddToCart = (product: Product) => {
     addItem(product)
   }
 
-  if (!isAuthenticated || loading) {
+  if ((!isLoaded || !userId) || loading) {
     return (
       <main className="min-h-screen bg-background">
         <Header />

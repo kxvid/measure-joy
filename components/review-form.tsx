@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { StarRating } from "@/components/star-rating"
-import { submitReview } from "@/lib/reviews"
+import { submitReviewAction } from "@/app/actions/reviews"
 import { Loader2, CheckCircle2 } from "lucide-react"
 
 interface ReviewFormProps {
@@ -45,7 +45,7 @@ export function ReviewForm({ productId, onSuccess, onCancel }: ReviewFormProps) 
 
     setIsSubmitting(true)
 
-    const result = await submitReview(productId, rating, title.trim(), content.trim())
+    const result = await submitReviewAction(productId, rating, title.trim(), content.trim())
 
     setIsSubmitting(false)
 

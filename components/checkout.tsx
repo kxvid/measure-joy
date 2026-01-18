@@ -1,11 +1,12 @@
 "use client"
 
-import { useCallback, useState, useEffect } from "react"
+import { useCallback, useState } from "react"
 import { EmbeddedCheckout, EmbeddedCheckoutProvider } from "@stripe/react-stripe-js"
 import { loadStripe } from "@stripe/stripe-js"
 import { startCheckoutSession, startSingleProductCheckout, saveOrderFromCheckout } from "@/app/actions/stripe"
 import { useCart } from "@/lib/cart-context"
-import { createClient } from "@/lib/supabase/client"
+// import { createClient } from "@/lib/supabase/client"
+import { useAuth } from "@clerk/nextjs" // Added Clerk import
 import { CheckCircle, Package, ArrowRight } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import Link from "next/link"
@@ -18,32 +19,28 @@ interface CheckoutProps {
 
 export default function Checkout({ productId }: CheckoutProps) {
   const { items, clearCart } = useCart()
-  const [userId, setUserId] = useState<string | undefined>()
+  const { userId } = useAuth()
   const [checkoutComplete, setCheckoutComplete] = useState(false)
   const [orderEmail, setOrderEmail] = useState<string | null>(null)
 
-  useEffect(() => {
-    const getUser = async () => {
-      const supabase = createClient()
-      const {
-        data: { user },
-      } = await supabase.auth.getUser()
-      if (user) {
-        setUserId(user.id)
-      }
-    }
-    getUser()
-  }, [])
+  // useEffect removed as we get userId from hook directly
 
   const fetchClientSecret = useCallback(async () => {
+    // Clerk userId can be null, but our actions expect string | undefined
+    const uid = userId || undefined
+
     if (productId) {
-      return startSingleProductCheckout(productId, userId)
+      const secret = await startSingleProductCheckout(productId, uid)
+      if (!secret) throw new Error("Failed to create checkout session")
+      return secret
     }
     const cartItems = items.map((item) => ({
       productId: item.product.id,
       quantity: item.quantity,
     }))
-    return startCheckoutSession(cartItems, userId)
+    const secret = await startCheckoutSession(cartItems, uid)
+    if (!secret) throw new Error("Failed to create checkout session")
+    return secret
   }, [productId, items, userId])
 
   const handleComplete = useCallback(async () => {
