@@ -5,14 +5,14 @@
 export interface Product {
   id: string
   name: string
-  brand: string
+  brand?: string
   description: string
   longDescription?: string
   priceInCents: number
   originalPriceInCents?: number
   images: string[]
   badge?: string
-  year: string
+  year?: string
   category: "camera" | "accessory"
   subcategory?: string
   condition: string

@@ -24,8 +24,8 @@ const CAMERA_BRANDS = [
 
 export function extractProductInfo(name: string, description: string) {
     const info = {
-        brand: "Unknown",
-        year: "Unknown",
+        brand: undefined as string | undefined,
+        year: undefined as string | undefined,
         category: "camera" as "camera" | "accessory"
     }
 

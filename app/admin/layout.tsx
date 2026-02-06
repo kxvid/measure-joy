@@ -1,5 +1,5 @@
 import Link from "next/link"
-import { Home, LayoutDashboard, Package, ShoppingCart } from "lucide-react"
+import { Home, LayoutDashboard, Package, ShoppingCart, Wand2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 
 export default function AdminLayout({
@@ -32,11 +32,15 @@ export default function AdminLayout({
                         <Package className="h-4 w-4" />
                         Categories
                     </Link>
+                    <Link href="/admin/products" className="flex items-center gap-2 hover:text-foreground transition-colors">
+                        <Wand2 className="h-4 w-4" />
+                        Data Tools
+                    </Link>
                 </nav>
             </header>
             <main className="flex-1 bg-muted/10">
                 {children}
             </main>
-        </div>
+        </div >
     )
 }

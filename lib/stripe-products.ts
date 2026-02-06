@@ -21,7 +21,7 @@ function transformStripeProduct(
     return {
         id: product.id,
         name: product.name,
-        brand: metadata.brand || fallback.brand,
+        brand: (metadata.brand && metadata.brand !== "Unknown") ? metadata.brand : fallback.brand,
         description: product.description || "",
         longDescription: metadata.longDescription || product.description || "",
         priceInCents: price?.unit_amount || 0,
@@ -30,7 +30,7 @@ function transformStripeProduct(
             : undefined,
         images: product.images || [],
         badge: metadata.badge || undefined,
-        year: metadata.year || fallback.year,
+        year: (metadata.year && metadata.year !== "Unknown") ? metadata.year : fallback.year,
         category: (metadata.category as "camera" | "accessory") || fallback.category,
         subcategory: metadata.subcategory || undefined,
         condition: metadata.condition || "Good",

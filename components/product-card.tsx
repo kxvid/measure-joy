@@ -164,7 +164,7 @@ export function ProductCard({ product }: ProductCardProps) {
         <div className="space-y-1.5">
           <div className="flex items-center justify-between">
             <span className="font-mono text-[10px] lg:text-xs text-muted-foreground uppercase tracking-wide">
-              {product.brand} · {product.year}
+              {[product.brand, product.year].filter(Boolean).join(" · ")}
             </span>
             {product.rating && product.reviewCount && product.reviewCount > 0 && (
               <div className="flex items-center gap-1">
