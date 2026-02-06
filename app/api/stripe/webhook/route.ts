@@ -1,7 +1,6 @@
 import { headers } from "next/headers"
 import { NextResponse } from "next/server"
 import Stripe from "stripe"
-import { createClient } from "@/lib/supabase/server"
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!)
 
@@ -37,9 +36,6 @@ export async function POST(req: Request) {
 
       console.log("[v0] Processing completed checkout session:", session.id)
 
-      // Extract order data from metadata
-      const userId = session.metadata?.userId
-
       // Retrieve line items from Stripe session
       const lineItems = await stripe.checkout.sessions.listLineItems(session.id, {
         expand: ['data.price.product']
@@ -58,49 +54,15 @@ export async function POST(req: Request) {
 
       const totalInCents = items.reduce((sum, item) => sum + item.priceInCents, 0)
 
-      // Save order to Supabase
-      const supabase = await createClient()
-
-      const { data: order, error: orderError } = await supabase
-        .from("orders")
-        .insert({
-          user_id: userId || null,
-          stripe_session_id: session.id,
-          stripe_payment_intent_id: session.payment_intent as string,
-          items: items,
-          total_cents: totalInCents,
-          status: "completed",
-          customer_email: session.customer_details?.email || null,
-          shipping_address: session.shipping_details?.address
-            ? {
-              line1: session.shipping_details.address.line1,
-              line2: session.shipping_details.address.line2,
-              city: session.shipping_details.address.city,
-              state: session.shipping_details.address.state,
-              postal_code: session.shipping_details.address.postal_code,
-              country: session.shipping_details.address.country,
-            }
-            : null,
-        })
-        .select()
-        .single()
-
-      if (orderError) {
-        console.error("[v0] Error saving order to database:", orderError)
-        return NextResponse.json({ error: "Database error" }, { status: 500 })
-      }
-
-      console.log("[v0] Order saved to database:", order.id)
-
       // Send confirmation email
       if (session.customer_details?.email) {
         try {
           await sendOrderConfirmationEmail({
             email: session.customer_details.email,
-            orderId: order.id,
+            orderId: session.id,
             items: items,
             totalInCents: totalInCents,
-            shippingAddress: order.shipping_address,
+            shippingAddress: (session as any).shipping_details?.address,
           })
           console.log("[v0] Confirmation email sent to:", session.customer_details.email)
         } catch (emailError) {
@@ -112,34 +74,16 @@ export async function POST(req: Request) {
       return NextResponse.json({ received: true })
     }
 
-    // Handle product events for inventory sync
+    // Handle product events for inventory sync (Log only, no DB)
     if (event.type === "product.created" || event.type === "product.updated") {
       const product = event.data.object as Stripe.Product
       console.log(`[v0] Product ${event.type}:`, product.id, product.name)
-
-      // If using Supabase cache, update it here
-      // const supabase = await createClient()
-      // await supabase.from("products_cache").upsert({
-      //   stripe_product_id: product.id,
-      //   name: product.name,
-      //   metadata: product.metadata,
-      //   images: product.images,
-      //   updated_at: new Date().toISOString(),
-      // })
-
-      // For now, just log - Next.js will fetch fresh data on next request
-      console.log(`[v0] Product sync complete for: ${product.name}`)
       return NextResponse.json({ received: true })
     }
 
     if (event.type === "product.deleted") {
       const product = event.data.object as Stripe.Product
       console.log(`[v0] Product deleted:`, product.id)
-
-      // If using Supabase cache, remove it here
-      // const supabase = await createClient()
-      // await supabase.from("products_cache").delete().eq("stripe_product_id", product.id)
-
       return NextResponse.json({ received: true })
     }
 

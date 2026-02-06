@@ -1,34 +1,121 @@
 "use server"
 
 import { auth } from "@clerk/nextjs/server"
-import { createAdminClient } from "@/lib/supabase/admin"
-import { Order, getOrder } from "@/lib/orders"
+import { stripe } from "@/lib/stripe"
+import { Order, OrderItem, ShippingAddress } from "@/lib/orders"
 
 export async function getOrders(): Promise<Order[]> {
     const { userId } = await auth()
     if (!userId) return []
 
-    const supabase = createAdminClient()
+    try {
+        // Search sessions for this user
+        const sessions = await stripe.checkout.sessions.list({
+            limit: 10,
+            expand: ["data.line_items", "data.line_items.data.price.product"],
+            // Stripe doesn't support filtering by metadata in list() directly for all keys efficiently without search
+            // But search has rate limits and latency.
+            // Using search is better for specific metadata keys.
+        })
 
-    const { data, error } = await supabase
-        .from("orders")
-        .select("*")
-        .eq("user_id", userId)
-        .order("created_at", { ascending: false })
+        // Actually, list() does NOT support metadata filtering. 
+        // We MUST use search().
+        const searchResult = await (stripe.checkout.sessions as any).search({
+            query: `metadata["user_id"]:"${userId}" AND status:"complete"`,
+            limit: 10,
+            expand: ["data.line_items", "data.line_items.data.price.product"]
+        })
 
-    if (error) {
-        console.error("Error fetching orders:", error)
+        const orders: Order[] = searchResult.data.map((session: any) => {
+            const items: OrderItem[] = session.line_items?.data.map((item: any) => ({
+                productId: item.price?.product?.id || "",
+                name: (item.price?.product as any)?.name || item.description || "Product",
+                quantity: item.quantity || 1,
+                priceInCents: item.amount_total || 0,
+                image: (item.price?.product as any)?.images?.[0] || ""
+            })) || []
+
+            const shipping_address: ShippingAddress | null = session.shipping_details?.address ? {
+                name: session.shipping_details.name || "",
+                line1: session.shipping_details.address.line1 || "",
+                line2: session.shipping_details.address.line2 || "",
+                city: session.shipping_details.address.city || "",
+                state: session.shipping_details.address.state || "",
+                postal_code: session.shipping_details.address.postal_code || "",
+                country: session.shipping_details.address.country || "",
+            } : null
+
+            return {
+                id: session.id,
+                user_id: session.metadata?.user_id || "",
+                stripe_session_id: session.id,
+                status: session.metadata?.shipped_at ? "shipped" : "completed", // Since we filter by status:complete
+                total_cents: session.amount_total || 0,
+                items,
+                shipping_address,
+                created_at: new Date(session.created * 1000).toISOString(),
+                tracking_number: session.metadata?.tracking_number || null,
+                carrier: session.metadata?.carrier || null,
+                shipped_at: session.metadata?.shipped_at || null
+            }
+        })
+
+        return orders
+    } catch (error) {
+        console.error("Error fetching orders from Stripe:", error)
         return []
     }
-
-    return data || []
 }
 
 export async function getOrderById(orderId: string): Promise<Order | null> {
     const { userId } = await auth()
     if (!userId) return null
 
-    return getOrder(orderId, userId)
+    try {
+        const session = await stripe.checkout.sessions.retrieve(orderId, {
+            expand: ["line_items", "line_items.data.price.product"]
+        })
+
+        // Verify ownership
+        if (session.metadata?.user_id !== userId) {
+            return null
+        }
+
+        const items: OrderItem[] = session.line_items?.data.map((item: any) => ({
+            productId: item.price?.product?.id || "",
+            name: (item.price?.product as any)?.name || item.description || "Product",
+            quantity: item.quantity || 1,
+            priceInCents: item.amount_total || 0,
+            image: (item.price?.product as any)?.images?.[0] || ""
+        })) || []
+
+        const shipping_address: ShippingAddress | null = (session as any).shipping_details?.address ? {
+            name: (session as any).shipping_details.name || "",
+            line1: (session as any).shipping_details.address.line1 || "",
+            line2: (session as any).shipping_details.address.line2 || "",
+            city: (session as any).shipping_details.address.city || "",
+            state: (session as any).shipping_details.address.state || "",
+            postal_code: (session as any).shipping_details.address.postal_code || "",
+            country: (session as any).shipping_details.address.country || "",
+        } : null
+
+        return {
+            id: session.id,
+            user_id: session.metadata?.user_id || "",
+            stripe_session_id: session.id,
+            status: session.metadata?.shipped_at ? "shipped" : (session.payment_status === "paid" ? "completed" : "pending"),
+            total_cents: session.amount_total || 0,
+            items,
+            shipping_address,
+            created_at: new Date(session.created * 1000).toISOString(),
+            tracking_number: session.metadata?.tracking_number || null,
+            carrier: session.metadata?.carrier || null,
+            shipped_at: session.metadata?.shipped_at || null
+        }
+    } catch (error) {
+        console.error("Error fetching order from Stripe:", error)
+        return null
+    }
 }
 
 export interface OrderStatusEvent {
@@ -49,40 +136,21 @@ export interface OrderTracking {
 }
 
 export async function getOrderTracking(orderId: string): Promise<OrderTracking | null> {
-    const { userId } = await auth()
-    if (!userId) return null
-
-    const supabase = createAdminClient()
-
-    // First verify order belongs to user
-    const { data: order, error: orderError } = await supabase
-        .from("orders")
-        .select("id, user_id, tracking_number, carrier, shipped_at, delivered_at")
-        .eq("id", orderId)
-        .eq("user_id", userId)
-        .single()
-
-    if (orderError || !order) {
-        console.error("Error fetching order for tracking:", orderError)
-        return null
-    }
-
-    // Fetch status history
-    const { data: statusHistory, error: historyError } = await supabase
-        .from("order_status_history")
-        .select("*")
-        .eq("order_id", orderId)
-        .order("created_at", { ascending: true })
-
-    if (historyError) {
-        console.error("Error fetching order status history:", historyError)
-    }
+    const order = await getOrderById(orderId)
+    if (!order) return null
 
     return {
-        tracking_number: order.tracking_number,
-        carrier: order.carrier,
-        shipped_at: order.shipped_at,
-        delivered_at: order.delivered_at,
-        status_history: statusHistory || []
+        tracking_number: order.tracking_number || null,
+        carrier: order.carrier || null,
+        shipped_at: order.shipped_at || null,
+        delivered_at: null,
+        status_history: order.shipped_at ? [{
+            id: "shipped",
+            order_id: orderId,
+            status: "shipped",
+            description: "Order has been shipped",
+            location: null,
+            created_at: order.shipped_at
+        }] : []
     }
 }
