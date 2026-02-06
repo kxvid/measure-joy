@@ -37,26 +37,31 @@ export function Footer() {
             <p className="text-sm text-background/60 mt-4 max-w-xs leading-relaxed">
               Reviving Y2K digital cameras for a new generation. Experience the magic of early digital photography.
             </p>
+            {/* 
             <div className="flex gap-2 mt-6">
               <Link
                 href="https://instagram.com"
                 className="w-10 h-10 bg-background/10 flex items-center justify-center text-background/60 hover:text-background hover:bg-pop-pink transition-colors"
+                target="_blank"
               >
                 <Instagram className="h-4 w-4" />
               </Link>
               <Link
                 href="https://twitter.com"
                 className="w-10 h-10 bg-background/10 flex items-center justify-center text-background/60 hover:text-background hover:bg-pop-pink transition-colors"
+                target="_blank"
               >
                 <Twitter className="h-4 w-4" />
               </Link>
               <Link
                 href="https://youtube.com"
                 className="w-10 h-10 bg-background/10 flex items-center justify-center text-background/60 hover:text-background hover:bg-pop-pink transition-colors"
+                target="_blank"
               >
                 <Youtube className="h-4 w-4" />
               </Link>
             </div>
+             */}
           </div>
 
           {/* Links */}

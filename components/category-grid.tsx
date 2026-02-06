@@ -67,9 +67,9 @@ function CornerTriangle({ position, color }: { position: "tl" | "tr" | "bl" | "b
 
 function StripedBorder({ orientation }: { orientation: "horizontal" | "vertical" }) {
   if (orientation === "horizontal") {
-    return <div className="h-2 md:h-4 lg:h-6 w-full stripes-yellow" />
+    return <div className="h-1 md:h-1.5 w-full bg-foreground" />
   }
-  return <div className="w-2 md:w-4 lg:w-6 h-full stripes-yellow" />
+  return <div className="w-1 md:w-1.5 h-full bg-foreground" />
 }
 
 export function CategoryGrid() {

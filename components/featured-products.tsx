@@ -42,6 +42,11 @@ export function FeaturedProducts() {
             <h2 className="text-3xl lg:text-5xl font-black uppercase tracking-tight">
               New <span className="text-pop-pink">Arrivals</span>
             </h2>
+            <p className="text-sm font-mono text-muted-foreground mt-2">
+              Latest drop: {products.length > 0 && products[0].createdAt
+                ? new Date(products[0].createdAt).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })
+                : new Date().toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}
+            </p>
           </div>
           <Button
             variant="outline"

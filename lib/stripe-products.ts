@@ -1,6 +1,7 @@
 import "server-only"
 import Stripe from "stripe"
 import type { Product } from "./products"
+import { extractProductInfo } from "./product-fallback"
 
 // Initialize Stripe client
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!)
@@ -14,10 +15,13 @@ function transformStripeProduct(
 ): Product {
     const metadata = product.metadata || {}
 
+    // Fallback if metadata is missing
+    const fallback = extractProductInfo(product.name, product.description || "")
+
     return {
         id: product.id,
         name: product.name,
-        brand: metadata.brand || "Unknown",
+        brand: metadata.brand || fallback.brand,
         description: product.description || "",
         longDescription: metadata.longDescription || product.description || "",
         priceInCents: price?.unit_amount || 0,
@@ -26,8 +30,8 @@ function transformStripeProduct(
             : undefined,
         images: product.images || [],
         badge: metadata.badge || undefined,
-        year: metadata.year || "Unknown",
-        category: (metadata.category as "camera" | "accessory") || "camera",
+        year: metadata.year || fallback.year,
+        category: (metadata.category as "camera" | "accessory") || fallback.category,
         subcategory: metadata.subcategory || undefined,
         condition: metadata.condition || "Good",
         specs: {
@@ -53,6 +57,7 @@ function transformStripeProduct(
             : undefined,
         isTrending: metadata.isTrending === "true",
         isBestseller: metadata.isBestseller === "true",
+        createdAt: product.created * 1000, // Stripe uses seconds, JS uses ms
     }
 }
 

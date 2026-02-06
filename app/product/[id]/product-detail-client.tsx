@@ -106,10 +106,10 @@ export function ProductDetailClient({ product, relatedProducts }: ProductDetailC
                 <Badge
                   variant="outline"
                   className={`${product.condition === "Excellent" || product.condition === "New"
-                      ? "border-green-200 bg-green-50 text-green-700"
-                      : product.condition === "Good" || product.condition === "Very Good"
-                        ? "border-amber-200 bg-amber-50 text-amber-700"
-                        : ""
+                    ? "border-green-200 bg-green-50 text-green-700"
+                    : product.condition === "Good" || product.condition === "Very Good"
+                      ? "border-amber-200 bg-amber-50 text-amber-700"
+                      : ""
                     }`}
                 >
                   {product.condition}
@@ -144,8 +144,8 @@ export function ProductDetailClient({ product, relatedProducts }: ProductDetailC
               {/* Quick features */}
               <div className="grid grid-cols-3 gap-4 mt-8">
                 {[
-                  { icon: Package, label: "Free Shipping", sublabel: "Orders $100+" },
-                  { icon: Shield, label: "30-Day Warranty", sublabel: "Full coverage" },
+                  { icon: Package, label: "Free Shipping", sublabel: "Orders $75+" },
+                  { icon: Shield, label: "90-Day Warranty", sublabel: "Full coverage" },
                   { icon: RotateCcw, label: "Easy Returns", sublabel: "No hassle" },
                 ].map((item) => (
                   <div key={item.label} className="text-center p-4 bg-secondary/50 rounded-2xl">
@@ -188,7 +188,7 @@ export function ProductDetailClient({ product, relatedProducts }: ProductDetailC
                   disabled={!product.inStock}
                 >
                   <Link href={`/checkout?product=${product.id}`}>
-                    <Zap className="h-5 w-5 mr-2" />
+                    <ShoppingBag className="h-5 w-5 mr-2" />
                     Buy Now
                   </Link>
                 </Button>
@@ -281,9 +281,11 @@ export function ProductDetailClient({ product, relatedProducts }: ProductDetailC
 
             <TabsContent value="description" className="mt-8">
               <div className="max-w-3xl">
-                <p className="text-lg leading-relaxed text-muted-foreground">
-                  {product.longDescription || product.description}
-                </p>
+                <div className="text-lg leading-relaxed text-muted-foreground space-y-4">
+                  {(product.longDescription || product.description).split('+').map((paragraph, index) => (
+                    <p key={index}>{paragraph.trim()}</p>
+                  ))}
+                </div>
 
                 {product.features && product.features.length > 0 && (
                   <div className="mt-8">
@@ -321,7 +323,7 @@ export function ProductDetailClient({ product, relatedProducts }: ProductDetailC
                 <div>
                   <h3 className="font-bold text-lg mb-2">Shipping</h3>
                   <ul className="space-y-2 text-muted-foreground">
-                    <li>• Free standard shipping on orders over $100</li>
+                    <li>• Free standard shipping on orders over $75</li>
                     <li>• Standard shipping (5-7 business days): $5.99</li>
                     <li>• Express shipping (2-3 business days): $12.99</li>
                     <li>• All items are carefully packaged to ensure safe delivery</li>
@@ -333,8 +335,8 @@ export function ProductDetailClient({ product, relatedProducts }: ProductDetailC
                   <ul className="space-y-2 text-muted-foreground">
                     <li>• 30-day return policy for all items</li>
                     <li>• Items must be in original condition with all accessories</li>
-                    <li>• All cameras include a 30-day warranty covering defects</li>
-                    <li>• Contact us at christianvelasquez363@gmail.com for returns</li>
+                    <li>• All cameras include a 90-day warranty covering defects</li>
+                    <li>• Contact us at support@measurejoy.org for returns</li>
                   </ul>
                 </div>
               </div>

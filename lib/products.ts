@@ -33,6 +33,7 @@ export interface Product {
   rating?: number
   isTrending?: boolean
   isBestseller?: boolean
+  createdAt?: number
 }
 
 /**

@@ -77,7 +77,7 @@ export function TestimonialsSection() {
         <div className="text-center mt-12">
           <div className="inline-flex items-center gap-2 bg-pop-yellow px-6 py-3 rounded-full">
             <Star className="h-5 w-5 fill-foreground text-foreground" />
-            <span className="font-bold">4.9/5 from 2,847+ reviews</span>
+            <span className="font-bold">Top-rated store for vintage tech</span>
           </div>
         </div>
       </div>

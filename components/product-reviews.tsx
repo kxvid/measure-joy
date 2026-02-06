@@ -195,9 +195,9 @@ export function ProductReviews({ productId }: ProductReviewsProps) {
           ) : !showForm ? (
             <div className="text-center py-12 bg-secondary/30 rounded-2xl">
               <MessageSquare className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-              <h3 className="font-semibold text-lg">No reviews yet</h3>
+              <h3 className="font-semibold text-lg">Be the first to review!</h3>
               <p className="text-muted-foreground mt-2 max-w-md mx-auto">
-                This product hasn't been reviewed yet. Be the first to share your experience!
+                We just got this item in stock. Share your thoughts with other Y2K enthusiasts.
               </p>
             </div>
           ) : null}

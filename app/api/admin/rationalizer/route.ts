@@ -1,11 +1,17 @@
 import { NextResponse } from "next/server"
 import { GoogleGenerativeAI } from "@google/generative-ai"
 import Stripe from "stripe"
+import { auth } from "@clerk/nextjs/server"
 
 // Initialize Gemini and Stripe
 const genAI = new GoogleGenerativeAI(process.env.GOOGLE_GENERATIVE_AI_API_KEY!)
 const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" })
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!)
+
+// Add execution time limit (Vercel serverless functions have timeouts)
+// We'll stop processing new items if we're close to the limit (e.g. 50s for a 60s timeout)
+// Note: This is a soft limit for the loop.
+const MAX_EXECUTION_TIME_MS = 50000
 
 /**
  * Product Rationalizer - The "Quarterback" for product data enrichment
@@ -211,9 +217,18 @@ function needsRationalization(value: string | undefined | null): boolean {
  * POST: Rationalize all products or a specific product
  */
 export async function POST(request: Request) {
+    // 1. Security Check: Ensure user is admin
+    const { sessionClaims } = await auth()
+    const role = (sessionClaims?.metadata as { role?: string })?.role
+
+    if (role !== "admin") {
+        return NextResponse.json({ error: "Unauthorized" }, { status: 403 })
+    }
+
     try {
         const body = await request.json()
         const { productId, dryRun = false, force = false } = body
+        const startTime = Date.now()
 
         const results: RationalizerResult[] = []
         let products: Stripe.Product[]
@@ -229,6 +244,12 @@ export async function POST(request: Request) {
         }
 
         for (const product of products) {
+            // 2. Stability Check: Exit if nearing timeout
+            if (Date.now() - startTime > MAX_EXECUTION_TIME_MS) {
+                console.warn("[Rationalizer] Approaching execution timeout, stopping early.")
+                break;
+            }
+
             const metadata = product.metadata || {}
 
             // Check if rationalization is needed
@@ -333,6 +354,7 @@ export async function POST(request: Request) {
             cameras: results.filter(r => r.category === "camera").length,
             accessories: results.filter(r => r.category === "accessory").length,
             errors: results.filter(r => !r.success).length,
+            partialResult: products.length > results.length,
             dryRun
         }
 
@@ -351,6 +373,14 @@ export async function POST(request: Request) {
  * GET: Get rationalization status for all products
  */
 export async function GET() {
+    // 1. Security Check: Ensure user is admin
+    const { sessionClaims } = await auth()
+    const role = (sessionClaims?.metadata as { role?: string })?.role
+
+    if (role !== "admin") {
+        return NextResponse.json({ error: "Unauthorized" }, { status: 403 })
+    }
+
     try {
         const products = await stripe.products.list({ active: true, limit: 100 })
 
@@ -410,3 +440,4 @@ export async function GET() {
         )
     }
 }
+

@@ -37,7 +37,7 @@ export function ImageGallery({ images, productName }: ImageGalleryProps) {
           src={images[selectedIndex] || "/placeholder.svg"}
           alt={`${productName} - Image ${selectedIndex + 1}`}
           className={cn(
-            "w-full h-full object-cover transition-transform duration-500",
+            "w-full h-full object-contain transition-transform duration-500",
             isZoomed && "scale-150 cursor-zoom-out",
           )}
           onClick={() => setIsZoomed(!isZoomed)}

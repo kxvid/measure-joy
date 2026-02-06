@@ -15,7 +15,7 @@ interface CartDrawerProps {
 export function CartDrawer({ open, onClose }: CartDrawerProps) {
   const { items, removeItem, updateQuantity, totalPrice } = useCart()
 
-  const freeShippingThreshold = 10000 // $100
+  const freeShippingThreshold = 7500 // $75
   const shippingProgress = Math.min((totalPrice / freeShippingThreshold) * 100, 100)
   const remainingForFreeShipping = Math.max(freeShippingThreshold - totalPrice, 0)
 
