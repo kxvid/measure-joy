@@ -2,46 +2,46 @@ import { NextResponse } from "next/server"
 import { Resend } from "resend"
 import { createClient } from "@/lib/supabase/server"
 
-const resend = new Resend(process.env.RESEND_API_KEY)
+const resend = process.env.RESEND_API_KEY ? new Resend(process.env.RESEND_API_KEY) : null
 
 export async function POST(request: Request) {
-    try {
-        const { email, source = "newsletter" } = await request.json()
+  try {
+    const { email, source = "newsletter" } = await request.json()
 
-        if (!email || !email.includes("@")) {
-            return NextResponse.json(
-                { error: "Valid email is required" },
-                { status: 400 }
-            )
-        }
+    if (!email || !email.includes("@")) {
+      return NextResponse.json(
+        { error: "Valid email is required" },
+        { status: 400 }
+      )
+    }
 
-        // Store subscriber in Supabase
-        const supabase = await createClient()
-        const { error: dbError } = await supabase
-            .from("subscribers")
-            .upsert(
-                {
-                    email: email.toLowerCase().trim(),
-                    source,
-                    subscribed_at: new Date().toISOString(),
-                    is_active: true
-                },
-                { onConflict: "email" }
-            )
+    // Store subscriber in Supabase
+    const supabase = await createClient()
+    const { error: dbError } = await supabase
+      .from("subscribers")
+      .upsert(
+        {
+          email: email.toLowerCase().trim(),
+          source,
+          subscribed_at: new Date().toISOString(),
+          is_active: true
+        },
+        { onConflict: "email" }
+      )
 
-        if (dbError) {
-            console.error("Database error:", dbError)
-            // Continue anyway - email capture is more important than DB storage
-        }
+    if (dbError) {
+      console.error("Database error:", dbError)
+      // Continue anyway - email capture is more important than DB storage
+    }
 
-        // Send welcome email via Resend
-        if (process.env.RESEND_API_KEY) {
-            try {
-                await resend.emails.send({
-                    from: "Measure Joy <hello@measurejoy.org>",
-                    to: email,
-                    subject: "Welcome to Measure Joy! 📸",
-                    html: `
+    // Send welcome email via Resend
+    if (resend) {
+      try {
+        await resend.emails.send({
+          from: "Measure Joy <hello@measurejoy.org>",
+          to: email,
+          subject: "Welcome to Measure Joy! 📸",
+          html: `
             <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 600px; margin: 0 auto; padding: 40px 20px;">
               <div style="text-align: center; margin-bottom: 32px;">
                 <h1 style="font-size: 28px; font-weight: 800; margin: 0; color: #1a1a1a;">MEASURE JOY</h1>
@@ -71,23 +71,23 @@ export async function POST(request: Request) {
               </p>
             </div>
           `,
-                })
-            } catch (emailError) {
-                console.error("Email send error:", emailError)
-                // Don't fail the request if email fails - subscription still succeeded
-            }
-        }
-
-        return NextResponse.json({
-            success: true,
-            message: "Successfully subscribed!"
         })
-
-    } catch (error) {
-        console.error("Subscribe error:", error)
-        return NextResponse.json(
-            { error: "Failed to subscribe. Please try again." },
-            { status: 500 }
-        )
+      } catch (emailError) {
+        console.error("Email send error:", emailError)
+        // Don't fail the request if email fails - subscription still succeeded
+      }
     }
+
+    return NextResponse.json({
+      success: true,
+      message: "Successfully subscribed!"
+    })
+
+  } catch (error) {
+    console.error("Subscribe error:", error)
+    return NextResponse.json(
+      { error: "Failed to subscribe. Please try again." },
+      { status: 500 }
+    )
+  }
 }

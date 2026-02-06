@@ -3,7 +3,7 @@
 import { useCallback, useState } from "react"
 import { EmbeddedCheckout, EmbeddedCheckoutProvider } from "@stripe/react-stripe-js"
 import { loadStripe } from "@stripe/stripe-js"
-import { startCheckoutSession, startSingleProductCheckout, saveOrderFromCheckout } from "@/app/actions/stripe"
+import { startCheckoutSession, startSingleProductCheckout } from "@/app/actions/stripe"
 import { useCart } from "@/lib/cart-context"
 // import { createClient } from "@/lib/supabase/client"
 import { useAuth } from "@clerk/nextjs" // Added Clerk import
@@ -43,22 +43,6 @@ export default function Checkout({ productId }: CheckoutProps) {
     return secret
   }, [productId, items, userId])
 
-  const handleComplete = useCallback(async () => {
-    // Get the session ID from the URL or embedded checkout
-    const urlParams = new URLSearchParams(window.location.search)
-    const sessionId = urlParams.get("session_id")
-
-    if (sessionId) {
-      const result = await saveOrderFromCheckout(sessionId)
-      if (result.success) {
-        setOrderEmail(result.email || null)
-        clearCart()
-      }
-    } else {
-      clearCart()
-    }
-    setCheckoutComplete(true)
-  }, [clearCart])
 
   if (checkoutComplete) {
     return (
