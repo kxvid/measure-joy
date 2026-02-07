@@ -3,7 +3,7 @@
 import { getOrders } from "@/app/actions/orders" // This now fetches from Stripe
 import { getAdminOrders } from "@/app/actions/admin"
 import { redirect } from "next/navigation"
-import { isAdmin } from "@/lib/auth"
+import { checkAdminAccess } from "@/app/actions/auth-admin"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -19,8 +19,25 @@ import { Badge } from "@/components/ui/badge"
 import { Package, Truck, CheckCircle, Clock } from "lucide-react"
 
 export default async function AdminOrdersPage() {
-    if (!await isAdmin()) {
-        redirect("/")
+    // Legacy isAdmin likely checks Clerk. We use our own cookie gate now.
+    // The layout.tsx gate handles the UI/redirect for missing auth, 
+    // but we can double check here or just let the layout handle it.
+    // Ideally, we shouldn't redirect to "/" if layout already gates it.
+    // But if we want to be safe:
+    /*
+    if (!await checkAdminAccess()) {
+        redirect("/admin") // Go back to gate
+    }
+    */
+    // Actually, layout.tsx *already* gates this. 
+    // If we are here, we passed layout (unless layout didn't run? layout always runs).
+    // The previous code redirected to "/" which confusingly kicked them out.
+    // I will remove the redirect entirely because Layout handles it, 
+    // OR use the correct check so it doesn't false-negative.
+
+    // Let's use checkAdminAccess to be safe, but redirect to /admin (login) not /.
+    if (!await checkAdminAccess()) {
+        redirect("/admin")
     }
 
     // Fetch all orders - currently getOrders() fetches for the *current user*.

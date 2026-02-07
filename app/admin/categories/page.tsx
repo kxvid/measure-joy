@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { useUser } from "@clerk/nextjs"
+
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -63,7 +63,9 @@ const SUBCATEGORIES = [
 ]
 
 export default function CategoriesAdminPage() {
-    const { isLoaded, isSignedIn, user } = useUser()
+    // Check admin access - handled by layout.tsx now
+    // const isAdmin = user?.publicMetadata?.role === "admin" || true 
+
     const [products, setProducts] = useState<Product[]>([])
     const [loading, setLoading] = useState(true)
     const [saving, setSaving] = useState<string | null>(null)
@@ -74,14 +76,9 @@ export default function CategoriesAdminPage() {
     const [editedCategories, setEditedCategories] = useState<Record<string, { category: string; subcategory: string }>>({})
     const [successMessage, setSuccessMessage] = useState<string | null>(null)
 
-    // Check admin access
-    const isAdmin = user?.publicMetadata?.role === "admin" || true // Temporarily bypass for migration
-
     useEffect(() => {
-        if (isLoaded && isSignedIn) {
-            fetchProducts()
-        }
-    }, [isLoaded, isSignedIn])
+        fetchProducts()
+    }, [])
 
     async function fetchProducts() {
         setLoading(true)
@@ -208,16 +205,6 @@ export default function CategoriesAdminPage() {
         )
     }
 
-    if (!isSignedIn || !isAdmin) {
-        return (
-            <div className="flex flex-col items-center justify-center min-h-screen gap-4">
-                <AlertCircle className="h-12 w-12 text-red-500" />
-                <h1 className="text-2xl font-bold">Access Denied</h1>
-                <p className="text-muted-foreground">You need admin access to view this page.</p>
-                <Link href="/" className="text-blue-600 hover:underline">Go back home</Link>
-            </div>
-        )
-    }
 
     return (
         <div className="container mx-auto py-8 px-4">
