@@ -7,12 +7,12 @@ import { verifyAdminCode } from "@/app/actions/auth-admin"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 
-export default function AdminLayout({
+export default async function AdminLayout({
     children,
 }: {
     children: React.ReactNode
 }) {
-    const cookieStore = cookies()
+    const cookieStore = await cookies()
     const isAuth = cookieStore.get("admin_access")?.value === "true"
 
     if (!isAuth) {

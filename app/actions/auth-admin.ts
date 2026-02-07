@@ -9,7 +9,7 @@ export async function verifyAdminCode(formData: FormData) {
     const code = formData.get("code") as string
 
     if (code === ADMIN_CODE) {
-        cookies().set("admin_access", "true", {
+        (await cookies()).set("admin_access", "true", {
             httpOnly: true,
             secure: process.env.NODE_ENV === "production",
             maxAge: 60 * 60 * 24 * 7 // 1 week
@@ -21,11 +21,11 @@ export async function verifyAdminCode(formData: FormData) {
 }
 
 export async function checkAdminAccess() {
-    const cookieStore = cookies()
+    const cookieStore = await cookies()
     return cookieStore.get("admin_access")?.value === "true"
 }
 
 export async function logoutAdmin() {
-    cookies().delete("admin_access")
+    (await cookies()).delete("admin_access")
     redirect("/")
 }
