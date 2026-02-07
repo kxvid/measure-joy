@@ -155,7 +155,7 @@ export async function generateProductCopy(
     variant: CopyVariant = "A"
 ): Promise<ProductCopy> {
     const model = genAI.getGenerativeModel({
-        model: "gemini-1.5-flash",
+        model: "gemini-2.0-flash",
         generationConfig: {
             temperature: 0.8,
             topP: 0.9,
@@ -279,7 +279,7 @@ export async function factCheckDescription(
     product: ProductInfo,
     description: string
 ): Promise<{ isAccurate: boolean; corrections: string[] }> {
-    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" })
+    const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" })
 
     const prompt = `You are a fact-checker for camera product descriptions.
 
