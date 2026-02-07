@@ -282,8 +282,12 @@ export function ProductDetailClient({ product, relatedProducts }: ProductDetailC
             <TabsContent value="description" className="mt-8">
               <div className="max-w-3xl">
                 <div className="text-lg leading-relaxed text-muted-foreground space-y-4">
-                  {(product.longDescription || product.description).split('+').map((paragraph, index) => (
-                    <p key={index}>{paragraph.trim()}</p>
+                  {(product.longDescription || product.description)
+                    .split(/\+|\n/)
+                    .map(s => s.trim())
+                    .filter(Boolean)
+                    .map((paragraph, index) => (
+                    <p key={index}>{paragraph}</p>
                   ))}
                 </div>
 
