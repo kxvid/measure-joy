@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server"
 import { GoogleGenerativeAI } from "@google/generative-ai"
 import Stripe from "stripe"
-import { auth } from "@clerk/nextjs/server"
+import { cookies } from "next/headers"
 
 // Initialize Gemini and Stripe
 const genAI = new GoogleGenerativeAI(process.env.GOOGLE_GENERATIVE_AI_API_KEY!)

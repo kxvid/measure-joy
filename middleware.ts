@@ -5,13 +5,6 @@ const isAdminRoute = createRouteMatcher(["/admin(.*)"])
 const isUserRoute = createRouteMatcher(["/account(.*)"])
 
 export default clerkMiddleware(async (auth, req) => {
-    // Protect admin routes with role check
-    if (isAdminRoute(req)) {
-        await auth.protect((has) => {
-            return has({ role: "admin" })
-        })
-    }
-
     // Protect user routes with basic auth
     if (isUserRoute(req)) {
         await auth.protect()
