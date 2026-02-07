@@ -32,7 +32,7 @@ export default function ShippingPage() {
               Free Shipping
             </h2>
             <p className="text-muted-foreground mt-2">
-              Orders over $100 qualify for free standard shipping within the continental United States. This offer is
+              Orders over $75 qualify for free standard shipping within the continental United States. This offer is
               automatically applied at checkout.
             </p>
           </section>

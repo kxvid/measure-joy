@@ -26,7 +26,7 @@ const faqs = [
       },
       {
         q: "Is shipping free?",
-        a: "Orders over $100 qualify for free standard shipping within the continental US. Other orders have a flat rate of $9.99.",
+        a: "Orders over $75 qualify for free standard shipping within the continental US. Other orders have a flat rate of $9.99.",
       },
     ],
   },
@@ -39,7 +39,7 @@ const faqs = [
       },
       {
         q: "Do cameras come with a warranty?",
-        a: "Yes, all cameras come with a 30-day functionality warranty. If your camera develops any issues within this period, we'll repair or replace it free of charge.",
+        a: "Yes, all cameras come with a 90-day functionality warranty. If your camera develops any issues within this period, we'll repair or replace it free of charge.",
       },
       {
         q: "What if my camera arrives damaged?",

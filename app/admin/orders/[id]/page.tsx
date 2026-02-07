@@ -3,9 +3,10 @@
 import { getOrderById } from "@/app/actions/orders"
 import { updateOrderTracking } from "@/app/actions/admin"
 import { redirect } from "next/navigation"
-import { isAdmin } from "@/lib/auth"
+import { checkAdminAccess } from "@/app/actions/auth-admin"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
+
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -13,12 +14,9 @@ import { Separator } from "@/components/ui/separator"
 import { ChevronLeft, Truck, Package, Clock, ShoppingBag } from "lucide-react"
 import { revalidatePath } from "next/cache"
 
-// Client component for the tracking form?
-// Let's keep it simple and make a small client component or just a server action form.
-
 export default async function AdminOrderDetailsPage({ params }: { params: { id: string } }) {
-    if (!await isAdmin()) {
-        redirect("/")
+    if (!await checkAdminAccess()) {
+        redirect("/admin")
     }
 
     // We can use getOrderById from clean stripe actions, 

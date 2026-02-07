@@ -6,7 +6,19 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { ArrowRight, Sparkles, Loader2 } from "lucide-react"
 
-export function Newsletter() {
+interface NewsletterProps {
+  cms?: Record<string, any>
+}
+
+const DEFAULTS = {
+  badge: "Join The List",
+  heading: "Get First Access",
+  subtitle: "New finds drop almost daily. Don't miss out on rare cameras and exclusive deals.",
+  disclaimer: "No spam, ever. Unsubscribe anytime.",
+}
+
+export function Newsletter({ cms = {} }: NewsletterProps) {
+  const c = { ...DEFAULTS, ...cms }
   const [email, setEmail] = useState("")
   const [submitted, setSubmitted] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
@@ -45,14 +57,14 @@ export function Newsletter() {
       <div className="mx-auto max-w-7xl px-4 lg:px-6">
         <div className="max-w-2xl mx-auto text-center">
           <span className="inline-block px-4 py-1 bg-foreground text-pop-yellow text-xs font-bold uppercase tracking-wider mb-4">
-            Join The List
+            {c.badge}
           </span>
 
           <h2 className="text-3xl lg:text-5xl font-black uppercase tracking-tight text-foreground mb-4">
-            Get First Access
+            {c.heading}
           </h2>
           <p className="text-foreground/70 text-base lg:text-lg leading-relaxed mb-8">
-            New finds drop almost daily. Don't miss out on rare cameras and exclusive deals.
+            {c.subtitle}
           </p>
 
           {submitted ? (
@@ -96,7 +108,7 @@ export function Newsletter() {
             <p className="text-sm text-red-600 mt-3 font-medium">{error}</p>
           )}
 
-          <p className="text-xs text-foreground/50 mt-5 uppercase tracking-wide">No spam, ever. Unsubscribe anytime.</p>
+          <p className="text-xs text-foreground/50 mt-5 uppercase tracking-wide">{c.disclaimer}</p>
         </div>
       </div>
     </section>

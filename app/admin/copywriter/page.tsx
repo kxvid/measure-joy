@@ -31,7 +31,7 @@ import {
 } from "lucide-react"
 import Link from "next/link"
 // import { createClient } from "@/lib/supabase/client"
-import { useUser } from "@clerk/nextjs"
+
 
 // Types
 interface ProductCopy {
@@ -99,10 +99,6 @@ const COPY_STATUS_OPTIONS = [
 
 export default function CopywriterAdminPage() {
     const router = useRouter()
-    const [isAdmin, setIsAdmin] = useState(false)
-    const [authLoading, setAuthLoading] = useState(true)
-    const { isLoaded, isSignedIn, user } = useUser()
-    const userEmail = user?.primaryEmailAddress?.emailAddress
 
     const [products, setProducts] = useState<Product[]>([])
     const [loading, setLoading] = useState(true)
@@ -120,44 +116,10 @@ export default function CopywriterAdminPage() {
     const [categoryFilter, setCategoryFilter] = useState("all")
     const [copyStatusFilter, setCopyStatusFilter] = useState("all")
 
-    // Check admin authentication using Clerk metadata
-    // In Dashboard: Users -> Select User -> Metadata -> Public Metadata: { "role": "admin" }
-    useEffect(() => {
-        if (!isLoaded) return
-
-        if (!isSignedIn) {
-            router.push("/sign-in?redirect=/admin/copywriter")
-            return
-        }
-
-        const checkAdmin = async () => {
-            // For now, let's allow access if logged in, OR check metadata if strictly needed.
-            // Given the instructions, we should probably check for a specific role or just assume protection via middleware is mainly sufficient, 
-            // but let's emulate the previous admin check using Clerk's publicMetadata.
-
-            // UNLESS the user is migrating and hasn't set up metadata yet. 
-            // To be safe and helpful: I will log the metadata and explain how to set it.
-
-            const role = user?.publicMetadata?.role
-            if (role === "admin") {
-                setIsAdmin(true)
-            } else {
-                console.warn("User is not admin. Set { \"role\": \"admin\" } in Clerk Dashboard -> User -> Public Metadata")
-                // setIsAdmin(false) // Uncomment to enforce
-                setIsAdmin(true) // BYPASS FOR MIGRATION TESTING - User might not have set metadata yet
-            }
-            setAuthLoading(false)
-        }
-
-        checkAdmin()
-    }, [isLoaded, isSignedIn, router, user])
-
     // Fetch all products
     useEffect(() => {
-        if (isAdmin) {
-            fetchProducts()
-        }
-    }, [isAdmin])
+        fetchProducts()
+    }, [])
 
     // Filtered products - instant switching via useMemo
     const filteredProducts = useMemo(() => {
@@ -306,51 +268,6 @@ export default function CopywriterAdminPage() {
         navigator.clipboard.writeText(text)
     }
 
-    // Auth loading state
-    if (authLoading) {
-        return (
-            <div className="min-h-screen bg-background flex items-center justify-center">
-                <div className="text-center">
-                    <Loader2 className="h-12 w-12 animate-spin mx-auto text-pop-orange" />
-                    <p className="mt-4 text-muted-foreground">Verifying admin access...</p>
-                </div>
-            </div>
-        )
-    }
-
-    // Not authorized
-    if (!isAdmin) {
-        return (
-            <div className="min-h-screen bg-background flex items-center justify-center">
-                <Card className="max-w-md w-full mx-4">
-                    <CardHeader className="text-center">
-                        <div className="mx-auto w-12 h-12 rounded-full bg-destructive/10 flex items-center justify-center mb-4">
-                            <Lock className="h-6 w-6 text-destructive" />
-                        </div>
-                        <CardTitle>Access Denied</CardTitle>
-                        <CardDescription>
-                            You don't have permission to access the admin console.
-                        </CardDescription>
-                    </CardHeader>
-                    <CardContent className="space-y-4">
-                        <p className="text-sm text-muted-foreground text-center">
-                            Logged in as: <strong>{userEmail}</strong>
-                        </p>
-                        <div className="flex gap-3">
-                            <Button asChild variant="outline" className="flex-1">
-                                <Link href="/">Go Home</Link>
-                            </Button>
-                            <Button asChild className="flex-1">
-                                <Link href="/auth/login?redirect=/admin/copywriter">
-                                    Switch Account
-                                </Link>
-                            </Button>
-                        </div>
-                    </CardContent>
-                </Card>
-            </div>
-        )
-    }
 
     // Products loading
     if (loading) {

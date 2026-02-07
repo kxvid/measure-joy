@@ -4,17 +4,24 @@ import { useState } from "react"
 import { X } from "lucide-react"
 import Link from "next/link"
 
-export function PromoBanner() {
+interface PromoBannerProps {
+  cms?: Record<string, any>
+}
+
+const DEFAULT_ITEMS = [
+  { text: "FREE SHIPPING ON $75+", href: "/shop" },
+  { text: "NEW ARRIVALS WEEKLY", href: "/shop?sort=newest" },
+  { text: "90-DAY WARRANTY", href: "/returns" },
+  { text: "TESTED & WORKING", href: "/about" },
+]
+
+export function PromoBanner({ cms = {} }: PromoBannerProps) {
   const [isVisible, setIsVisible] = useState(true)
 
   if (!isVisible) return null
 
-  const promoItems = [
-    { text: "FREE SHIPPING ON $75+", href: "/shop" },
-    { text: "NEW ARRIVALS WEEKLY", href: "/shop?sort=newest" },
-    { text: "90-DAY WARRANTY", href: "/returns" },
-    { text: "TESTED & WORKING", href: "/about" },
-  ]
+  const promoItems: { text: string; href: string }[] =
+    Array.isArray(cms.items) ? cms.items : DEFAULT_ITEMS
 
   return (
     <div className="relative bg-pop-pink text-white overflow-hidden">

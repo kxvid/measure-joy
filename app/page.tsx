@@ -9,21 +9,37 @@ import { TrustStory } from "@/components/trust-story"
 import { TrustBanner } from "@/components/trust-banner"
 import { Newsletter } from "@/components/newsletter"
 import { Footer } from "@/components/footer"
+import { getSectionContent } from "@/lib/content"
 
-export default function Home() {
+export const revalidate = 60 // Revalidate every 60 seconds
+
+export default async function Home() {
+  // Fetch all CMS content in parallel
+  const [hero, promoBanner, trustBadges, trustBanner, trustStory, testimonials, newsletter, footer] =
+    await Promise.all([
+      getSectionContent("hero"),
+      getSectionContent("promo_banner"),
+      getSectionContent("trust_badges"),
+      getSectionContent("trust_banner"),
+      getSectionContent("trust_story"),
+      getSectionContent("testimonials"),
+      getSectionContent("newsletter"),
+      getSectionContent("footer"),
+    ])
+
   return (
     <main className="min-h-screen bg-background">
-      <PromoBanner />
+      <PromoBanner cms={promoBanner} />
       <Header />
-      <Hero />
+      <Hero cms={hero} />
       <CategoryGrid />
       <FeaturedProducts />
       <AnimatedCategories />
-      <TestimonialsSection />
-      <TrustStory />
-      <TrustBanner />
-      <Newsletter />
-      <Footer />
+      <TestimonialsSection cms={testimonials} />
+      <TrustStory cms={trustStory} />
+      <TrustBanner cms={trustBanner} />
+      <Newsletter cms={newsletter} />
+      <Footer cms={footer} />
     </main>
   )
 }

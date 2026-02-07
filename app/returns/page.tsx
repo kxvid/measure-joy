@@ -23,7 +23,7 @@ export default function ReturnsPage() {
           </div>
           <div className="bg-card border border-border rounded-lg p-6">
             <Shield className="h-6 w-6 text-accent" />
-            <h3 className="font-bold mt-4">30-Day Warranty</h3>
+            <h3 className="font-bold mt-4">90-Day Warranty</h3>
             <p className="text-sm text-muted-foreground mt-1">
               All cameras include a functionality warranty covering defects.
             </p>
@@ -52,7 +52,7 @@ export default function ReturnsPage() {
             <h2 className="text-xl font-bold">Warranty Coverage</h2>
             <div className="text-muted-foreground mt-4 space-y-4">
               <p>
-                Every camera comes with a 30-day functionality warranty. This covers any defects in the camera's core
+                Every camera comes with a 90-day functionality warranty. This covers any defects in the camera's core
                 functions including:
               </p>
               <ul className="list-disc list-inside space-y-1 ml-4">

@@ -1,12 +1,16 @@
 "use server"
 
 import { stripe } from "@/lib/stripe"
-import { requireAdmin } from "@/lib/auth"
+// import { requireAdmin } from "@/lib/auth" // Legacy Clerk check
+import { checkAdminAccess } from "@/app/actions/auth-admin"
 import { revalidatePath } from "next/cache"
 import { Order, OrderItem, ShippingAddress } from "@/lib/orders"
 
 export async function getAdminOrders(): Promise<Order[]> {
-    await requireAdmin()
+    if (!await checkAdminAccess()) {
+        console.error("Unauthorized access attempt to getAdminOrders")
+        return []
+    }
 
     try {
         // Fetch all recent successful checkout sessions
@@ -62,7 +66,9 @@ export async function updateOrderTracking(
     trackingNumber: string,
     carrier: string
 ) {
-    await requireAdmin()
+    if (!await checkAdminAccess()) {
+        return { success: false, error: "Unauthorized" }
+    }
 
     try {
         const shippedAt = new Date().toISOString()

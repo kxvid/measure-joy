@@ -197,15 +197,6 @@ export default function CategoriesAdminPage() {
         uncategorized: products.filter(p => !getCategory(p)).length
     }
 
-    if (!isLoaded) {
-        return (
-            <div className="flex items-center justify-center min-h-screen">
-                <Loader2 className="h-8 w-8 animate-spin" />
-            </div>
-        )
-    }
-
-
     return (
         <div className="container mx-auto py-8 px-4">
             <div className="flex flex-col gap-6">

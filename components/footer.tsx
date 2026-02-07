@@ -1,5 +1,8 @@
 import Link from "next/link"
-import { Instagram, Twitter, Youtube } from "lucide-react"
+
+interface FooterProps {
+  cms?: Record<string, any>
+}
 
 const footerLinks = {
   shop: [
@@ -23,48 +26,26 @@ const footerLinks = {
   ],
 }
 
-export function Footer() {
+const DEFAULT_TAGLINE = "Reviving Y2K digital cameras for a new generation. Experience the magic of early digital photography."
+const DEFAULT_BOTTOM = "Made for Y2K lovers"
+
+export function Footer({ cms = {} }: FooterProps) {
+  const tagline = cms.tagline || DEFAULT_TAGLINE
+  const bottomText = cms.bottom_text || DEFAULT_BOTTOM
+
   return (
     <footer className="bg-foreground text-background">
-      {/* Main footer content */}
       <div className="mx-auto max-w-7xl px-4 py-12 lg:px-6 lg:py-16">
         <div className="grid grid-cols-2 md:grid-cols-5 gap-8 lg:gap-12">
-          {/* Brand column */}
           <div className="col-span-2">
             <Link href="/" className="inline-block">
               <span className="text-2xl font-black tracking-tight uppercase">Measure Joy</span>
             </Link>
             <p className="text-sm text-background/60 mt-4 max-w-xs leading-relaxed">
-              Reviving Y2K digital cameras for a new generation. Experience the magic of early digital photography.
+              {tagline}
             </p>
-            {/* 
-            <div className="flex gap-2 mt-6">
-              <Link
-                href="https://instagram.com"
-                className="w-10 h-10 bg-background/10 flex items-center justify-center text-background/60 hover:text-background hover:bg-pop-pink transition-colors"
-                target="_blank"
-              >
-                <Instagram className="h-4 w-4" />
-              </Link>
-              <Link
-                href="https://twitter.com"
-                className="w-10 h-10 bg-background/10 flex items-center justify-center text-background/60 hover:text-background hover:bg-pop-pink transition-colors"
-                target="_blank"
-              >
-                <Twitter className="h-4 w-4" />
-              </Link>
-              <Link
-                href="https://youtube.com"
-                className="w-10 h-10 bg-background/10 flex items-center justify-center text-background/60 hover:text-background hover:bg-pop-pink transition-colors"
-                target="_blank"
-              >
-                <Youtube className="h-4 w-4" />
-              </Link>
-            </div>
-             */}
           </div>
 
-          {/* Links */}
           <div>
             <h3 className="font-bold text-xs text-background uppercase tracking-wider mb-4">Shop</h3>
             <ul className="space-y-3">
@@ -106,15 +87,14 @@ export function Footer() {
         </div>
       </div>
 
-      {/* Bottom bar */}
       <div className="border-t border-background/10">
         <div className="mx-auto max-w-7xl px-4 py-6 lg:px-6 flex flex-col sm:flex-row justify-between items-center gap-4">
           <p className="text-xs text-background/50 uppercase tracking-wide">
-            © {new Date().getFullYear()} Measure Joy. All rights reserved.
+            &copy; {new Date().getFullYear()} Measure Joy. All rights reserved.
           </p>
           <div className="flex items-center gap-2">
             <span className="text-pop-yellow">★</span>
-            <span className="font-mono text-xs text-background/50 uppercase">Made for Y2K lovers</span>
+            <span className="font-mono text-xs text-background/50 uppercase">{bottomText}</span>
             <span className="text-pop-pink">★</span>
           </div>
         </div>

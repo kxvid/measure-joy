@@ -3,7 +3,7 @@
 import { cookies } from "next/headers"
 import { redirect } from "next/navigation"
 
-const ADMIN_CODE = "measurejoy-admin" // Simple code
+const ADMIN_CODE = process.env.ADMIN_ACCESS_CODE || "measurejoy-admin"
 
 export async function verifyAdminCode(formData: FormData) {
     const code = formData.get("code") as string

@@ -1,11 +1,19 @@
-import { cookies } from "next/headers"
+import { cookies, headers } from "next/headers"
 import { redirect } from "next/navigation"
 import Link from "next/link"
-import { Home, LayoutDashboard, Package, ShoppingCart, Wand2, Lock } from "lucide-react"
+import { Home, LayoutDashboard, Package, ShoppingCart, Wand2, Lock, FileEdit, LogOut, Pencil } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { verifyAdminCode } from "@/app/actions/auth-admin"
+import { verifyAdminCode, logoutAdmin } from "@/app/actions/auth-admin"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+
+const NAV_ITEMS = [
+    { href: "/admin/orders", label: "Orders", icon: ShoppingCart },
+    { href: "/admin/categories", label: "Categories", icon: Package },
+    { href: "/admin/content", label: "Site Content", icon: FileEdit },
+    { href: "/admin/copywriter", label: "AI Copywriter", icon: Pencil },
+    { href: "/admin/products", label: "Data Tools", icon: Wand2 },
+]
 
 export default async function AdminLayout({
     children,
@@ -57,14 +65,17 @@ export default async function AdminLayout({
         )
     }
 
+    // Get current pathname for active state highlighting
+    const headersList = await headers()
+    const pathname = headersList.get("x-pathname") || headersList.get("x-invoke-path") || ""
+
     return (
         <div className="min-h-screen flex flex-col">
             <header className="border-b h-14 flex items-center px-4 gap-4 bg-background sticky top-0 z-50">
-                {/* Home/Account Redirect as requested */}
                 <Button variant="ghost" size="icon" asChild className="mr-2">
-                    <Link href="/account" title="Back to Account">
+                    <Link href="/" title="Back to Store">
                         <Home className="h-5 w-5" />
-                        <span className="sr-only">Back to Account</span>
+                        <span className="sr-only">Back to Store</span>
                     </Link>
                 </Button>
 
@@ -73,20 +84,35 @@ export default async function AdminLayout({
                     Admin
                 </div>
 
-                <nav className="ml-6 flex items-center gap-6 text-sm font-medium text-muted-foreground">
-                    <Link href="/admin/orders" className="flex items-center gap-2 hover:text-foreground transition-colors">
-                        <ShoppingCart className="h-4 w-4" />
-                        Orders
-                    </Link>
-                    <Link href="/admin/categories" className="flex items-center gap-2 hover:text-foreground transition-colors">
-                        <Package className="h-4 w-4" />
-                        Categories
-                    </Link>
-                    <Link href="/admin/products" className="flex items-center gap-2 hover:text-foreground transition-colors">
-                        <Wand2 className="h-4 w-4" />
-                        Data Tools
-                    </Link>
+                <nav className="ml-6 flex items-center gap-1 text-sm font-medium">
+                    {NAV_ITEMS.map((item) => {
+                        const Icon = item.icon
+                        const isActive = pathname.startsWith(item.href)
+                        return (
+                            <Link
+                                key={item.href}
+                                href={item.href}
+                                className={`flex items-center gap-2 px-3 py-1.5 rounded-md transition-colors ${
+                                    isActive
+                                        ? "bg-foreground text-background"
+                                        : "text-muted-foreground hover:text-foreground hover:bg-secondary"
+                                }`}
+                            >
+                                <Icon className="h-4 w-4" />
+                                {item.label}
+                            </Link>
+                        )
+                    })}
                 </nav>
+
+                <div className="ml-auto">
+                    <form action={logoutAdmin}>
+                        <Button variant="ghost" size="sm" type="submit" className="gap-2 text-muted-foreground hover:text-foreground">
+                            <LogOut className="h-4 w-4" />
+                            Logout
+                        </Button>
+                    </form>
+                </div>
             </header>
             <main className="flex-1 bg-muted/10">
                 {children}
