@@ -6,7 +6,7 @@ import { Menu, X, ShoppingBag, Search, ChevronDown, Heart } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { useCart } from "@/lib/cart-context"
 import { CartDrawer } from "@/components/cart-drawer"
-import { SignedIn, SignedOut, UserButton } from "@clerk/nextjs"
+import { SignedIn, SignedOut, UserButton, useUser } from "@clerk/nextjs"
 
 const navigation = [
   {
@@ -52,8 +52,8 @@ export function Header() {
                 key={item.name}
                 href={item.href}
                 className={`px-4 py-2 text-xs font-bold uppercase tracking-wider transition-colors ${item.featured
-                    ? "bg-foreground text-background hover:bg-pop-pink"
-                    : "text-foreground/70 hover:text-foreground hover:bg-secondary"
+                  ? "bg-foreground text-background hover:bg-pop-pink"
+                  : "text-foreground/70 hover:text-foreground hover:bg-secondary"
                   }`}
               >
                 {item.name}
@@ -159,6 +159,7 @@ export function Header() {
                   </Link>
                 ))}
                 <SignedIn>
+                  <MobileAdminLink setOpen={setMobileMenuOpen} />
                   <Link
                     href="/account/wishlist"
                     className="flex items-center justify-between py-4 text-xl font-bold text-foreground uppercase tracking-wide hover:text-pop-pink transition-colors border-b border-border"
@@ -203,5 +204,34 @@ export function Header() {
       {/* Cart drawer component */}
       <CartDrawer open={cartOpen} onClose={() => setCartOpen(false)} />
     </>
+  )
+}
+function MobileAdminLink({ setOpen }: { setOpen: (open: boolean) => void }) {
+  const { user } = useUser()
+  if (user?.publicMetadata?.role !== 'admin') return null
+
+  return (
+    <Link
+      href="/admin/orders"
+      className="flex items-center justify-between py-4 text-xl font-bold text-pop-pink uppercase tracking-wide hover:text-pop-pink/80 transition-colors border-b border-border"
+      onClick={() => setOpen(false)}
+    >
+      Admin Panel
+      <ChevronDown className="h-5 w-5 -rotate-90" />
+    </Link>
+  )
+}
+
+function AdminLink() {
+  const { user } = useUser()
+  if (user?.publicMetadata?.role !== 'admin') return null
+
+  return (
+    <Link
+      href="/admin/orders"
+      className="hidden lg:flex items-center gap-2 px-4 py-2 text-xs font-bold uppercase tracking-wider text-pop-pink hover:bg-secondary transition-colors"
+    >
+      Admin
+    </Link>
   )
 }

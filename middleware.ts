@@ -1,13 +1,19 @@
 import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server"
 
 // Define protected routes that require authentication
-const isProtectedRoute = createRouteMatcher([
-    "/account(.*)",
-    "/admin(.*)",
-])
+const isAdminRoute = createRouteMatcher(["/admin(.*)"])
+const isUserRoute = createRouteMatcher(["/account(.*)"])
 
 export default clerkMiddleware(async (auth, req) => {
-    if (isProtectedRoute(req)) {
+    // Protect admin routes with role check
+    if (isAdminRoute(req)) {
+        await auth.protect((has) => {
+            return has({ role: "admin" })
+        })
+    }
+
+    // Protect user routes with basic auth
+    if (isUserRoute(req)) {
         await auth.protect()
     }
 })
