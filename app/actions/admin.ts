@@ -13,20 +13,22 @@ export async function getAdminOrders(): Promise<Order[]> {
     }
 
     try {
-        // Fetch all recent successful checkout sessions
+        // Only expand data.line_items — deeper nested expansion like
+        // data.line_items.data.price.product is NOT supported on list endpoints
+        // and causes the Stripe API call to throw (silently returning [])
         const sessions = await stripe.checkout.sessions.list({
             limit: 50,
             status: 'complete',
-            expand: ["data.line_items", "data.line_items.data.price.product"],
+            expand: ["data.line_items"],
         })
 
         const orders: Order[] = sessions.data.map((session: any) => {
             const items: OrderItem[] = session.line_items?.data.map((item: any) => ({
-                productId: item.price?.product?.id || "",
-                name: (item.price?.product as any)?.name || item.description || "Product",
+                productId: typeof item.price?.product === "string" ? item.price.product : item.price?.product?.id || "",
+                name: item.description || "Product",
                 quantity: item.quantity || 1,
                 priceInCents: item.amount_total || 0,
-                image: (item.price?.product as any)?.images?.[0] || ""
+                image: ""
             })) || []
 
             const shipping_address: ShippingAddress | null = session.shipping_details?.address ? {
@@ -47,6 +49,7 @@ export async function getAdminOrders(): Promise<Order[]> {
                 total_cents: session.amount_total || 0,
                 items,
                 shipping_address,
+                customer_email: session.customer_details?.email || null,
                 created_at: new Date(session.created * 1000).toISOString(),
                 tracking_number: session.metadata?.tracking_number || null,
                 carrier: session.metadata?.carrier || null,

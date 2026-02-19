@@ -109,8 +109,10 @@ export default async function AdminOrdersPage() {
                                             {new Date(order.created_at).toLocaleDateString()}
                                         </TableCell>
                                         <TableCell>
-                                            {/* We rely on what we have. Email might not be in the basic Order list unless we fetched it. check getAdminOrders implementation plan */}
-                                            {order.shipping_address?.name || "Guest"}
+                                            <div>{order.shipping_address?.name || "Guest"}</div>
+                                            {order.customer_email && (
+                                                <div className="text-xs text-muted-foreground">{order.customer_email}</div>
+                                            )}
                                         </TableCell>
                                         <TableCell>
                                             <Badge variant={

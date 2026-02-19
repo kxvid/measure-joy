@@ -154,22 +154,30 @@ export default function CopywriterAdminPage() {
                 return
             }
 
-            const detailedProducts = await Promise.all(
-                productsList.slice(0, 50).map(async (p: { id: string }) => {
-                    try {
-                        const res = await fetch(`/api/admin/generate-copy?productId=${p.id}`)
-                        if (res.ok) {
-                            const detail = await res.json()
-                            return detail.product
-                        }
-                    } catch {
-                        // Fall back
-                    }
-                    return null
-                })
-            )
+            // Map directly from the products API — all copy data is already included.
+            // This replaces the old N+1 pattern that fired 24+ parallel requests to
+            // /api/admin/generate-copy for each product, which hammered Stripe rate limits.
+            const mapped: Product[] = productsList.map((p: any) => ({
+                id: p.id,
+                name: p.name,
+                description: p.description || "",
+                images: p.images || [],
+                currentCopy: {
+                    description: p.description || "",
+                    longDescription: p.longDescription || "",
+                    features: p.features || [],
+                    sellingPoints: p.sellingPoints || [],
+                    generatedAt: null,
+                },
+                metadata: {
+                    brand: p.brand || "Unknown",
+                    year: p.year || "Unknown",
+                    category: p.category || "camera",
+                    condition: p.condition || "Good",
+                },
+            }))
 
-            setProducts(detailedProducts.filter(Boolean))
+            setProducts(mapped)
         } catch (err) {
             setError(err instanceof Error ? err.message : "Failed to load products")
             setProducts([])

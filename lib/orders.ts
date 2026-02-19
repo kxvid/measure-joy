@@ -25,6 +25,7 @@ export interface Order {
   total_cents: number
   items: OrderItem[]
   shipping_address: ShippingAddress | null
+  customer_email?: string | null
   created_at: string
   tracking_number?: string | null
   carrier?: string | null
