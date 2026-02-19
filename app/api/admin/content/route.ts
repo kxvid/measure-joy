@@ -75,7 +75,8 @@ export async function PUT(request: Request) {
         }
 
         invalidateContentCache(section)
-        revalidatePath("/")
+        revalidatePath("/", "layout")
+        revalidatePath("/shop")
         revalidatePath("/about")
         revalidatePath("/faq")
 

@@ -100,8 +100,12 @@ Respond in this exact JSON format:
         const result = await model.generateContent(prompt)
         const response = result.response.text()
 
-        // Extract JSON from response
-        const jsonMatch = response.match(/\{[\s\S]*\}/)
+        // Strip markdown code blocks before extracting JSON
+        let jsonStr = response.trim()
+        if (jsonStr.startsWith("```")) {
+            jsonStr = jsonStr.replace(/```json?\n?/g, "").replace(/```$/g, "")
+        }
+        const jsonMatch = jsonStr.match(/\{[\s\S]*\}/)
         if (!jsonMatch) {
             throw new Error("Failed to parse LLM response")
         }
@@ -190,16 +194,33 @@ function rationalizeByRules(
         ? existingMetadata.condition
         : "Good"
 
+    // Generate basic features and selling points from available info
+    const defaultFeatures: string[] = []
+    if (brand !== "Unknown") defaultFeatures.push(`Authentic ${brand} product`)
+    if (category === "camera") {
+        defaultFeatures.push("Tested and verified working condition")
+        defaultFeatures.push(`${condition} cosmetic condition`)
+        if (year !== "Unknown") defaultFeatures.push(`Released in ${year}`)
+        defaultFeatures.push("Includes original battery compartment")
+    } else {
+        defaultFeatures.push(`Compatible with popular ${brand !== "Unknown" ? brand + " " : ""}cameras`)
+        defaultFeatures.push(`${condition} condition`)
+    }
+
+    const defaultSellingPoints: string[] = category === "camera"
+        ? ["Perfect for Y2K photography enthusiasts", "Tested and ready to shoot", "Ships with care and protection"]
+        : ["Essential accessory for your camera kit", "Quality tested before shipping"]
+
     return {
         brand,
         year,
         category,
         subcategory: existingMetadata.subcategory,
         condition,
-        description: existingDescription || `Vintage ${brand} digital camera. Tested and working strategy.`,
+        description: existingDescription || `Vintage ${brand !== "Unknown" ? brand + " " : ""}digital camera. Tested and working.`,
         longDescription: existingMetadata.longDescription || "",
-        features: [],
-        sellingPoints: [],
+        features: defaultFeatures,
+        sellingPoints: defaultSellingPoints,
         confidence: 0.4 // Low confidence marker
     }
 }

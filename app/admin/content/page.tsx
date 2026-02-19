@@ -95,6 +95,16 @@ const SECTION_SCHEMA: Record<string, { key: string; label: string; type: "text" 
     ],
 }
 
+// Template shapes for object_list fields so "Add Item" on empty lists creates usable fields
+const OBJECT_LIST_TEMPLATES: Record<string, Record<string, any>> = {
+    "promo_banner.items": { text: "", link: "" },
+    "trust_badges.items": { text: "", icon: "" },
+    "trust_banner.items": { text: "", icon: "" },
+    "trust_story.points": { title: "", description: "" },
+    "testimonials.items": { name: "", text: "", rating: 5 },
+    "about.values": { title: "", description: "" },
+}
+
 export default function ContentEditorPage() {
     const [activeSection, setActiveSection] = useState("hero")
     const [content, setContent] = useState<Record<string, Record<string, any>>>({})
@@ -296,6 +306,7 @@ export default function ContentEditorPage() {
                             <FieldEditor
                                 key={field.key}
                                 field={field}
+                                section={activeSection}
                                 value={editState[activeSection]?.[field.key]}
                                 onChange={(val) => updateField(activeSection, field.key, val)}
                             />
@@ -318,10 +329,12 @@ export default function ContentEditorPage() {
 // Field Editor component
 function FieldEditor({
     field,
+    section,
     value,
     onChange,
 }: {
     field: { key: string; label: string; type: string }
+    section: string
     value: any
     onChange: (val: any) => void
 }) {
@@ -462,7 +475,11 @@ function FieldEditor({
                         <Button
                             variant="outline"
                             size="sm"
-                            onClick={() => onChange([{}])}
+                            onClick={() => {
+                                const templateKey = `${section}.${field.key}`
+                                const template = OBJECT_LIST_TEMPLATES[templateKey] || {}
+                                onChange([{ ...template }])
+                            }}
                             className="gap-1"
                         >
                             <Plus className="h-3 w-3" />

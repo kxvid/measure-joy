@@ -17,7 +17,7 @@ import { ProductReviews } from "@/components/product-reviews"
 import { WishlistButton } from "@/components/wishlist-button"
 import { Breadcrumbs } from "@/components/breadcrumbs"
 import { TrustBadges } from "@/components/trust-badges"
-import { ShoppingBag, Check, Shield, RotateCcw, Plus, Package, Zap, Award } from "lucide-react"
+import { ShoppingBag, Check, Shield, RotateCcw, Plus, Package, Zap, Award, Sparkles } from "lucide-react"
 import { StickyAddToCart } from "@/components/sticky-add-to-cart"
 import { RecentlyViewed } from "@/components/recently-viewed"
 
@@ -301,6 +301,22 @@ export function ProductDetailClient({ product, relatedProducts }: ProductDetailC
                             <Check className="h-4 w-4 text-green-600" />
                           </div>
                           <span className="text-muted-foreground">{feature}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+
+                {product.sellingPoints && product.sellingPoints.length > 0 && (
+                  <div className="mt-8">
+                    <h3 className="text-xl font-bold mb-4">Why Buy This</h3>
+                    <ul className="grid gap-3">
+                      {product.sellingPoints.map((point, index) => (
+                        <li key={index} className="flex items-start gap-3">
+                          <div className="w-6 h-6 rounded-full bg-pop-orange/20 flex items-center justify-center flex-shrink-0 mt-0.5">
+                            <Sparkles className="h-4 w-4 text-pop-orange" />
+                          </div>
+                          <span className="text-muted-foreground">{point}</span>
                         </li>
                       ))}
                     </ul>

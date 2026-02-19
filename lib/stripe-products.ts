@@ -44,7 +44,8 @@ function transformStripeProduct(
             material: metadata.material,
             size: metadata.size,
         },
-        features: metadata.features ? JSON.parse(metadata.features) : undefined,
+        features: (() => { try { return metadata.features ? JSON.parse(metadata.features) : undefined } catch { return undefined } })(),
+        sellingPoints: (() => { try { return metadata.sellingPoints ? JSON.parse(metadata.sellingPoints) : undefined } catch { return undefined } })(),
         inStock: product.active && (metadata.inStock !== "false"),
         stockCount: metadata.stockCount
             ? parseInt(metadata.stockCount, 10)
