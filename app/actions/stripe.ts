@@ -3,6 +3,8 @@
 import { stripe } from "@/lib/stripe"
 import { getStripeProductById } from "@/lib/stripe-products"
 
+const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://measurejoy.org"
+
 interface CheckoutItem {
   productId: string
   quantity: number
@@ -45,7 +47,8 @@ export async function startCheckoutSession(items: CheckoutItem[], userId?: strin
 
   const session = await stripe.checkout.sessions.create({
     ui_mode: "embedded",
-    redirect_on_completion: "never",
+    redirect_on_completion: "if_required",
+    return_url: `${baseUrl}/checkout/return?session_id={CHECKOUT_SESSION_ID}`,
     line_items: stripeLineItems,
     mode: "payment",
     allow_promotion_codes: true,
@@ -95,7 +98,8 @@ export async function startSingleProductCheckout(productId: string, userId?: str
 
   const session = await stripe.checkout.sessions.create({
     ui_mode: "embedded",
-    redirect_on_completion: "never",
+    redirect_on_completion: "if_required",
+    return_url: `${baseUrl}/checkout/return?session_id={CHECKOUT_SESSION_ID}`,
     line_items: [
       {
         price_data: {
@@ -147,5 +151,13 @@ export async function startSingleProductCheckout(productId: string, userId?: str
   })
 
   return session.client_secret
+}
+
+export async function getCheckoutSessionStatus(sessionId: string) {
+  const session = await stripe.checkout.sessions.retrieve(sessionId)
+  return {
+    status: session.status,
+    customerEmail: session.customer_details?.email ?? null,
+  }
 }
 
