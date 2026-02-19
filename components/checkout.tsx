@@ -25,6 +25,11 @@ export default function Checkout({ productId }: CheckoutProps) {
 
   // useEffect removed as we get userId from hook directly
 
+  const handleComplete = useCallback(() => {
+    setCheckoutComplete(true)
+    clearCart()
+  }, [clearCart])
+
   const fetchClientSecret = useCallback(async () => {
     // Clerk userId can be null, but our actions expect string | undefined
     const uid = userId || undefined
