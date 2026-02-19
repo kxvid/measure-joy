@@ -10,16 +10,23 @@ const CAMERA_BRANDS = [
     "Canon",
     "Nikon",
     "Fujifilm",
+    "Fuji",
     "Olympus",
     "Kodak",
     "Samsung",
     "Pentax",
     "Casio",
     "Panasonic",
+    "Lumix",
     "HP",
     "Leica",
     "Minolta",
-    "Ricoh"
+    "Ricoh",
+    "Polaroid",
+    "GoPro",
+    "Sanyo",
+    "Kyocera",
+    "Konica"
 ]
 
 export function extractProductInfo(name: string, description: string) {
@@ -30,12 +37,14 @@ export function extractProductInfo(name: string, description: string) {
     }
 
     const lowerName = name.toLowerCase()
-    const lowerDesc = description.toLowerCase()
 
     // 1. Detect Brand
     for (const brand of CAMERA_BRANDS) {
         if (lowerName.includes(brand.toLowerCase())) {
-            info.brand = brand
+            // Normalize aliases
+            if (brand === "Fuji") info.brand = "Fujifilm"
+            else if (brand === "Lumix") info.brand = "Panasonic"
+            else info.brand = brand
             break
         }
     }
@@ -47,7 +56,7 @@ export function extractProductInfo(name: string, description: string) {
     }
 
     // 3. Detect Category (Accessory keywords)
-    const accessoryKeywords = ["battery", "charger", "case", "bag", "strap", "tripod", "cable", "card", "memory"]
+    const accessoryKeywords = ["battery", "charger", "case", "bag", "strap", "tripod", "cable", "card", "memory", "film", "cleaning", "filter", "adapter", "lens cap"]
     if (accessoryKeywords.some(k => lowerName.includes(k))) {
         info.category = "accessory"
     }
