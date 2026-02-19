@@ -133,10 +133,15 @@ export default function CategoriesAdminPage() {
             if (response.ok) {
                 setSuccessMessage(`Saved category for product`)
                 setTimeout(() => setSuccessMessage(null), 3000)
-                // Update local state
+                // Update local state — category/subcategory are top-level fields from the API
                 setProducts(prev => prev.map(p =>
                     p.id === productId
-                        ? { ...p, metadata: { ...p.metadata, category: edit.category, subcategory: edit.subcategory } }
+                        ? {
+                            ...p,
+                            category: edit.category,
+                            subcategory: edit.subcategory !== "none" ? edit.subcategory : undefined,
+                            metadata: { ...p.metadata, category: edit.category, subcategory: edit.subcategory, categorized_by_llm: "false" }
+                        }
                         : p
                 ))
                 // Clear edit state
@@ -312,21 +317,21 @@ export default function CategoriesAdminPage() {
 
                             return (
                                 <Card key={product.id} className={hasChanges ? "ring-2 ring-blue-500" : ""}>
-                                    <CardContent className="p-4">
+                                    <CardContent className="p-4 space-y-3">
                                         <div className="flex items-start gap-4">
                                             {/* Product Image */}
-                                            <div className="w-20 h-20 bg-gray-100 rounded-lg overflow-hidden flex-shrink-0">
+                                            <div className="w-16 h-16 bg-gray-100 rounded-lg overflow-hidden flex-shrink-0">
                                                 {product.images?.[0] ? (
                                                     <Image
                                                         src={product.images[0]}
                                                         alt={product.name}
-                                                        width={80}
-                                                        height={80}
+                                                        width={64}
+                                                        height={64}
                                                         className="w-full h-full object-cover"
                                                     />
                                                 ) : (
                                                     <div className="w-full h-full flex items-center justify-center">
-                                                        <Camera className="h-8 w-8 text-gray-400" />
+                                                        <Camera className="h-6 w-6 text-gray-400" />
                                                     </div>
                                                 )}
                                             </div>
@@ -337,73 +342,73 @@ export default function CategoriesAdminPage() {
                                                 <p className="text-sm text-muted-foreground truncate">
                                                     {product.description || "No description"}
                                                 </p>
-                                                <div className="flex gap-2 mt-2">
-                                                    {product.metadata?.categorized_by_llm === "true" && (
-                                                        <Badge variant="outline" className="text-xs">
-                                                            <Sparkles className="h-3 w-3 mr-1" />
-                                                            AI Categorized
-                                                        </Badge>
-                                                    )}
-                                                </div>
+                                                {product.metadata?.categorized_by_llm === "true" && (
+                                                    <Badge variant="outline" className="text-xs mt-1">
+                                                        <Sparkles className="h-3 w-3 mr-1" />
+                                                        AI Categorized
+                                                    </Badge>
+                                                )}
                                             </div>
+                                        </div>
 
-                                            {/* Category Controls */}
-                                            <div className="flex items-center gap-2 flex-shrink-0">
+                                        {/* Category Controls - own row */}
+                                        <div className="flex items-center gap-2 flex-wrap">
+                                            <Select
+                                                value={currentCategory}
+                                                onValueChange={(v) => handleCategoryChange(product.id, v)}
+                                            >
+                                                <SelectTrigger className="w-[140px]">
+                                                    <SelectValue placeholder="Category" />
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                    <SelectItem value="camera">
+                                                        <span className="flex items-center gap-2">
+                                                            <Camera className="h-4 w-4" />
+                                                            Camera
+                                                        </span>
+                                                    </SelectItem>
+                                                    <SelectItem value="accessory">
+                                                        <span className="flex items-center gap-2">
+                                                            <Package className="h-4 w-4" />
+                                                            Accessory
+                                                        </span>
+                                                    </SelectItem>
+                                                </SelectContent>
+                                            </Select>
+
+                                            {currentCategory === "accessory" && (
                                                 <Select
-                                                    value={currentCategory}
-                                                    onValueChange={(v) => handleCategoryChange(product.id, v)}
+                                                    value={currentSubcategory}
+                                                    onValueChange={(v) => handleSubcategoryChange(product.id, v)}
                                                 >
-                                                    <SelectTrigger className="w-[140px]">
-                                                        <SelectValue placeholder="Category" />
+                                                    <SelectTrigger className="w-[160px]">
+                                                        <SelectValue placeholder="Subcategory" />
                                                     </SelectTrigger>
                                                     <SelectContent>
-                                                        <SelectItem value="camera">
-                                                            <span className="flex items-center gap-2">
-                                                                <Camera className="h-4 w-4" />
-                                                                Camera
-                                                            </span>
-                                                        </SelectItem>
-                                                        <SelectItem value="accessory">
-                                                            <span className="flex items-center gap-2">
-                                                                <Package className="h-4 w-4" />
-                                                                Accessory
-                                                            </span>
-                                                        </SelectItem>
+                                                        {SUBCATEGORIES.map((sub) => (
+                                                            <SelectItem key={sub.value} value={sub.value}>
+                                                                {sub.label}
+                                                            </SelectItem>
+                                                        ))}
                                                     </SelectContent>
                                                 </Select>
+                                            )}
 
-                                                {currentCategory === "accessory" && (
-                                                    <Select
-                                                        value={currentSubcategory}
-                                                        onValueChange={(v) => handleSubcategoryChange(product.id, v)}
-                                                    >
-                                                        <SelectTrigger className="w-[160px]">
-                                                            <SelectValue placeholder="Subcategory" />
-                                                        </SelectTrigger>
-                                                        <SelectContent>
-                                                            {SUBCATEGORIES.map((sub) => (
-                                                                <SelectItem key={sub.value} value={sub.value}>
-                                                                    {sub.label}
-                                                                </SelectItem>
-                                                            ))}
-                                                        </SelectContent>
-                                                    </Select>
-                                                )}
-
-                                                {hasChanges && (
-                                                    <Button
-                                                        size="sm"
-                                                        onClick={() => saveCategory(product.id)}
-                                                        disabled={saving === product.id}
-                                                    >
-                                                        {saving === product.id ? (
-                                                            <Loader2 className="h-4 w-4 animate-spin" />
-                                                        ) : (
-                                                            <Save className="h-4 w-4" />
-                                                        )}
-                                                    </Button>
-                                                )}
-                                            </div>
+                                            {hasChanges && (
+                                                <Button
+                                                    size="sm"
+                                                    onClick={() => saveCategory(product.id)}
+                                                    disabled={saving === product.id}
+                                                    className="gap-2"
+                                                >
+                                                    {saving === product.id ? (
+                                                        <Loader2 className="h-4 w-4 animate-spin" />
+                                                    ) : (
+                                                        <Save className="h-4 w-4" />
+                                                    )}
+                                                    Save
+                                                </Button>
+                                            )}
                                         </div>
                                     </CardContent>
                                 </Card>
