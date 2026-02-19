@@ -27,6 +27,7 @@ export interface Product {
     size?: string
   }
   features?: string[]
+  sellingPoints?: string[]
   inStock: boolean
   stockCount?: number
   reviewCount?: number

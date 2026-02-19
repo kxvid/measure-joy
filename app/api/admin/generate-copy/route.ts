@@ -222,8 +222,8 @@ export async function GET(request: Request) {
                     currentCopy: {
                         description: product.description || "",
                         longDescription: metadata.longDescription || "",
-                        features: metadata.features ? JSON.parse(metadata.features) : [],
-                        sellingPoints: metadata.sellingPoints ? JSON.parse(metadata.sellingPoints) : [],
+                        features: (() => { try { return metadata.features ? JSON.parse(metadata.features) : [] } catch { return [] } })(),
+                        sellingPoints: (() => { try { return metadata.sellingPoints ? JSON.parse(metadata.sellingPoints) : [] } catch { return [] } })(),
                         variant: metadata.copyVariant || null,
                         generatedAt: metadata.copyGeneratedAt || null,
                     },
