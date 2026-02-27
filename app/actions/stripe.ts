@@ -46,9 +46,8 @@ export async function startCheckoutSession(items: CheckoutItem[], userId?: strin
   const stripeLineItems = validItems.map(({ productId, ...rest }) => rest)
 
   const session = await stripe.checkout.sessions.create({
-    ui_mode: "embedded",
-    redirect_on_completion: "if_required",
-    return_url: `${baseUrl}/checkout/return?session_id={CHECKOUT_SESSION_ID}`,
+    success_url: `${baseUrl}/checkout/return?session_id={CHECKOUT_SESSION_ID}`,
+    cancel_url: `${baseUrl}/cart`,
     line_items: stripeLineItems,
     mode: "payment",
     allow_promotion_codes: true,
@@ -87,7 +86,7 @@ export async function startCheckoutSession(items: CheckoutItem[], userId?: strin
     },
   })
 
-  return session.client_secret
+  return session.url
 }
 
 export async function startSingleProductCheckout(productId: string, userId?: string) {
@@ -97,9 +96,8 @@ export async function startSingleProductCheckout(productId: string, userId?: str
   }
 
   const session = await stripe.checkout.sessions.create({
-    ui_mode: "embedded",
-    redirect_on_completion: "if_required",
-    return_url: `${baseUrl}/checkout/return?session_id={CHECKOUT_SESSION_ID}`,
+    success_url: `${baseUrl}/checkout/return?session_id={CHECKOUT_SESSION_ID}`,
+    cancel_url: `${baseUrl}/product/${productId}`,
     line_items: [
       {
         price_data: {
@@ -150,7 +148,7 @@ export async function startSingleProductCheckout(productId: string, userId?: str
     },
   })
 
-  return session.client_secret
+  return session.url
 }
 
 export async function getCheckoutSessionStatus(sessionId: string) {

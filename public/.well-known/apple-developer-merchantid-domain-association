@@ -1,0 +1,7 @@
+Replace this file with the contents from your Stripe Dashboard.
+
+Steps:
+1. Go to https://dashboard.stripe.com/settings/payments/apple_pay
+2. Click "Add new domain" and enter: measurejoy.org
+3. Download the verification file Stripe provides
+4. Replace this entire file with those contents (it will be a long hex string)
