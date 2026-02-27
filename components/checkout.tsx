@@ -1,17 +1,12 @@
 "use client"
 
-import { useCallback, useState } from "react"
-import { EmbeddedCheckout, EmbeddedCheckoutProvider } from "@stripe/react-stripe-js"
-import { loadStripe } from "@stripe/stripe-js"
+import { useEffect, useState } from "react"
 import { startCheckoutSession, startSingleProductCheckout } from "@/app/actions/stripe"
 import { useCart } from "@/lib/cart-context"
-// import { createClient } from "@/lib/supabase/client"
-import { useAuth } from "@clerk/nextjs" // Added Clerk import
-import { CheckCircle, Package, ArrowRight } from "lucide-react"
+import { useAuth } from "@clerk/nextjs"
+import { CheckCircle, Package, ArrowRight, Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import Link from "next/link"
-
-const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!)
 
 interface CheckoutProps {
   productId?: string
@@ -20,74 +15,56 @@ interface CheckoutProps {
 export default function Checkout({ productId }: CheckoutProps) {
   const { items, clearCart } = useCart()
   const { userId } = useAuth()
-  const [checkoutComplete, setCheckoutComplete] = useState(false)
-  const [orderEmail, setOrderEmail] = useState<string | null>(null)
+  const [error, setError] = useState<string | null>(null)
 
-  // useEffect removed as we get userId from hook directly
+  useEffect(() => {
+    async function redirectToCheckout() {
+      try {
+        const uid = userId || undefined
 
-  const handleComplete = useCallback(() => {
-    setCheckoutComplete(true)
-    clearCart()
-  }, [clearCart])
+        let url: string | null
+        if (productId) {
+          url = await startSingleProductCheckout(productId, uid)
+        } else {
+          const cartItems = items.map((item) => ({
+            productId: item.product.id,
+            quantity: item.quantity,
+          }))
+          url = await startCheckoutSession(cartItems, uid)
+        }
 
-  const fetchClientSecret = useCallback(async () => {
-    // Clerk userId can be null, but our actions expect string | undefined
-    const uid = userId || undefined
+        if (!url) {
+          setError("Failed to create checkout session. Please try again.")
+          return
+        }
 
-    if (productId) {
-      const secret = await startSingleProductCheckout(productId, uid)
-      if (!secret) throw new Error("Failed to create checkout session")
-      return secret
+        window.location.href = url
+      } catch (err) {
+        console.error("Checkout error:", err)
+        setError(err instanceof Error ? err.message : "Something went wrong. Please try again.")
+      }
     }
-    const cartItems = items.map((item) => ({
-      productId: item.product.id,
-      quantity: item.quantity,
-    }))
-    const secret = await startCheckoutSession(cartItems, uid)
-    if (!secret) throw new Error("Failed to create checkout session")
-    return secret
+
+    if (items.length > 0 || productId) {
+      redirectToCheckout()
+    }
   }, [productId, items, userId])
 
-
-  if (checkoutComplete) {
+  if (error) {
     return (
       <div className="text-center py-12">
-        <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6">
-          <CheckCircle className="h-8 w-8 text-green-600" />
-        </div>
-        <h2 className="text-2xl font-bold mb-2">Order Confirmed!</h2>
-        <p className="text-muted-foreground mb-6">
-          {orderEmail ? `Confirmation sent to ${orderEmail}` : "Thank you for your purchase!"}
-        </p>
-        <div className="flex flex-col sm:flex-row gap-3 justify-center">
-          <Button asChild variant="outline" className="rounded-xl bg-transparent">
-            <Link href="/account/orders">
-              <Package className="h-4 w-4 mr-2" />
-              View Orders
-            </Link>
-          </Button>
-          <Button asChild className="rounded-xl">
-            <Link href="/shop">
-              Continue Shopping
-              <ArrowRight className="h-4 w-4 ml-2" />
-            </Link>
-          </Button>
-        </div>
+        <p className="text-red-600 mb-4">{error}</p>
+        <Button asChild variant="outline" className="rounded-xl bg-transparent">
+          <Link href="/cart">Back to Cart</Link>
+        </Button>
       </div>
     )
   }
 
   return (
-    <div id="checkout" className="w-full">
-      <EmbeddedCheckoutProvider
-        stripe={stripePromise}
-        options={{
-          fetchClientSecret,
-          onComplete: handleComplete,
-        }}
-      >
-        <EmbeddedCheckout />
-      </EmbeddedCheckoutProvider>
+    <div className="text-center py-12">
+      <Loader2 className="h-8 w-8 mx-auto animate-spin text-muted-foreground" />
+      <p className="text-muted-foreground mt-4">Redirecting to secure checkout...</p>
     </div>
   )
 }
