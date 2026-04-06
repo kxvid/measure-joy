@@ -1,10 +1,10 @@
 "use server"
 
 import { stripe } from "@/lib/stripe"
-// import { requireAdmin } from "@/lib/auth" // Legacy Clerk check
 import { checkAdminAccess } from "@/app/actions/auth-admin"
 import { revalidatePath } from "next/cache"
 import { Order, OrderItem, ShippingAddress } from "@/lib/orders"
+import { sendShippingUpdateEmail } from "@/lib/emails"
 
 export async function getAdminOrders(): Promise<Order[]> {
     if (!await checkAdminAccess()) {
@@ -85,18 +85,34 @@ export async function updateOrderTracking(
             }
         })
 
-        // In a real app, we would trigger the email here.
-        // Since we don't have a DB, we can't easily rely on a background job picking this up unless we use a queue.
-        // But we can just send it directly here.
-
-        // However, we need the customer email.
-        const session = await stripe.checkout.sessions.retrieve(orderId)
+        // Send shipping notification email to customer
+        const session = await stripe.checkout.sessions.retrieve(orderId, {
+            expand: ["line_items", "line_items.data.price.product"]
+        })
         const email = session.customer_details?.email
 
         if (email) {
-            console.log(`[Admin] Sending shipping confirmation to ${email} for order ${orderId}`)
-            // Call email service here (mocked for now)
-            // await sendShippingConfirmationEmail(...)
+            const items = (session.line_items?.data || []).map((item: any) => {
+                const product = item.price?.product
+                return {
+                    name: item.description || product?.name || "Unknown Product",
+                    quantity: item.quantity || 1,
+                }
+            })
+
+            try {
+                await sendShippingUpdateEmail({
+                    email,
+                    orderId,
+                    trackingNumber,
+                    carrier,
+                    items,
+                })
+                console.log(`[Admin] Shipping notification sent to ${email} for order ${orderId}`)
+            } catch (emailError) {
+                console.error("[Admin] Failed to send shipping email:", emailError)
+                // Don't fail the tracking update if email fails
+            }
         }
 
         revalidatePath(`/admin/orders/${orderId}`)

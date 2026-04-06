@@ -9,12 +9,13 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Label } from "@/components/ui/label"
-import { Wrench, Camera, Send, Check, Clock, Shield, Sparkles, CircleDollarSign, ChevronDown } from "lucide-react"
+import { Wrench, Camera, Send, Check, Clock, Shield, Sparkles, CircleDollarSign, ChevronDown, Film } from "lucide-react"
 
 const serviceTypes = [
   { value: "repair", label: "Camera Repair", description: "Fix issues with your camera" },
   { value: "restoration", label: "Full Restoration", description: "Complete refurbishment" },
   { value: "cleaning", label: "Sensor Cleaning", description: "Professional deep clean" },
+  { value: "film-dev", label: "Film Development", description: "35mm & disposable film processing" },
   { value: "quote", label: "Quote Request", description: "Get an estimate first" },
 ]
 
@@ -37,6 +38,7 @@ export default function RepairPage() {
   const [submitted, setSubmitted] = useState(false)
   const [selectedService, setSelectedService] = useState("")
   const [selectedIssues, setSelectedIssues] = useState<string[]>([])
+  const [preferredCallTime, setPreferredCallTime] = useState("")
 
   const toggleIssue = (issue: string) => {
     setSelectedIssues((prev) => (prev.includes(issue) ? prev.filter((i) => i !== issue) : [...prev, issue]))
@@ -59,6 +61,7 @@ export default function RepairPage() {
 Name: ${name}
 Email: ${email}
 Phone: ${phone || "Not provided"}
+Preferred Call Time: ${preferredCallTime || "No preference"}
 
 Camera Details:
 - Brand: ${brand}
@@ -139,7 +142,12 @@ ${description}
                 <h3 className="font-bold text-lg">Cleaning</h3>
                 <p className="text-sm mt-2 text-foreground/70">Sensor & lens deep cleaning service</p>
               </div>
-              <div className="bg-background/10 p-6 text-background border border-background/20">
+              <div className="bg-purple-400 p-6 text-foreground">
+                <Film className="h-8 w-8 mb-4" />
+                <h3 className="font-bold text-lg">Film Dev</h3>
+                <p className="text-sm mt-2 text-foreground/70">35mm & disposable film processing + scans</p>
+              </div>
+              <div className="col-span-2 bg-background/10 p-6 text-background border border-background/20">
                 <CircleDollarSign className="h-8 w-8 mb-4" />
                 <h3 className="font-bold text-lg">Free Quotes</h3>
                 <p className="text-sm mt-2 text-background/70">No obligation estimates</p>
@@ -284,6 +292,7 @@ ${description}
                         setSubmitted(false)
                         setSelectedService("")
                         setSelectedIssues([])
+                        setPreferredCallTime("")
                       }}
                     >
                       Submit Another Request
@@ -326,6 +335,33 @@ ${description}
                           placeholder="(555) 123-4567"
                           className="border-2 border-foreground/20 focus:border-foreground"
                         />
+                      </div>
+
+                      {/* Preferred call time */}
+                      <div className="mt-4">
+                        <Label className="mb-3 block">Best Time to Call</Label>
+                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                          {[
+                            { value: "morning", label: "Morning", desc: "9am–12pm" },
+                            { value: "afternoon", label: "Afternoon", desc: "12–3pm" },
+                            { value: "evening", label: "Evening", desc: "3–6pm" },
+                            { value: "anytime", label: "Anytime", desc: "No preference" },
+                          ].map((time) => (
+                            <button
+                              key={time.value}
+                              type="button"
+                              onClick={() => setPreferredCallTime(time.value)}
+                              className={`p-3 border-2 text-center transition-all ${
+                                preferredCallTime === time.value
+                                  ? "border-foreground bg-pop-teal"
+                                  : "border-foreground/20 hover:border-foreground/40"
+                              }`}
+                            >
+                              <p className="font-bold text-xs">{time.label}</p>
+                              <p className="text-[10px] text-muted-foreground mt-0.5">{time.desc}</p>
+                            </button>
+                          ))}
+                        </div>
                       </div>
                     </div>
 
