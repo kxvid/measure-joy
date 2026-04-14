@@ -9,6 +9,9 @@ permissions:
   contents: write
   pull-requests: write
 
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
+
 jobs:
   # ── 1. TypeScript strict type-check ────────────────────────────────────────
   typecheck:
@@ -19,10 +22,11 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '22'
           cache: 'npm'
 
-      - run: npm ci --ignore-scripts
+      # --legacy-peer-deps: React 19.2.0 in repo vs Clerk peer range ~19.2.3
+      - run: npm ci --ignore-scripts --legacy-peer-deps
 
       - name: Run tsc
         run: npx tsc --noEmit 2>&1 | tee tsc-output.txt || true
@@ -43,10 +47,10 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '22'
           cache: 'npm'
 
-      - run: npm ci --ignore-scripts
+      - run: npm ci --ignore-scripts --legacy-peer-deps
 
       # next lint sets up ESLint with the built-in Next.js config on first run
       - name: Install ESLint deps (if needed)
