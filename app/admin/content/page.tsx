@@ -1,14 +1,9 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef, useMemo, useCallback } from "react"
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
 import {
-    Save,
     Loader2,
     CheckCircle2,
     AlertCircle,
@@ -20,27 +15,30 @@ import {
     Mail,
     Info,
     Layout,
-    Plus,
-    Trash2,
     Database,
-    RefreshCw,
+    Eye,
+    Edit3,
 } from "lucide-react"
+import { FieldEditor, type FieldDef } from "./components/field-editor"
+import { LivePreview } from "./components/live-preview"
+import { PublishBar } from "./components/publish-bar"
+import { DiffModal } from "./components/diff-modal"
 
 // Section definitions for the CMS
 const SECTIONS = [
-    { id: "hero", label: "Hero Section", icon: Layout, description: "Main homepage hero banner" },
+    { id: "hero", label: "Hero", icon: Layout, description: "Main homepage hero banner" },
     { id: "promo_banner", label: "Promo Banner", icon: Megaphone, description: "Top announcement bar" },
     { id: "trust_badges", label: "Trust Badges", icon: Shield, description: "Checkout trust indicators" },
     { id: "trust_banner", label: "Trust Banner", icon: Shield, description: "Feature highlights strip" },
     { id: "trust_story", label: "Trust Story", icon: Star, description: "Why Choose Us section" },
     { id: "testimonials", label: "Testimonials", icon: Quote, description: "Customer reviews" },
-    { id: "newsletter", label: "Newsletter", icon: Mail, description: "Newsletter signup section" },
+    { id: "newsletter", label: "Newsletter", icon: Mail, description: "Newsletter signup" },
     { id: "footer", label: "Footer", icon: FileText, description: "Footer content" },
     { id: "about", label: "About Page", icon: Info, description: "About page content" },
 ] as const
 
 // Schema: defines what fields each section has and their types
-const SECTION_SCHEMA: Record<string, { key: string; label: string; type: "text" | "textarea" | "list" | "object_list" | "stat_list" }[]> = {
+const SECTION_SCHEMA: Record<string, FieldDef[]> = {
     hero: [
         { key: "badge", label: "Badge Text", type: "text" },
         { key: "heading_line1", label: "Heading Line 1", type: "text" },
@@ -51,15 +49,9 @@ const SECTION_SCHEMA: Record<string, { key: string; label: string; type: "text" 
         { key: "cta_secondary", label: "Secondary Button Text", type: "text" },
         { key: "marquee_items", label: "Marquee Items", type: "list" },
     ],
-    promo_banner: [
-        { key: "items", label: "Banner Items (text + link)", type: "object_list" },
-    ],
-    trust_badges: [
-        { key: "items", label: "Badge Items", type: "object_list" },
-    ],
-    trust_banner: [
-        { key: "items", label: "Feature Items", type: "object_list" },
-    ],
+    promo_banner: [{ key: "items", label: "Banner Items (text + link)", type: "object_list" }],
+    trust_badges: [{ key: "items", label: "Badge Items", type: "object_list" }],
+    trust_banner: [{ key: "items", label: "Feature Items", type: "object_list" }],
     trust_story: [
         { key: "badge", label: "Badge Text", type: "text" },
         { key: "heading", label: "Section Heading", type: "text" },
@@ -95,483 +87,489 @@ const SECTION_SCHEMA: Record<string, { key: string; label: string; type: "text" 
     ],
 }
 
-// Template shapes for object_list fields so "Add Item" on empty lists creates usable fields
-const OBJECT_LIST_TEMPLATES: Record<string, Record<string, any>> = {
-    "promo_banner.items": { text: "", link: "" },
-    "trust_badges.items": { text: "", icon: "" },
-    "trust_banner.items": { text: "", icon: "" },
-    "trust_story.points": { title: "", description: "" },
-    "testimonials.items": { name: "", text: "", rating: 5 },
-    "about.values": { title: "", description: "" },
-}
+type ContentMap = Record<string, Record<string, any>>
 
 export default function ContentEditorPage() {
-    const [activeSection, setActiveSection] = useState("hero")
-    const [content, setContent] = useState<Record<string, Record<string, any>>>({})
-    const [editState, setEditState] = useState<Record<string, Record<string, any>>>({})
-    const [loading, setLoading] = useState(true)
-    const [saving, setSaving] = useState(false)
-    const [setupRunning, setSetupRunning] = useState(false)
-    const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null)
-    const [needsSetup, setNeedsSetup] = useState(false)
+    const [activeSection, setActiveSection] = useState<string>("hero")
+    // Live content — the DB state, used as the baseline for diffing
+    const [liveContent, setLiveContent] = useState<ContentMap>({})
+    // Edit state — draft values being worked on (may differ from live)
+    const [editState, setEditState] = useState<ContentMap>({})
 
+    const [loading, setLoading] = useState(true)
+    const [syncing, setSyncing] = useState(false)
+    const [publishing, setPublishing] = useState(false)
+    const [discarding, setDiscarding] = useState(false)
+    const [needsSetup, setNeedsSetup] = useState(false)
+    const [setupRunning, setSetupRunning] = useState(false)
+
+    const [errorMessage, setErrorMessage] = useState<string | null>(null)
+    const [successMessage, setSuccessMessage] = useState<string | null>(null)
+    const [lastSavedAt, setLastSavedAt] = useState<number | null>(null)
+    const [refreshToken, setRefreshToken] = useState(0)
+    const [showDiff, setShowDiff] = useState(false)
+
+    // Narrow-viewport mode: toggle between "edit" and "preview" rather than
+    // showing both side-by-side (xl: breakpoint handles the split).
+    const [narrowView, setNarrowView] = useState<"edit" | "preview">("edit")
+
+    // Debounced sync: writes drafts to the server cookie 500ms after the
+    // last keystroke, then bumps refreshToken to reload the iframe.
+    const syncTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+    const latestEditRef = useRef(editState)
+    latestEditRef.current = editState
+
+    // -----------------------------------------------------------------
+    // Load live content + any in-progress drafts on mount
+    // -----------------------------------------------------------------
     useEffect(() => {
-        loadContent()
+        loadAll()
     }, [])
 
-    async function loadContent() {
+    async function loadAll() {
         setLoading(true)
         try {
-            const resp = await fetch("/api/admin/content")
-            if (resp.ok) {
-                const data = await resp.json()
-                setContent(data)
-                setEditState(JSON.parse(JSON.stringify(data)))
-                if (Object.keys(data).length === 0) {
-                    setNeedsSetup(true)
+            // 1. Load live content from DB
+            const contentResp = await fetch("/api/admin/content")
+            if (!contentResp.ok) throw new Error("Failed to load content")
+            const contentData: ContentMap = await contentResp.json()
+            setLiveContent(contentData)
+
+            if (Object.keys(contentData).length === 0) {
+                setNeedsSetup(true)
+                setEditState({})
+                return
+            }
+
+            // 2. Load any active drafts for this admin
+            let drafts: ContentMap = {}
+            try {
+                const draftResp = await fetch("/api/admin/preview")
+                if (draftResp.ok) {
+                    const { drafts: d } = await draftResp.json()
+                    if (d && typeof d === "object") drafts = d
+                }
+            } catch {
+                // Drafts are best-effort — fall through to live content only
+            }
+
+            // 3. Merge: drafts override live on a per-key basis
+            const merged: ContentMap = {}
+            const allSections = new Set([...Object.keys(contentData), ...Object.keys(drafts)])
+            for (const section of allSections) {
+                merged[section] = {
+                    ...(contentData[section] || {}),
+                    ...(drafts[section] || {}),
                 }
             }
-        } catch {
-            setMessage({ type: "error", text: "Failed to load content" })
+            setEditState(merged)
+
+            if (Object.keys(drafts).length > 0) {
+                setRefreshToken((t) => t + 1) // Show drafts in preview
+            }
+        } catch (err: any) {
+            setErrorMessage(err.message || "Failed to load content")
+        } finally {
+            setLoading(false)
         }
-        setLoading(false)
     }
 
     async function runSetup() {
         setSetupRunning(true)
+        setErrorMessage(null)
         try {
             const resp = await fetch("/api/admin/setup-cms", { method: "POST" })
             const data = await resp.json()
             if (resp.ok) {
-                setMessage({ type: "success", text: data.message })
+                setSuccessMessage(data.message || "CMS initialized")
                 setNeedsSetup(false)
-                await loadContent()
+                await loadAll()
             } else {
-                if (data.migration_url) {
-                    setMessage({
-                        type: "error",
-                        text: `Table not found. Please create it first: Go to the Supabase SQL Editor and run the migration file.`
-                    })
-                } else {
-                    setMessage({ type: "error", text: data.error })
-                }
+                setErrorMessage(data.error || "Setup failed")
             }
         } catch {
-            setMessage({ type: "error", text: "Setup failed" })
+            setErrorMessage("Setup failed")
+        } finally {
+            setSetupRunning(false)
         }
-        setSetupRunning(false)
     }
 
-    async function saveSection(section: string) {
-        setSaving(true)
-        setMessage(null)
-        try {
-            const sectionData = editState[section] || {}
-            const resp = await fetch("/api/admin/content", {
-                method: "PUT",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ section, entries: sectionData }),
-            })
-            if (resp.ok) {
-                setContent(prev => ({ ...prev, [section]: { ...sectionData } }))
-                setMessage({ type: "success", text: `${section} saved successfully` })
-                setTimeout(() => setMessage(null), 3000)
-            } else {
-                const err = await resp.json()
-                setMessage({ type: "error", text: err.error || "Save failed" })
+    // -----------------------------------------------------------------
+    // Draft sync: debounced POST to /api/admin/preview
+    // -----------------------------------------------------------------
+    const scheduleDraftSync = useCallback(() => {
+        if (syncTimeoutRef.current) clearTimeout(syncTimeoutRef.current)
+        syncTimeoutRef.current = setTimeout(async () => {
+            const drafts = computeDrafts(liveContent, latestEditRef.current)
+            setSyncing(true)
+            setErrorMessage(null)
+            try {
+                if (Object.keys(drafts).length === 0) {
+                    // Nothing changed — ensure cookie is cleared
+                    await fetch("/api/admin/preview", { method: "DELETE" })
+                } else {
+                    const resp = await fetch("/api/admin/preview", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ drafts }),
+                    })
+                    if (!resp.ok) {
+                        const data = await resp.json().catch(() => ({}))
+                        throw new Error(data.error || "Failed to sync drafts")
+                    }
+                }
+                setLastSavedAt(Date.now())
+                // Force iframe reload so preview reflects latest drafts
+                setRefreshToken((t) => t + 1)
+            } catch (err: any) {
+                setErrorMessage(err.message || "Draft sync failed")
+            } finally {
+                setSyncing(false)
             }
-        } catch {
-            setMessage({ type: "error", text: "Save failed" })
-        }
-        setSaving(false)
-    }
+        }, 500)
+    }, [liveContent])
 
     function updateField(section: string, key: string, value: any) {
-        setEditState(prev => ({
+        setEditState((prev) => ({
             ...prev,
-            [section]: {
-                ...prev[section],
-                [key]: value,
-            },
+            [section]: { ...prev[section], [key]: value },
         }))
+        scheduleDraftSync()
     }
 
-    function hasChanges(section: string): boolean {
-        return JSON.stringify(content[section]) !== JSON.stringify(editState[section])
+    // -----------------------------------------------------------------
+    // Publish: commit all drafts to DB, clear cookie
+    // -----------------------------------------------------------------
+    async function publishAll() {
+        const drafts = computeDrafts(liveContent, editState)
+        const changedSections = Object.keys(drafts)
+        if (changedSections.length === 0) return
+
+        setPublishing(true)
+        setErrorMessage(null)
+
+        try {
+            // Publish each changed section. If one fails, we bail and leave
+            // the rest as drafts — the admin can retry.
+            for (const section of changedSections) {
+                const entries = { ...(liveContent[section] || {}), ...drafts[section] }
+                const resp = await fetch("/api/admin/content", {
+                    method: "PUT",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ section, entries }),
+                })
+                if (!resp.ok) {
+                    const data = await resp.json().catch(() => ({}))
+                    throw new Error(`Failed to publish "${section}": ${data.error || resp.statusText}`)
+                }
+            }
+
+            // Clear draft cookie — everything is now live
+            await fetch("/api/admin/preview", { method: "DELETE" })
+
+            // Resync local state: the editState is now the new liveContent
+            setLiveContent((prev) => {
+                const next = { ...prev }
+                for (const section of changedSections) {
+                    next[section] = { ...(next[section] || {}), ...drafts[section] }
+                }
+                return next
+            })
+            setLastSavedAt(null)
+            setRefreshToken((t) => t + 1)
+            setShowDiff(false)
+            setSuccessMessage(`Published ${changedSections.length} section${changedSections.length !== 1 ? "s" : ""}`)
+            setTimeout(() => setSuccessMessage(null), 4000)
+        } catch (err: any) {
+            setErrorMessage(err.message || "Publish failed")
+        } finally {
+            setPublishing(false)
+        }
     }
+
+    // -----------------------------------------------------------------
+    // Discard: clear drafts cookie + reset form to live
+    // -----------------------------------------------------------------
+    async function discardDrafts() {
+        const count = countChanges(liveContent, editState)
+        if (count === 0) return
+        if (!confirm(`Discard ${count} unpublished change${count !== 1 ? "s" : ""}? This can't be undone.`)) return
+
+        setDiscarding(true)
+        setErrorMessage(null)
+        try {
+            await fetch("/api/admin/preview", { method: "DELETE" })
+            setEditState(deepClone(liveContent))
+            setLastSavedAt(null)
+            setRefreshToken((t) => t + 1)
+        } catch (err: any) {
+            setErrorMessage(err.message || "Discard failed")
+        } finally {
+            setDiscarding(false)
+        }
+    }
+
+    const changedCount = useMemo(
+        () => countChanges(liveContent, editState),
+        [liveContent, editState]
+    )
 
     const sectionFields = SECTION_SCHEMA[activeSection] || []
-    const sectionInfo = SECTIONS.find(s => s.id === activeSection)
+    const sectionInfo = SECTIONS.find((s) => s.id === activeSection)
 
+    const lastSavedLabel = useLastSavedLabel(lastSavedAt)
+
+    // -----------------------------------------------------------------
+    // Render
+    // -----------------------------------------------------------------
     if (loading) {
         return (
             <div className="flex items-center justify-center min-h-[60vh]">
-                <Loader2 className="h-8 w-8 animate-spin" />
+                <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
             </div>
         )
     }
 
     return (
-        <div className="flex h-[calc(100vh-3.5rem)]">
-            {/* Sidebar */}
-            <aside className="w-64 border-r bg-background overflow-y-auto flex-shrink-0">
-                <div className="p-4">
-                    <h2 className="font-bold text-sm uppercase tracking-wider text-muted-foreground mb-4">Sections</h2>
-                    <nav className="space-y-1">
-                        {SECTIONS.map((section) => {
-                            const Icon = section.icon
-                            const isActive = activeSection === section.id
-                            const changed = hasChanges(section.id)
-                            return (
-                                <button
-                                    key={section.id}
-                                    onClick={() => setActiveSection(section.id)}
-                                    className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
-                                        isActive
-                                            ? "bg-foreground text-background"
-                                            : "hover:bg-secondary text-muted-foreground hover:text-foreground"
-                                    }`}
-                                >
-                                    <Icon className="h-4 w-4 flex-shrink-0" />
-                                    <span className="truncate">{section.label}</span>
-                                    {changed && (
-                                        <span className="ml-auto w-2 h-2 rounded-full bg-pop-pink flex-shrink-0" />
-                                    )}
-                                </button>
-                            )
-                        })}
-                    </nav>
+        <div className="flex flex-col h-[calc(100vh-3.5rem)]">
+            {/* Top area: sidebar + (editor + preview) */}
+            <div className="flex flex-1 min-h-0">
+                {/* Sidebar */}
+                <aside className="w-56 border-r bg-background overflow-y-auto flex-shrink-0 hidden md:block">
+                    <div className="p-3">
+                        <h2 className="font-bold text-[10px] uppercase tracking-wider text-muted-foreground mb-3 px-2">
+                            Sections
+                        </h2>
+                        <nav className="space-y-0.5">
+                            {SECTIONS.map((section) => {
+                                const Icon = section.icon
+                                const isActive = activeSection === section.id
+                                const sectionChanges = countSectionChanges(
+                                    liveContent[section.id] || {},
+                                    editState[section.id] || {}
+                                )
+                                return (
+                                    <button
+                                        key={section.id}
+                                        onClick={() => setActiveSection(section.id)}
+                                        className={`w-full flex items-center gap-2.5 px-2.5 py-2 rounded-md text-sm font-medium transition-colors ${
+                                            isActive
+                                                ? "bg-foreground text-background"
+                                                : "hover:bg-secondary text-muted-foreground hover:text-foreground"
+                                        }`}
+                                    >
+                                        <Icon className="h-4 w-4 flex-shrink-0" />
+                                        <span className="truncate">{section.label}</span>
+                                        {sectionChanges > 0 && (
+                                            <span
+                                                className={`ml-auto text-[10px] font-bold rounded-full px-1.5 py-0.5 flex-shrink-0 ${
+                                                    isActive
+                                                        ? "bg-background/20 text-background"
+                                                        : "bg-pop-pink text-background"
+                                                }`}
+                                                title={`${sectionChanges} unpublished`}
+                                            >
+                                                {sectionChanges}
+                                            </span>
+                                        )}
+                                    </button>
+                                )
+                            })}
+                        </nav>
 
-                    <Separator className="my-4" />
+                        <Separator className="my-4" />
 
-                    <Button
-                        variant="outline"
-                        size="sm"
-                        className="w-full gap-2"
-                        onClick={runSetup}
-                        disabled={setupRunning}
-                    >
-                        {setupRunning ? (
-                            <Loader2 className="h-3 w-3 animate-spin" />
-                        ) : (
-                            <Database className="h-3 w-3" />
-                        )}
-                        {needsSetup ? "Initialize CMS" : "Re-seed Defaults"}
-                    </Button>
-                </div>
-            </aside>
-
-            {/* Main Editor */}
-            <main className="flex-1 overflow-y-auto">
-                <div className="max-w-3xl mx-auto p-8">
-                    {/* Section Header */}
-                    <div className="flex items-center justify-between mb-6">
-                        <div>
-                            <h1 className="text-2xl font-bold">{sectionInfo?.label}</h1>
-                            <p className="text-muted-foreground text-sm">{sectionInfo?.description}</p>
-                        </div>
                         <Button
-                            onClick={() => saveSection(activeSection)}
-                            disabled={saving || !hasChanges(activeSection)}
-                            className="gap-2"
+                            variant="outline"
+                            size="sm"
+                            className="w-full gap-2 text-xs"
+                            onClick={runSetup}
+                            disabled={setupRunning}
                         >
-                            {saving ? (
-                                <Loader2 className="h-4 w-4 animate-spin" />
+                            {setupRunning ? (
+                                <Loader2 className="h-3 w-3 animate-spin" />
                             ) : (
-                                <Save className="h-4 w-4" />
+                                <Database className="h-3 w-3" />
                             )}
-                            Save Changes
+                            {needsSetup ? "Initialize CMS" : "Re-seed Defaults"}
+                        </Button>
+                    </div>
+                </aside>
+
+                {/* Right of sidebar: tab switcher + main/preview row */}
+                <div className="flex flex-col flex-1 min-w-0">
+                    {/* Mobile/tablet view toggle — hidden on xl: */}
+                    <div className="xl:hidden border-b bg-background flex items-center gap-2 px-3 py-2 flex-shrink-0">
+                        {/* Mobile-only section selector (sidebar is hidden below md:) */}
+                        <select
+                            className="md:hidden border rounded-md px-2 py-1 text-sm bg-background"
+                            value={activeSection}
+                            onChange={(e) => setActiveSection(e.target.value)}
+                        >
+                            {SECTIONS.map((s) => (
+                                <option key={s.id} value={s.id}>
+                                    {s.label}
+                                </option>
+                            ))}
+                        </select>
+                        <Button
+                            size="sm"
+                            variant={narrowView === "edit" ? "default" : "ghost"}
+                            onClick={() => setNarrowView("edit")}
+                            className="h-8 gap-1.5"
+                        >
+                            <Edit3 className="h-3.5 w-3.5" />
+                            Edit
+                        </Button>
+                        <Button
+                            size="sm"
+                            variant={narrowView === "preview" ? "default" : "ghost"}
+                            onClick={() => setNarrowView("preview")}
+                            className="h-8 gap-1.5"
+                        >
+                            <Eye className="h-3.5 w-3.5" />
+                            Preview
                         </Button>
                     </div>
 
-                    {/* Messages */}
-                    {message && (
-                        <div className={`mb-6 p-4 rounded-lg flex items-center gap-3 ${
-                            message.type === "success"
-                                ? "bg-green-50 border border-green-200 text-green-800"
-                                : "bg-red-50 border border-red-200 text-red-800"
-                        }`}>
-                            {message.type === "success" ? (
-                                <CheckCircle2 className="h-5 w-5 flex-shrink-0" />
-                            ) : (
-                                <AlertCircle className="h-5 w-5 flex-shrink-0" />
-                            )}
-                            <p className="text-sm">{message.text}</p>
+                    <div className="flex flex-1 min-h-0">
+                        {/* Editor form */}
+                        <main
+                            className={`flex-1 min-w-0 overflow-y-auto ${
+                                narrowView === "preview" ? "hidden xl:block" : "block"
+                            }`}
+                        >
+                            <div className="max-w-2xl mx-auto p-6 xl:p-8">
+                                {/* Section Header */}
+                                <div className="mb-6">
+                                    <h1 className="text-xl font-bold tracking-tight">
+                                        {sectionInfo?.label}
+                                    </h1>
+                                    <p className="text-muted-foreground text-sm">
+                                        {sectionInfo?.description}
+                                    </p>
+                                </div>
+
+                                {successMessage && (
+                                    <div className="mb-5 p-3 rounded-lg flex items-center gap-2.5 bg-green-50 border border-green-200 text-green-800 text-sm">
+                                        <CheckCircle2 className="h-4 w-4 flex-shrink-0" />
+                                        <p>{successMessage}</p>
+                                    </div>
+                                )}
+
+                                {/* Fields */}
+                                <div className="space-y-5">
+                                    {sectionFields.map((field) => (
+                                        <FieldEditor
+                                            key={field.key}
+                                            field={field}
+                                            section={activeSection}
+                                            value={editState[activeSection]?.[field.key]}
+                                            onChange={(val) =>
+                                                updateField(activeSection, field.key, val)
+                                            }
+                                        />
+                                    ))}
+                                    {sectionFields.length === 0 && (
+                                        <div className="p-8 text-center text-muted-foreground border rounded-lg">
+                                            No editable fields defined for this section.
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        </main>
+
+                        {/* Live Preview pane */}
+                        <div
+                            className={`flex-1 min-w-0 xl:block ${
+                                narrowView === "preview" ? "block" : "hidden"
+                            }`}
+                        >
+                            <LivePreview refreshToken={refreshToken} syncing={syncing} />
                         </div>
-                    )}
-
-                    {/* Fields */}
-                    <div className="space-y-6">
-                        {sectionFields.map((field) => (
-                            <FieldEditor
-                                key={field.key}
-                                field={field}
-                                section={activeSection}
-                                value={editState[activeSection]?.[field.key]}
-                                onChange={(val) => updateField(activeSection, field.key, val)}
-                            />
-                        ))}
-
-                        {sectionFields.length === 0 && (
-                            <Card>
-                                <CardContent className="p-8 text-center text-muted-foreground">
-                                    No editable fields defined for this section.
-                                </CardContent>
-                            </Card>
-                        )}
                     </div>
                 </div>
-            </main>
+            </div>
+
+            {/* Sticky publish bar */}
+            <PublishBar
+                changedCount={changedCount}
+                lastSaved={lastSavedLabel}
+                onDiscard={discardDrafts}
+                onPreviewDiff={() => setShowDiff(true)}
+                discarding={discarding}
+                syncing={syncing}
+                errorMessage={errorMessage}
+            />
+
+            {/* Diff modal */}
+            <DiffModal
+                open={showDiff}
+                onClose={() => setShowDiff(false)}
+                onConfirm={publishAll}
+                liveContent={liveContent}
+                draftContent={editState}
+                publishing={publishing}
+            />
         </div>
     )
 }
 
-// Field Editor component
-function FieldEditor({
-    field,
-    section,
-    value,
-    onChange,
-}: {
-    field: { key: string; label: string; type: string }
-    section: string
-    value: any
-    onChange: (val: any) => void
-}) {
-    if (field.type === "text") {
-        return (
-            <div className="space-y-2">
-                <Label className="text-sm font-medium">{field.label}</Label>
-                <Input
-                    value={value || ""}
-                    onChange={(e) => onChange(e.target.value)}
-                    placeholder={`Enter ${field.label.toLowerCase()}`}
-                />
-            </div>
-        )
-    }
+// -----------------------------------------------------------------
+// Helpers
+// -----------------------------------------------------------------
 
-    if (field.type === "textarea") {
-        return (
-            <div className="space-y-2">
-                <Label className="text-sm font-medium">{field.label}</Label>
-                <textarea
-                    className="flex min-h-[100px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-                    value={value || ""}
-                    onChange={(e) => onChange(e.target.value)}
-                    placeholder={`Enter ${field.label.toLowerCase()}`}
-                />
-            </div>
-        )
-    }
+function deepClone<T>(obj: T): T {
+    return JSON.parse(JSON.stringify(obj))
+}
 
-    if (field.type === "list") {
-        const items: string[] = Array.isArray(value) ? value : []
-        return (
-            <Card>
-                <CardHeader className="pb-3">
-                    <CardTitle className="text-sm font-medium">{field.label}</CardTitle>
-                    <CardDescription>Add or remove items from this list</CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-2">
-                    {items.map((item, i) => (
-                        <div key={i} className="flex items-center gap-2">
-                            <Input
-                                value={item}
-                                onChange={(e) => {
-                                    const next = [...items]
-                                    next[i] = e.target.value
-                                    onChange(next)
-                                }}
-                            />
-                            <Button
-                                variant="ghost"
-                                size="icon"
-                                onClick={() => onChange(items.filter((_, j) => j !== i))}
-                                className="flex-shrink-0 text-red-500 hover:text-red-700"
-                            >
-                                <Trash2 className="h-4 w-4" />
-                            </Button>
-                        </div>
-                    ))}
-                    <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => onChange([...items, ""])}
-                        className="gap-1"
-                    >
-                        <Plus className="h-3 w-3" />
-                        Add Item
-                    </Button>
-                </CardContent>
-            </Card>
-        )
-    }
-
-    if (field.type === "stat_list") {
-        const items: { value: string; label: string }[] = Array.isArray(value) ? value : []
-        return (
-            <Card>
-                <CardHeader className="pb-3">
-                    <CardTitle className="text-sm font-medium">{field.label}</CardTitle>
-                    <CardDescription>Edit stat values and labels</CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-3">
-                    {items.map((item, i) => (
-                        <div key={i} className="flex items-center gap-2">
-                            <Input
-                                value={item.value}
-                                onChange={(e) => {
-                                    const next = [...items]
-                                    next[i] = { ...next[i], value: e.target.value }
-                                    onChange(next)
-                                }}
-                                placeholder="Value (e.g. 2,500+)"
-                                className="w-32"
-                            />
-                            <Input
-                                value={item.label}
-                                onChange={(e) => {
-                                    const next = [...items]
-                                    next[i] = { ...next[i], label: e.target.value }
-                                    onChange(next)
-                                }}
-                                placeholder="Label (e.g. Happy Customers)"
-                            />
-                            <Button
-                                variant="ghost"
-                                size="icon"
-                                onClick={() => onChange(items.filter((_, j) => j !== i))}
-                                className="flex-shrink-0 text-red-500 hover:text-red-700"
-                            >
-                                <Trash2 className="h-4 w-4" />
-                            </Button>
-                        </div>
-                    ))}
-                    <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => onChange([...items, { value: "", label: "" }])}
-                        className="gap-1"
-                    >
-                        <Plus className="h-3 w-3" />
-                        Add Stat
-                    </Button>
-                </CardContent>
-            </Card>
-        )
-    }
-
-    if (field.type === "object_list") {
-        const items: Record<string, any>[] = Array.isArray(value) ? value : []
-        if (items.length === 0) {
-            return (
-                <Card>
-                    <CardHeader className="pb-3">
-                        <CardTitle className="text-sm font-medium">{field.label}</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                        <p className="text-sm text-muted-foreground mb-3">No items yet.</p>
-                        <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => {
-                                const templateKey = `${section}.${field.key}`
-                                const template = OBJECT_LIST_TEMPLATES[templateKey] || {}
-                                onChange([{ ...template }])
-                            }}
-                            className="gap-1"
-                        >
-                            <Plus className="h-3 w-3" />
-                            Add Item
-                        </Button>
-                    </CardContent>
-                </Card>
-            )
+// Return only the sections+keys where edit state differs from live content.
+function computeDrafts(live: ContentMap, edit: ContentMap): ContentMap {
+    const drafts: ContentMap = {}
+    for (const section of Object.keys(edit)) {
+        const liveSection = live[section] || {}
+        const editSection = edit[section] || {}
+        for (const key of Object.keys(editSection)) {
+            if (JSON.stringify(liveSection[key]) !== JSON.stringify(editSection[key])) {
+                if (!drafts[section]) drafts[section] = {}
+                drafts[section][key] = editSection[key]
+            }
         }
-
-        // Infer fields from the first item
-        const objectKeys = Object.keys(items[0]).filter(k => k !== "icon" && k !== "color")
-
-        return (
-            <Card>
-                <CardHeader className="pb-3">
-                    <CardTitle className="text-sm font-medium">{field.label}</CardTitle>
-                    <CardDescription>{items.length} item{items.length !== 1 ? "s" : ""}</CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                    {items.map((item, i) => (
-                        <div key={i} className="p-4 border rounded-lg space-y-3 relative">
-                            <div className="flex items-center justify-between">
-                                <Badge variant="outline" className="text-xs">Item {i + 1}</Badge>
-                                <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    onClick={() => onChange(items.filter((_, j) => j !== i))}
-                                    className="h-7 w-7 text-red-500 hover:text-red-700"
-                                >
-                                    <Trash2 className="h-3 w-3" />
-                                </Button>
-                            </div>
-                            {objectKeys.map((k) => (
-                                <div key={k} className="space-y-1">
-                                    <Label className="text-xs text-muted-foreground capitalize">{k.replace(/_/g, " ")}</Label>
-                                    {typeof item[k] === "string" && item[k].length > 80 ? (
-                                        <textarea
-                                            className="flex min-h-[60px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                                            value={item[k] ?? ""}
-                                            onChange={(e) => {
-                                                const next = [...items]
-                                                next[i] = { ...next[i], [k]: e.target.value }
-                                                onChange(next)
-                                            }}
-                                        />
-                                    ) : typeof item[k] === "number" ? (
-                                        <Input
-                                            type="number"
-                                            value={item[k] ?? 0}
-                                            onChange={(e) => {
-                                                const next = [...items]
-                                                next[i] = { ...next[i], [k]: parseInt(e.target.value) || 0 }
-                                                onChange(next)
-                                            }}
-                                        />
-                                    ) : (
-                                        <Input
-                                            value={item[k] ?? ""}
-                                            onChange={(e) => {
-                                                const next = [...items]
-                                                next[i] = { ...next[i], [k]: e.target.value }
-                                                onChange(next)
-                                            }}
-                                        />
-                                    )}
-                                </div>
-                            ))}
-                        </div>
-                    ))}
-                    <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => {
-                            const template: Record<string, any> = {}
-                            for (const k of objectKeys) {
-                                template[k] = typeof items[0]?.[k] === "number" ? 0 : ""
-                            }
-                            // Preserve icon/color if present
-                            if (items[0]?.icon) template.icon = items[0].icon
-                            if (items[0]?.color) template.color = items[0].color
-                            onChange([...items, template])
-                        }}
-                        className="gap-1"
-                    >
-                        <Plus className="h-3 w-3" />
-                        Add Item
-                    </Button>
-                </CardContent>
-            </Card>
-        )
     }
+    return drafts
+}
 
-    return null
+function countChanges(live: ContentMap, edit: ContentMap): number {
+    let n = 0
+    for (const section of Object.keys(edit)) {
+        n += countSectionChanges(live[section] || {}, edit[section] || {})
+    }
+    return n
+}
+
+function countSectionChanges(live: Record<string, any>, edit: Record<string, any>): number {
+    let n = 0
+    for (const key of Object.keys(edit)) {
+        if (JSON.stringify(live[key]) !== JSON.stringify(edit[key])) n++
+    }
+    return n
+}
+
+// "12s ago" / "3m ago" — ticks every 10s so the label stays fresh
+function useLastSavedLabel(timestamp: number | null): string | null {
+    const [, setTick] = useState(0)
+    useEffect(() => {
+        if (!timestamp) return
+        const id = setInterval(() => setTick((t) => t + 1), 10000)
+        return () => clearInterval(id)
+    }, [timestamp])
+
+    if (!timestamp) return null
+    const seconds = Math.floor((Date.now() - timestamp) / 1000)
+    if (seconds < 5) return "just now"
+    if (seconds < 60) return `${seconds}s ago`
+    const minutes = Math.floor(seconds / 60)
+    if (minutes < 60) return `${minutes}m ago`
+    const hours = Math.floor(minutes / 60)
+    return `${hours}h ago`
 }
