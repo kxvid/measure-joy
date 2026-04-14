@@ -68,6 +68,11 @@ jobs:
         with:
           node-version: '22'
 
+      # Snyk needs the dependency tree resolved — install without running
+      # postinstall scripts and with --legacy-peer-deps (React 19.2 vs Clerk)
+      - name: Install project dependencies
+        run: npm install --legacy-peer-deps --ignore-scripts
+
       - name: Install Snyk CLI
         run: npm install -g snyk
 
