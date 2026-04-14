@@ -1,14 +1,25 @@
-import { cookies, headers } from "next/headers"
-import { redirect } from "next/navigation"
+import { headers } from "next/headers"
 import Link from "next/link"
-import { Home, LayoutDashboard, Package, ShoppingCart, Wand2, Lock, FileEdit, LogOut, Pencil } from "lucide-react"
+import {
+    Home,
+    LayoutDashboard,
+    Package,
+    ShoppingCart,
+    Wand2,
+    Lock,
+    FileEdit,
+    LogOut,
+    Pencil,
+    Boxes,
+    ShieldAlert,
+} from "lucide-react"
+import { SignOutButton } from "@clerk/nextjs"
 import { Button } from "@/components/ui/button"
-import { verifyAdminCode, logoutAdmin } from "@/app/actions/auth-admin"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
+import { getAdminStatus } from "@/app/actions/auth-admin"
 
 const NAV_ITEMS = [
     { href: "/admin/orders", label: "Orders", icon: ShoppingCart },
+    { href: "/admin/inventory", label: "Inventory", icon: Boxes },
     { href: "/admin/categories", label: "Categories", icon: Package },
     { href: "/admin/content", label: "Site Content", icon: FileEdit },
     { href: "/admin/copywriter", label: "AI Copywriter", icon: Pencil },
@@ -20,52 +31,62 @@ export default async function AdminLayout({
 }: {
     children: React.ReactNode
 }) {
-    const cookieStore = await cookies()
-    const isAuth = cookieStore.get("admin_access")?.value === "true"
+    const { isAdmin, isSignedIn, email } = await getAdminStatus()
 
-    if (!isAuth) {
+    // Middleware ensures isSignedIn is true by the time we render. If it's not,
+    // Clerk has already redirected — but guard defensively anyway.
+    if (!isSignedIn) {
         return (
-            <div className="min-h-screen flex items-center justify-center bg-muted/20">
-                <div className="max-w-md w-full p-8 bg-background border rounded-xl shadow-sm">
-                    <div className="flex flex-col items-center mb-6">
-                        <div className="h-12 w-12 bg-pop-pink/10 rounded-full flex items-center justify-center mb-4">
-                            <Lock className="h-6 w-6 text-pop-pink" />
-                        </div>
-                        <h1 className="text-2xl font-bold tracking-tight">Admin Access</h1>
-                        <p className="text-muted-foreground text-center mt-2 text-sm">
-                            Enter the access code to manage Measure Joy.
-                        </p>
-                    </div>
-
-                    <form action={async (formData) => {
-                        "use server"
-                        const result = await verifyAdminCode(formData)
-                        if (result.success) {
-                            redirect("/admin/orders")
-                        }
-                    }}>
-                        <div className="space-y-4">
-                            <div className="space-y-2">
-                                <Label htmlFor="code">Access Code</Label>
-                                <Input
-                                    id="code"
-                                    name="code"
-                                    type="password"
-                                    placeholder="••••••••"
-                                    required
-                                />
-                            </div>
-                            <Button type="submit" className="w-full">
-                                Unlock Dashboard
-                            </Button>
-                        </div>
-                    </form>
+            <div className="min-h-screen flex items-center justify-center bg-muted/20 p-8">
+                <div className="max-w-md w-full p-8 bg-background border rounded-xl shadow-sm text-center">
+                    <Lock className="h-10 w-10 mx-auto text-muted-foreground mb-4" />
+                    <h1 className="text-2xl font-bold">Sign in required</h1>
+                    <p className="text-muted-foreground mt-2 text-sm">
+                        You need to be signed in to access the admin dashboard.
+                    </p>
+                    <Button asChild className="mt-6">
+                        <Link href="/sign-in?redirect_url=/admin/orders">Sign in</Link>
+                    </Button>
                 </div>
             </div>
         )
     }
 
-    // Get current pathname for active state highlighting
+    // Signed in but not on the allowlist — show a clear "no access" screen
+    // with sign-out so they can switch accounts.
+    if (!isAdmin) {
+        return (
+            <div className="min-h-screen flex items-center justify-center bg-muted/20 p-8">
+                <div className="max-w-md w-full p-8 bg-background border rounded-xl shadow-sm text-center">
+                    <div className="h-12 w-12 bg-destructive/10 rounded-full flex items-center justify-center mx-auto mb-4">
+                        <ShieldAlert className="h-6 w-6 text-destructive" />
+                    </div>
+                    <h1 className="text-2xl font-bold">Access denied</h1>
+                    <p className="text-muted-foreground mt-2 text-sm">
+                        {email
+                            ? <>Your account (<span className="font-mono">{email}</span>) is not an admin.</>
+                            : "This account is not authorized."}
+                    </p>
+                    <p className="text-xs text-muted-foreground mt-3">
+                        If this is a mistake, ask the owner to add your email to ADMIN_EMAILS.
+                    </p>
+                    <div className="flex gap-2 mt-6">
+                        <Button variant="outline" asChild className="flex-1">
+                            <Link href="/">Back to store</Link>
+                        </Button>
+                        <SignOutButton redirectUrl="/sign-in?redirect_url=/admin/orders">
+                            <Button className="flex-1 gap-2">
+                                <LogOut className="h-4 w-4" />
+                                Sign out
+                            </Button>
+                        </SignOutButton>
+                    </div>
+                </div>
+            </div>
+        )
+    }
+
+    // Authorized admin — render the dashboard chrome.
     const headersList = await headers()
     const pathname = headersList.get("x-pathname") || headersList.get("x-invoke-path") || ""
 
@@ -105,13 +126,18 @@ export default async function AdminLayout({
                     })}
                 </nav>
 
-                <div className="ml-auto">
-                    <form action={logoutAdmin}>
-                        <Button variant="ghost" size="sm" type="submit" className="gap-2 text-muted-foreground hover:text-foreground">
+                <div className="ml-auto flex items-center gap-3">
+                    {email && (
+                        <span className="text-xs text-muted-foreground font-mono hidden md:inline">
+                            {email}
+                        </span>
+                    )}
+                    <SignOutButton redirectUrl="/">
+                        <Button variant="ghost" size="sm" className="gap-2 text-muted-foreground hover:text-foreground">
                             <LogOut className="h-4 w-4" />
-                            Logout
+                            Sign out
                         </Button>
-                    </form>
+                    </SignOutButton>
                 </div>
             </header>
             <main className="flex-1 bg-muted/10">

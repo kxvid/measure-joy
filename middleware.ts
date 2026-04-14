@@ -5,8 +5,10 @@ const isAdminRoute = createRouteMatcher(["/admin(.*)"])
 const isUserRoute = createRouteMatcher(["/account(.*)"])
 
 export default clerkMiddleware(async (auth, req) => {
-    // Protect user routes with basic auth
-    if (isUserRoute(req)) {
+    // Admin and user routes both require a signed-in Clerk session.
+    // Admin *email allowlist* enforcement happens in app/admin/layout.tsx
+    // via getAdminStatus() — this middleware only gates the auth boundary.
+    if (isAdminRoute(req) || isUserRoute(req)) {
         await auth.protect()
     }
 })

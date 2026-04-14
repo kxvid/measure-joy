@@ -125,3 +125,96 @@ export async function updateOrderTracking(
         return { success: false, error: "Failed to update tracking" }
     }
 }
+
+export interface InventoryProduct {
+    id: string
+    name: string
+    image: string | null
+    priceInCents: number
+    stockCount: number | null // null = untracked (unlimited)
+    inStock: boolean
+    active: boolean
+}
+
+// List all products (active + archived) with their current inventory state
+export async function listInventoryProducts(): Promise<InventoryProduct[]> {
+    if (!await checkAdminAccess()) {
+        console.error("Unauthorized access to listInventoryProducts")
+        return []
+    }
+
+    try {
+        const products = await stripe.products.list({
+            limit: 100,
+            expand: ["data.default_price"],
+        })
+
+        return products.data.map((product: any) => {
+            const price = product.default_price
+            const stockRaw = product.metadata?.stockCount
+            const stockCount = stockRaw && !isNaN(parseInt(stockRaw, 10))
+                ? parseInt(stockRaw, 10)
+                : null
+
+            return {
+                id: product.id,
+                name: product.name,
+                image: product.images?.[0] || null,
+                priceInCents: price?.unit_amount || 0,
+                stockCount,
+                inStock: product.metadata?.inStock !== "false",
+                active: product.active,
+            }
+        })
+    } catch (error) {
+        console.error("[Admin] Error listing inventory:", error)
+        return []
+    }
+}
+
+// Update a product's stockCount and optionally its inStock flag.
+// Pass stockCount: null to clear the limit (product becomes untracked/unlimited).
+export async function updateProductInventory(
+    productId: string,
+    stockCount: number | null,
+    inStock?: boolean
+) {
+    if (!await checkAdminAccess()) {
+        return { success: false, error: "Unauthorized" }
+    }
+
+    try {
+        const product = await stripe.products.retrieve(productId)
+        const existing = product.metadata || {}
+
+        // Build new metadata, preserving other keys
+        const newMetadata: Record<string, string> = { ...existing }
+
+        if (stockCount === null) {
+            // Clear stockCount = back to untracked/unlimited
+            delete newMetadata.stockCount
+        } else {
+            const safeCount = Math.max(0, Math.floor(stockCount))
+            newMetadata.stockCount = safeCount.toString()
+            // Auto-flip inStock when count reaches 0 (unless caller overrides)
+            if (safeCount === 0 && inStock === undefined) {
+                newMetadata.inStock = "false"
+            }
+        }
+
+        if (inStock !== undefined) {
+            newMetadata.inStock = inStock ? "true" : "false"
+        }
+
+        await stripe.products.update(productId, { metadata: newMetadata })
+
+        revalidatePath("/admin/inventory")
+        revalidatePath(`/product/${productId}`)
+        revalidatePath("/shop")
+
+        return { success: true }
+    } catch (error) {
+        console.error(`[Admin] Error updating inventory for ${productId}:`, error)
+        return { success: false, error: "Failed to update inventory" }
+    }
+}
