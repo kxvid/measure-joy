@@ -14,6 +14,8 @@ import { Button } from "@/components/ui/button"
 function CheckoutContent() {
   const searchParams = useSearchParams()
   const productId = searchParams.get("product")
+  const qtyParam = searchParams.get("qty")
+  const singleQuantity = Math.max(1, parseInt(qtyParam || "1", 10) || 1)
   const { items, totalPrice } = useCart()
 
   // Fetch single product from API if productId is provided
@@ -99,10 +101,11 @@ function CheckoutContent() {
                       className="w-full h-full object-cover"
                     />
                   </div>
-                  <div>
+                  <div className="flex-1">
                     <p className="font-medium text-sm">{singleProduct.name}</p>
                     <p className="text-sm text-muted-foreground">{singleProduct.year}</p>
-                    <p className="font-bold mt-1">{formatPrice(singleProduct.priceInCents)}</p>
+                    <p className="text-xs text-muted-foreground mt-1">Qty: {singleQuantity}</p>
+                    <p className="font-bold mt-1">{formatPrice(singleProduct.priceInCents * singleQuantity)}</p>
                   </div>
                 </div>
               ) : (
@@ -129,7 +132,7 @@ function CheckoutContent() {
               <div className="border-t border-border mt-4 pt-4">
                 <div className="flex justify-between font-bold">
                   <span>Total</span>
-                  <span>{formatPrice(singleProduct ? singleProduct.priceInCents : totalPrice)}</span>
+                  <span>{formatPrice(singleProduct ? singleProduct.priceInCents * singleQuantity : totalPrice)}</span>
                 </div>
               </div>
 
@@ -143,7 +146,7 @@ function CheckoutContent() {
           {/* Checkout form */}
           <div className="lg:col-span-3 order-1 lg:order-2">
             <h1 className="text-2xl font-bold mb-6">Checkout</h1>
-            <Checkout productId={singleProduct?.id} />
+            <Checkout productId={singleProduct?.id} quantity={singleQuantity} />
           </div>
         </div>
       </div>

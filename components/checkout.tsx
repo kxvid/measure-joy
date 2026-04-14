@@ -10,9 +10,10 @@ import Link from "next/link"
 
 interface CheckoutProps {
   productId?: string
+  quantity?: number
 }
 
-export default function Checkout({ productId }: CheckoutProps) {
+export default function Checkout({ productId, quantity = 1 }: CheckoutProps) {
   const { items, clearCart } = useCart()
   const { userId } = useAuth()
   const [error, setError] = useState<string | null>(null)
@@ -24,7 +25,7 @@ export default function Checkout({ productId }: CheckoutProps) {
 
         let url: string | null
         if (productId) {
-          url = await startSingleProductCheckout(productId, uid)
+          url = await startSingleProductCheckout(productId, uid, quantity)
         } else {
           const cartItems = items.map((item) => ({
             productId: item.product.id,
@@ -48,7 +49,7 @@ export default function Checkout({ productId }: CheckoutProps) {
     if (items.length > 0 || productId) {
       redirectToCheckout()
     }
-  }, [productId, items, userId])
+  }, [productId, quantity, items, userId])
 
   if (error) {
     return (

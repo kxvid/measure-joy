@@ -82,6 +82,8 @@ export function CartDrawer({ open, onClose }: CartDrawerProps) {
             <div className="flex-1 overflow-y-auto p-6 space-y-4">
               {items.map((item) => {
                 const itemSubtotal = item.product.priceInCents * item.quantity
+                const maxStock = typeof item.product.stockCount === "number" ? item.product.stockCount : undefined
+                const atMaxStock = maxStock !== undefined && item.quantity >= maxStock
 
                 return (
                   <div key={item.product.id} className="flex gap-4 group">
@@ -104,6 +106,9 @@ export function CartDrawer({ open, onClose }: CartDrawerProps) {
                         </h3>
                       </Link>
                       <p className="text-xs text-muted-foreground mt-1">{item.product.brand}</p>
+                      {atMaxStock && (
+                        <p className="text-xs text-pop-orange mt-1 font-medium">Only {maxStock} in stock</p>
+                      )}
 
                       <div className="flex items-center justify-between mt-3">
                         <div className="flex items-center gap-1 bg-secondary rounded-lg p-1 border border-border">
@@ -119,8 +124,10 @@ export function CartDrawer({ open, onClose }: CartDrawerProps) {
                           <Button
                             variant="ghost"
                             size="icon"
-                            className="h-7 w-7 rounded hover:bg-background"
+                            className="h-7 w-7 rounded hover:bg-background disabled:opacity-40"
                             onClick={() => updateQuantity(item.product.id, item.quantity + 1)}
+                            disabled={atMaxStock}
+                            aria-label="Increase quantity"
                           >
                             <Plus className="h-3 w-3" />
                           </Button>
