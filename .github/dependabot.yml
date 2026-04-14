@@ -1,0 +1,49 @@
+version: 2
+updates:
+  # ── npm dependencies ──────────────────────────────────────────────────────
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "daily"
+      time: "07:00"      # UTC — before the security audit runs at 08:00
+    open-pull-requests-limit: 8
+    labels:
+      - "dependencies"
+      - "automated"
+    # Group all patch + minor updates into one PR per week to reduce noise
+    groups:
+      radix-ui:
+        patterns:
+          - "@radix-ui/*"
+      stripe:
+        patterns:
+          - "stripe"
+          - "@stripe/*"
+      supabase:
+        patterns:
+          - "@supabase/*"
+      clerk:
+        patterns:
+          - "@clerk/*"
+    # Pin major versions of core framework deps — review manually
+    ignore:
+      - dependency-name: "next"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "react"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "react-dom"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "typescript"
+        update-types: ["version-update:semver-major"]
+
+  # ── GitHub Actions ────────────────────────────────────────────────────────
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "07:00"
+    labels:
+      - "dependencies"
+      - "github-actions"
+      - "automated"

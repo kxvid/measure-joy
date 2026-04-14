@@ -1,0 +1,222 @@
+name: Daily Security Audit
+
+on:
+  schedule:
+    - cron: '0 8 * * *'   # 08:00 UTC every day
+  workflow_dispatch:        # allow manual trigger
+
+permissions:
+  contents: read
+  issues: write
+
+env:
+  SITE_URL: https://www.measurejoy.org
+
+jobs:
+  # ── 1. Dependency vulnerability scan ──────────────────────────────────────
+  npm-audit:
+    name: npm audit
+    runs-on: ubuntu-latest
+    outputs:
+      summary: ${{ steps.summary.outputs.text }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install dependencies (no scripts for safety)
+        run: npm ci --ignore-scripts
+
+      - name: Run npm audit
+        id: summary
+        run: |
+          npm audit --json > npm-audit.json 2>&1 || true
+          # Build a compact summary line for the consolidated issue
+          CRITICAL=$(jq '.metadata.vulnerabilities.critical // 0' npm-audit.json)
+          HIGH=$(jq     '.metadata.vulnerabilities.high     // 0' npm-audit.json)
+          MODERATE=$(jq '.metadata.vulnerabilities.moderate // 0' npm-audit.json)
+          LOW=$(jq      '.metadata.vulnerabilities.low      // 0' npm-audit.json)
+          TEXT="critical: $CRITICAL · high: $HIGH · moderate: $MODERATE · low: $LOW"
+          echo "text=$TEXT" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: npm-audit-${{ github.run_id }}
+          path: npm-audit.json
+          retention-days: 30
+
+  # ── 2. Snyk software composition analysis ─────────────────────────────────
+  snyk:
+    name: Snyk SCA
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        run: npm ci --ignore-scripts
+
+      - name: Snyk test
+        uses: snyk/actions/node@master
+        env:
+          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+        with:
+          # Only fail on high/critical; warn on moderate
+          args: --severity-threshold=high --json-file-output=snyk-results.json
+        continue-on-error: true   # don't block if SNYK_TOKEN not yet set
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: snyk-results-${{ github.run_id }}
+          path: snyk-results.json
+          retention-days: 30
+
+  # ── 3. OWASP ZAP passive baseline scan ────────────────────────────────────
+  zap-scan:
+    name: OWASP ZAP Baseline
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      issues: write      # ZAP action writes its own labeled issue
+    steps:
+      - name: ZAP Baseline Scan
+        uses: zaproxy/action-baseline@v0.12.0
+        with:
+          target: ${{ env.SITE_URL }}
+          # Passive scan only — never modifies the site
+          cmd_options: '-a -j'
+          issue_title: 'ZAP Baseline Scan — ${{ github.run_id }}'
+          fail_action: false  # don't fail the workflow on findings
+
+  # ── 4. Security headers (Mozilla Observatory) ─────────────────────────────
+  security-headers:
+    name: Security Headers
+    runs-on: ubuntu-latest
+    outputs:
+      grade: ${{ steps.obs.outputs.grade }}
+      score: ${{ steps.obs.outputs.score }}
+    steps:
+      - name: Trigger Observatory scan
+        id: obs
+        run: |
+          DOMAIN="www.measurejoy.org"
+          # Kick off a fresh scan (hidden = not listed publicly)
+          curl -sS -X POST \
+            "https://http-observatory.security.mozilla.org/api/v1/analyze?host=${DOMAIN}&hidden=true&rescan=true" \
+            > /dev/null
+          # Wait for the scan to complete (max ~60 s)
+          for i in $(seq 1 12); do
+            sleep 5
+            RESULT=$(curl -sS "https://http-observatory.security.mozilla.org/api/v1/analyze?host=${DOMAIN}")
+            STATE=$(echo "$RESULT" | python3 -c "import sys,json; print(json.load(sys.stdin).get('state',''))" 2>/dev/null)
+            if [ "$STATE" = "FINISHED" ]; then break; fi
+          done
+          GRADE=$(echo "$RESULT" | python3 -c "import sys,json; print(json.load(sys.stdin).get('grade','N/A'))"  2>/dev/null || echo "N/A")
+          SCORE=$(echo "$RESULT" | python3 -c "import sys,json; print(json.load(sys.stdin).get('score','N/A'))"  2>/dev/null || echo "N/A")
+          echo "grade=$GRADE" >> "$GITHUB_OUTPUT"
+          echo "score=$SCORE" >> "$GITHUB_OUTPUT"
+
+  # ── 5. Lighthouse CI ───────────────────────────────────────────────────────
+  lighthouse:
+    name: Lighthouse CI
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install Lighthouse CI
+        run: npm install -g @lhci/cli@0.14.x
+
+      - name: Run Lighthouse CI
+        run: lhci autorun 2>&1 | tee lhci-output.txt || true
+        continue-on-error: true
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: lighthouse-${{ github.run_id }}
+          path: lhci-output.txt
+          retention-days: 30
+
+  # ── 6. Consolidated audit issue ───────────────────────────────────────────
+  open-issue:
+    name: Open Audit Issue
+    runs-on: ubuntu-latest
+    needs: [npm-audit, security-headers, lighthouse]
+    if: always()
+    permissions:
+      issues: write
+    steps:
+      - name: Close yesterday's audit issue
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const { data: open } = await github.rest.issues.listForRepo({
+              owner: context.repo.owner,
+              repo:  context.repo.repo,
+              labels: 'security-audit',
+              state: 'open',
+              per_page: 20,
+            });
+            for (const issue of open) {
+              await github.rest.issues.update({
+                owner: context.repo.owner,
+                repo:  context.repo.repo,
+                issue_number: issue.number,
+                state: 'closed',
+              });
+            }
+
+      - name: Create consolidated audit issue
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const date  = new Date().toISOString().split('T')[0];
+            const runUrl = `${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}`;
+            const obsUrl = `https://observatory.mozilla.org/analyze/www.measurejoy.org`;
+
+            const body = [
+              `# 🔐 Daily Security Audit — ${date}`,
+              ``,
+              `> Full artifacts: [Run #${{ github.run_id }}](${runUrl})`,
+              ``,
+              `## npm audit`,
+              `\`${{ needs.npm-audit.outputs.summary }}\``,
+              ``,
+              `## Security Headers (Mozilla Observatory)`,
+              `Grade: **${{ needs.security-headers.outputs.grade }}** · Score: **${{ needs.security-headers.outputs.score }}/100**`,
+              `Full report: ${obsUrl}`,
+              ``,
+              `## OWASP ZAP Baseline`,
+              `Passive scan results are in the separate issue labeled \`ZAP-Results\` opened by the ZAP action.`,
+              ``,
+              `## Lighthouse CI`,
+              `Results uploaded as a workflow artifact — see \`lighthouse-${context.runId}\` in the [run](${runUrl}).`,
+              ``,
+              `## Snyk SCA`,
+              `See \`snyk-results-${context.runId}\` artifact for the full JSON report.`,
+              `If \`SNYK_TOKEN\` is not yet configured the step is skipped (add it in repo → Settings → Secrets).`,
+              ``,
+              `---`,
+              `*Auto-generated. Review findings, then close this issue.*`,
+            ].join('\n');
+
+            await github.rest.issues.create({
+              owner:  context.repo.owner,
+              repo:   context.repo.repo,
+              title:  `🔐 Daily Security Audit — ${date}`,
+              body,
+              labels: ['security-audit', 'automated'],
+            });
