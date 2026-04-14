@@ -1,12 +1,9 @@
-import { cookies } from "next/headers"
 import { createAdminClient } from "@/lib/supabase/admin"
 import { invalidateContentCache } from "@/lib/content"
 import { revalidatePath } from "next/cache"
+import { checkAdminAccess } from "@/app/actions/auth-admin"
 
-async function checkAdmin() {
-    const cookieStore = await cookies()
-    return cookieStore.get("admin_access")?.value === "true"
-}
+const checkAdmin = checkAdminAccess
 
 // GET - fetch all content grouped by section
 export async function GET() {

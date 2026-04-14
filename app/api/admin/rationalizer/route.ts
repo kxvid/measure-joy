@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server"
 import { GoogleGenerativeAI } from "@google/generative-ai"
 import Stripe from "stripe"
-import { cookies } from "next/headers"
+import { checkAdminAccess } from "@/app/actions/auth-admin"
 
 // Initialize Gemini and Stripe
 const genAI = new GoogleGenerativeAI(process.env.GOOGLE_AI_API_KEY!)
@@ -238,11 +238,8 @@ function needsRationalization(value: string | undefined | null): boolean {
  * POST: Rationalize all products or a specific product
  */
 export async function POST(request: Request) {
-    // 1. Security Check: Ensure user provides admin secret
-    const cookieStore = await cookies()
-    const isAdmin = cookieStore.get("admin_access")?.value === "true"
-
-    if (!isAdmin) {
+    // 1. Security Check: Ensure user is an allowlisted admin (Clerk + ADMIN_EMAILS)
+    if (!await checkAdminAccess()) {
         return NextResponse.json({ error: "Unauthorized" }, { status: 403 })
     }
 
@@ -394,11 +391,8 @@ export async function POST(request: Request) {
  * GET: Get rationalization status for all products
  */
 export async function GET() {
-    // 1. Security Check: Ensure user is admin
-    const cookieStore = await cookies()
-    const isAdmin = cookieStore.get("admin_access")?.value === "true"
-
-    if (!isAdmin) {
+    // 1. Security Check: Ensure user is an allowlisted admin (Clerk + ADMIN_EMAILS)
+    if (!await checkAdminAccess()) {
         return NextResponse.json({ error: "Unauthorized" }, { status: 403 })
     }
 

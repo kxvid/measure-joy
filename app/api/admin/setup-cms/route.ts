@@ -1,5 +1,5 @@
-import { cookies } from "next/headers"
 import { createAdminClient } from "@/lib/supabase/admin"
+import { checkAdminAccess } from "@/app/actions/auth-admin"
 
 const SEED_DATA = [
     // Hero
@@ -93,9 +93,7 @@ const SEED_DATA = [
 ]
 
 export async function POST() {
-    const cookieStore = await cookies()
-    const isAdmin = cookieStore.get("admin_access")?.value === "true"
-    if (!isAdmin) {
+    if (!await checkAdminAccess()) {
         return Response.json({ error: "Unauthorized" }, { status: 401 })
     }
 
