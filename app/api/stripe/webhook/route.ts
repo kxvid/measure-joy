@@ -55,6 +55,18 @@ export async function POST(req: Request) {
 
       const totalInCents = items.reduce((sum, item) => sum + item.priceInCents, 0)
 
+      // Decrement inventory for each purchased product
+      // Uses Stripe product metadata as source of truth for stockCount
+      for (const item of items) {
+        if (item.productId === "unknown") continue
+        try {
+          await decrementProductStock(item.productId, item.quantity)
+        } catch (stockError) {
+          console.error(`[v0] Failed to decrement stock for ${item.productId}:`, stockError)
+          // Don't fail the webhook if stock update fails - order is already paid
+        }
+      }
+
       // Send confirmation email
       if (session.customer_details?.email) {
         try {
@@ -100,4 +112,39 @@ export async function POST(req: Request) {
     console.error("[v0] Webhook error:", error)
     return NextResponse.json({ error: "Webhook handler failed" }, { status: 500 })
   }
+}
+
+// Decrement a product's stockCount in Stripe metadata by the given quantity.
+// Marks the product as out-of-stock (inStock: "false") when count hits 0.
+// If stockCount is not set on the product, this is a no-op (inventory untracked).
+async function decrementProductStock(productId: string, quantity: number) {
+  const product = await stripe.products.retrieve(productId)
+  const currentStockRaw = product.metadata?.stockCount
+
+  // Skip if inventory isn't tracked for this product
+  if (!currentStockRaw) {
+    console.log(`[v0] Product ${productId} has no stockCount metadata - skipping decrement`)
+    return
+  }
+
+  const currentStock = parseInt(currentStockRaw, 10)
+  if (isNaN(currentStock)) {
+    console.warn(`[v0] Invalid stockCount "${currentStockRaw}" for product ${productId}`)
+    return
+  }
+
+  const newStock = Math.max(0, currentStock - quantity)
+
+  const newMetadata: Record<string, string> = {
+    ...product.metadata,
+    stockCount: newStock.toString(),
+  }
+
+  // Auto-mark as out of stock when depleted
+  if (newStock === 0) {
+    newMetadata.inStock = "false"
+  }
+
+  await stripe.products.update(productId, { metadata: newMetadata })
+  console.log(`[v0] Decremented stock for ${productId}: ${currentStock} → ${newStock}`)
 }

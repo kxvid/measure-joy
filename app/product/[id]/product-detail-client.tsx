@@ -17,7 +17,7 @@ import { ProductReviews } from "@/components/product-reviews"
 import { WishlistButton } from "@/components/wishlist-button"
 import { Breadcrumbs } from "@/components/breadcrumbs"
 import { TrustBadges } from "@/components/trust-badges"
-import { ShoppingBag, Check, Shield, RotateCcw, Plus, Package, Zap, Award, Sparkles } from "lucide-react"
+import { ShoppingBag, Check, Shield, RotateCcw, Plus, Minus, Package, Zap, Award, Sparkles } from "lucide-react"
 import { StickyAddToCart } from "@/components/sticky-add-to-cart"
 import { RecentlyViewed } from "@/components/recently-viewed"
 
@@ -30,16 +30,22 @@ export function ProductDetailClient({ product, relatedProducts }: ProductDetailC
   const [justAdded, setJustAdded] = useState(false)
   const [showUpsell, setShowUpsell] = useState(false)
   const [addedUpsells, setAddedUpsells] = useState<Set<string>>(new Set())
+  const [quantity, setQuantity] = useState(1)
   const { addItem } = useCart()
 
+  const maxQuantity = typeof product.stockCount === "number" ? product.stockCount : 10
+
   const handleAddToCart = () => {
-    addItem(product)
+    addItem(product, quantity)
     setJustAdded(true)
     if (product.category === "camera") {
       setShowUpsell(true)
     }
     setTimeout(() => setJustAdded(false), 2000)
   }
+
+  const decrementQty = () => setQuantity((q) => Math.max(1, q - 1))
+  const incrementQty = () => setQuantity((q) => Math.min(maxQuantity, q + 1))
 
   const handleAddUpsell = (upsell: Product) => {
     addItem(upsell)
@@ -158,6 +164,43 @@ export function ProductDetailClient({ product, relatedProducts }: ProductDetailC
 
               {/* Actions - Updated heart button to WishlistButton component */}
               <div className="mt-8 space-y-3">
+                {/* Quantity selector */}
+                {product.inStock && (
+                  <div className="flex items-center justify-between p-3 border-2 border-border rounded-xl">
+                    <span className="text-sm font-medium">Quantity</span>
+                    <div className="flex items-center gap-3">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="icon"
+                        className="h-9 w-9 rounded-lg"
+                        onClick={decrementQty}
+                        disabled={quantity <= 1}
+                        aria-label="Decrease quantity"
+                      >
+                        <Minus className="h-4 w-4" />
+                      </Button>
+                      <span className="font-bold text-lg w-8 text-center">{quantity}</span>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="icon"
+                        className="h-9 w-9 rounded-lg"
+                        onClick={incrementQty}
+                        disabled={quantity >= maxQuantity}
+                        aria-label="Increase quantity"
+                      >
+                        <Plus className="h-4 w-4" />
+                      </Button>
+                      {typeof product.stockCount === "number" && (
+                        <span className="text-xs text-muted-foreground ml-2">
+                          {product.stockCount} available
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                )}
+
                 <div className="flex gap-3">
                   <Button
                     size="lg"
@@ -187,7 +230,7 @@ export function ProductDetailClient({ product, relatedProducts }: ProductDetailC
                   asChild
                   disabled={!product.inStock}
                 >
-                  <Link href={`/checkout?product=${product.id}`}>
+                  <Link href={`/checkout?product=${product.id}&qty=${quantity}`}>
                     <ShoppingBag className="h-5 w-5 mr-2" />
                     Buy Now
                   </Link>

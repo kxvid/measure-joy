@@ -10,7 +10,7 @@ export interface CartItem {
 
 interface CartContextType {
   items: CartItem[]
-  addItem: (product: Product) => void
+  addItem: (product: Product, quantity?: number) => void
   removeItem: (productId: string) => void
   updateQuantity: (productId: string, quantity: number) => void
   clearCart: () => void
@@ -19,6 +19,14 @@ interface CartContextType {
 }
 
 const CartContext = createContext<CartContextType | undefined>(undefined)
+
+// Clamp quantity to available stock. If stockCount is undefined, no limit applied.
+function clampToStock(product: Product, quantity: number): number {
+  const max = typeof product.stockCount === "number" ? product.stockCount : Infinity
+  if (quantity > max) return max
+  if (quantity < 1) return 1
+  return quantity
+}
 
 export function CartProvider({ children }: { children: ReactNode }) {
   const [items, setItems] = useState<CartItem[]>([])
@@ -44,13 +52,17 @@ export function CartProvider({ children }: { children: ReactNode }) {
     }
   }, [items, isHydrated])
 
-  const addItem = (product: Product) => {
+  const addItem = (product: Product, quantity: number = 1) => {
     setItems((prev) => {
       const existing = prev.find((item) => item.product.id === product.id)
       if (existing) {
-        return prev.map((item) => (item.product.id === product.id ? { ...item, quantity: item.quantity + 1 } : item))
+        const newQty = clampToStock(product, existing.quantity + quantity)
+        return prev.map((item) =>
+          item.product.id === product.id ? { ...item, quantity: newQty } : item
+        )
       }
-      return [...prev, { product, quantity: 1 }]
+      const clampedQty = clampToStock(product, quantity)
+      return [...prev, { product, quantity: clampedQty }]
     })
   }
 
@@ -63,7 +75,13 @@ export function CartProvider({ children }: { children: ReactNode }) {
       removeItem(productId)
       return
     }
-    setItems((prev) => prev.map((item) => (item.product.id === productId ? { ...item, quantity } : item)))
+    setItems((prev) =>
+      prev.map((item) =>
+        item.product.id === productId
+          ? { ...item, quantity: clampToStock(item.product, quantity) }
+          : item
+      )
+    )
   }
 
   const clearCart = () => setItems([])

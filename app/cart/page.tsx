@@ -44,64 +44,74 @@ export default function CartPage() {
         <div className="grid lg:grid-cols-3 gap-8 lg:gap-12">
           {/* Cart items */}
           <div className="lg:col-span-2 space-y-4">
-            {items.map((item) => (
-              <div
-                key={item.product.id}
-                className="flex gap-4 p-4 bg-card rounded-2xl border border-border hover:border-border/80 transition-colors"
-              >
-                {/* Image */}
-                <Link href={`/product/${item.product.id}`} className="shrink-0">
-                  <div className="w-24 h-24 rounded-xl overflow-hidden bg-secondary">
-                    <img
-                      src={item.product.images[0] || "/placeholder.svg"}
-                      alt={item.product.name}
-                      className="w-full h-full object-cover"
-                    />
-                  </div>
-                </Link>
+            {items.map((item) => {
+              const maxStock = typeof item.product.stockCount === "number" ? item.product.stockCount : undefined
+              const atMaxStock = maxStock !== undefined && item.quantity >= maxStock
 
-                {/* Details */}
-                <div className="flex-1 min-w-0">
-                  <Link href={`/product/${item.product.id}`}>
-                    <h3 className="font-medium hover:text-accent transition-colors">{item.product.name}</h3>
+              return (
+                <div
+                  key={item.product.id}
+                  className="flex gap-4 p-4 bg-card rounded-2xl border border-border hover:border-border/80 transition-colors"
+                >
+                  {/* Image */}
+                  <Link href={`/product/${item.product.id}`} className="shrink-0">
+                    <div className="w-24 h-24 rounded-xl overflow-hidden bg-secondary">
+                      <img
+                        src={item.product.images[0] || "/placeholder.svg"}
+                        alt={item.product.name}
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
                   </Link>
-                  <p className="text-sm text-muted-foreground mt-1">{item.product.year}</p>
-                  <p className="font-semibold mt-2">{formatPrice(item.product.priceInCents)}</p>
-                </div>
 
-                {/* Quantity controls */}
-                <div className="flex flex-col items-end justify-between">
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-8 w-8 rounded-lg text-muted-foreground hover:text-destructive"
-                    onClick={() => removeItem(item.product.id)}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
+                  {/* Details */}
+                  <div className="flex-1 min-w-0">
+                    <Link href={`/product/${item.product.id}`}>
+                      <h3 className="font-medium hover:text-accent transition-colors">{item.product.name}</h3>
+                    </Link>
+                    <p className="text-sm text-muted-foreground mt-1">{item.product.year}</p>
+                    <p className="font-semibold mt-2">{formatPrice(item.product.priceInCents)}</p>
+                    {atMaxStock && (
+                      <p className="text-xs text-pop-orange mt-1 font-medium">Only {maxStock} in stock</p>
+                    )}
+                  </div>
 
-                  <div className="flex items-center gap-1 bg-secondary rounded-lg p-1">
+                  {/* Quantity controls */}
+                  <div className="flex flex-col items-end justify-between">
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="h-8 w-8 rounded-md"
-                      onClick={() => updateQuantity(item.product.id, item.quantity - 1)}
+                      className="h-8 w-8 rounded-lg text-muted-foreground hover:text-destructive"
+                      onClick={() => removeItem(item.product.id)}
                     >
-                      <Minus className="h-3 w-3" />
+                      <Trash2 className="h-4 w-4" />
                     </Button>
-                    <span className="w-8 text-center font-mono text-sm">{item.quantity}</span>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-8 w-8 rounded-md"
-                      onClick={() => updateQuantity(item.product.id, item.quantity + 1)}
-                    >
-                      <Plus className="h-3 w-3" />
-                    </Button>
+
+                    <div className="flex items-center gap-1 bg-secondary rounded-lg p-1">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 rounded-md"
+                        onClick={() => updateQuantity(item.product.id, item.quantity - 1)}
+                      >
+                        <Minus className="h-3 w-3" />
+                      </Button>
+                      <span className="w-8 text-center font-mono text-sm">{item.quantity}</span>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 rounded-md disabled:opacity-40"
+                        onClick={() => updateQuantity(item.product.id, item.quantity + 1)}
+                        disabled={atMaxStock}
+                        aria-label="Increase quantity"
+                      >
+                        <Plus className="h-3 w-3" />
+                      </Button>
+                    </div>
                   </div>
                 </div>
-              </div>
-            ))}
+              )
+            })}
           </div>
 
           {/* Order summary */}

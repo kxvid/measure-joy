@@ -12,11 +12,21 @@ interface CheckoutItem {
 
 export async function startCheckoutSession(items: CheckoutItem[], userId?: string) {
   // Fetch products from Stripe and build line items (filter out products not found)
+  // Also validates live stock availability to prevent overselling
   const lineItemsPromises = items.map(async (item) => {
     const product = await getStripeProductById(item.productId)
     if (!product) {
       console.warn(`[Checkout] Product ${item.productId} not found in Stripe, skipping`)
       return null
+    }
+    // Stock validation: block checkout if out of stock or requested qty exceeds stockCount
+    if (!product.inStock) {
+      throw new Error(`"${product.name}" is out of stock. Please remove it from your cart.`)
+    }
+    if (typeof product.stockCount === "number" && item.quantity > product.stockCount) {
+      throw new Error(
+        `Only ${product.stockCount} of "${product.name}" available. Please reduce the quantity in your cart.`
+      )
     }
     return {
       price_data: {
@@ -89,10 +99,25 @@ export async function startCheckoutSession(items: CheckoutItem[], userId?: strin
   return session.url
 }
 
-export async function startSingleProductCheckout(productId: string, userId?: string) {
+export async function startSingleProductCheckout(
+  productId: string,
+  userId?: string,
+  quantity: number = 1
+) {
   const product = await getStripeProductById(productId)
   if (!product) {
     throw new Error(`Product with id "${productId}" not found`)
+  }
+
+  // Stock validation
+  if (!product.inStock) {
+    throw new Error(`"${product.name}" is out of stock.`)
+  }
+  const safeQuantity = Math.max(1, Math.floor(quantity))
+  if (typeof product.stockCount === "number" && safeQuantity > product.stockCount) {
+    throw new Error(
+      `Only ${product.stockCount} of "${product.name}" available. Please reduce the quantity.`
+    )
   }
 
   const session = await stripe.checkout.sessions.create({
@@ -109,7 +134,7 @@ export async function startSingleProductCheckout(productId: string, userId?: str
           },
           unit_amount: product.priceInCents,
         },
-        quantity: 1,
+        quantity: safeQuantity,
       },
     ],
     mode: "payment",
@@ -144,7 +169,7 @@ export async function startSingleProductCheckout(productId: string, userId?: str
     },
     metadata: {
       user_id: userId || "",
-      items: `${productId}:1`,
+      items: `${productId}:${safeQuantity}`,
     },
   })
 
