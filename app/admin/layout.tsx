@@ -1,7 +1,7 @@
 import { cookies, headers } from "next/headers"
 import { redirect } from "next/navigation"
 import Link from "next/link"
-import { Home, LayoutDashboard, Package, ShoppingCart, Wand2, Lock, FileEdit, LogOut, Pencil } from "lucide-react"
+import { Home, LayoutDashboard, Package, ShoppingCart, Wand2, Lock, FileEdit, LogOut, Pencil, Boxes } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { verifyAdminCode, logoutAdmin } from "@/app/actions/auth-admin"
 import { Input } from "@/components/ui/input"
@@ -9,6 +9,7 @@ import { Label } from "@/components/ui/label"
 
 const NAV_ITEMS = [
     { href: "/admin/orders", label: "Orders", icon: ShoppingCart },
+    { href: "/admin/inventory", label: "Inventory", icon: Boxes },
     { href: "/admin/categories", label: "Categories", icon: Package },
     { href: "/admin/content", label: "Site Content", icon: FileEdit },
     { href: "/admin/copywriter", label: "AI Copywriter", icon: Pencil },
