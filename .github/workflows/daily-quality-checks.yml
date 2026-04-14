@@ -63,7 +63,7 @@ jobs:
         run: npx eslint . --ext .ts,.tsx --fix --max-warnings=0 2>&1 || true
 
       - name: Open PR if ESLint made changes
-        uses: peter-evans/create-pull-request@v6
+        uses: peter-evans/create-pull-request@v8
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           branch: quality/eslint-autofix-${{ github.run_id }}
