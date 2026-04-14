@@ -1,0 +1,162 @@
+name: Daily Quality Checks
+
+on:
+  schedule:
+    - cron: '0 9 * * *'   # 09:00 UTC every day (1 h after security audit)
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  # ── 1. TypeScript strict type-check ────────────────────────────────────────
+  typecheck:
+    name: TypeScript Check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - run: npm ci --ignore-scripts
+
+      - name: Run tsc
+        run: npx tsc --noEmit 2>&1 | tee tsc-output.txt || true
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: tsc-output-${{ github.run_id }}
+          path: tsc-output.txt
+          retention-days: 14
+
+  # ── 2. ESLint auto-fix → PR if changes ─────────────────────────────────────
+  eslint-autofix:
+    name: ESLint Auto-fix
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - run: npm ci --ignore-scripts
+
+      # next lint sets up ESLint with the built-in Next.js config on first run
+      - name: Install ESLint deps (if needed)
+        run: |
+          if ! node -e "require('eslint')" 2>/dev/null; then
+            npm install --save-dev eslint eslint-config-next --legacy-peer-deps
+          fi
+
+      - name: Run ESLint with auto-fix
+        run: npx eslint . --ext .ts,.tsx --fix --max-warnings=0 2>&1 || true
+
+      - name: Open PR if ESLint made changes
+        uses: peter-evans/create-pull-request@v6
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          branch: quality/eslint-autofix-${{ github.run_id }}
+          commit-message: "fix: apply ESLint auto-fixes"
+          title: "🛠️ ESLint auto-fix — ${{ github.run_number }}"
+          body: |
+            ## Auto-generated ESLint fix
+
+            This PR was opened automatically by the [Daily Quality Checks](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}) workflow.
+
+            ESLint ran with `--fix` and corrected one or more auto-fixable issues (unused imports, quote style, spacing, etc.).
+
+            **Review the diff before merging.**
+          labels: |
+            automated
+            quality
+          delete-branch: true
+          # only open a PR when there are actual file changes
+          add-paths: |
+            app/**
+            components/**
+            lib/**
+            hooks/**
+
+  # ── 3. Console.log / debug statement scanner ────────────────────────────────
+  debug-statements:
+    name: Debug Statement Scan
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Find console.log in source files
+        id: scan
+        run: |
+          # Exclude node_modules, .next, scripts
+          MATCHES=$(grep -rn "console\.log\|console\.warn\|console\.error\|debugger" \
+            --include="*.ts" --include="*.tsx" \
+            --exclude-dir=node_modules --exclude-dir=.next --exclude-dir=scripts \
+            . 2>/dev/null || true)
+          COUNT=$(echo "$MATCHES" | grep -c "." || echo 0)
+          echo "count=$COUNT" >> "$GITHUB_OUTPUT"
+          echo "$MATCHES" > debug-scan.txt
+
+      - name: Report findings as workflow annotation
+        if: steps.scan.outputs.count != '0'
+        run: |
+          echo "::warning::Found ${{ steps.scan.outputs.count }} debug statement(s) in source. See debug-scan.txt artifact."
+          cat debug-scan.txt
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: debug-scan-${{ github.run_id }}
+          path: debug-scan.txt
+          retention-days: 14
+
+  # ── 4. Missing image alt-text scanner ───────────────────────────────────────
+  a11y-alt-text:
+    name: Alt Text Audit
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Find <img> tags without alt attribute
+        run: |
+          # Look for HTML img or JSX <img that lack alt=
+          # This catches  <img src="..." />  but not  <img alt="..." src="..." />
+          MATCHES=$(grep -rn '<img\b[^>]*>' \
+            --include="*.tsx" --include="*.jsx" --include="*.html" \
+            --exclude-dir=node_modules --exclude-dir=.next \
+            . 2>/dev/null \
+            | grep -v 'alt=' || true)
+          if [ -n "$MATCHES" ]; then
+            echo "::warning::The following <img> tags are missing an alt attribute:"
+            echo "$MATCHES"
+          else
+            echo "✅ All <img> tags have alt attributes."
+          fi
+
+  # ── 5. Open-graph / SEO meta tag coverage ───────────────────────────────────
+  seo-meta-check:
+    name: SEO Meta Tag Check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Scan page.tsx files for og:image / og:description
+        run: |
+          PAGES=$(find app -name "page.tsx" 2>/dev/null)
+          MISSING=""
+          for f in $PAGES; do
+            if ! grep -q "openGraph\|og:image\|og:description" "$f" 2>/dev/null; then
+              MISSING="$MISSING\n  $f"
+            fi
+          done
+          if [ -n "$MISSING" ]; then
+            echo "::warning::Pages missing openGraph metadata:$MISSING"
+          else
+            echo "✅ All pages have openGraph metadata."
+          fi
