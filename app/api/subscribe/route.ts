@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server"
 import { Resend } from "resend"
-import { createClient } from "@/lib/supabase/server"
+import { createAdminClient } from "@/lib/supabase/admin"
 
 const resend = process.env.RESEND_API_KEY ? new Resend(process.env.RESEND_API_KEY) : null
 
@@ -15,8 +15,7 @@ export async function POST(request: Request) {
       )
     }
 
-    // Store subscriber in Supabase
-    const supabase = await createClient()
+    const supabase = createAdminClient()
     const { error: dbError } = await supabase
       .from("subscribers")
       .upsert(
