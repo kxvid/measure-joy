@@ -1,6 +1,5 @@
 "use server"
 
-import { getOrders } from "@/app/actions/orders" // This now fetches from Stripe
 import { getAdminOrders } from "@/app/actions/admin"
 import { redirect } from "next/navigation"
 import { checkAdminAccess } from "@/app/actions/auth-admin"
@@ -16,74 +15,97 @@ import {
     TableRow,
 } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
-import { Package, Truck, CheckCircle, Clock } from "lucide-react"
+import { Package, Truck, CheckCircle, Clock, ShoppingBag } from "lucide-react"
 
-export default async function AdminOrdersPage() {
-    // Legacy isAdmin likely checks Clerk. We use our own cookie gate now.
-    // The layout.tsx gate handles the UI/redirect for missing auth, 
-    // but we can double check here or just let the layout handle it.
-    // Ideally, we shouldn't redirect to "/" if layout already gates it.
-    // But if we want to be safe:
-    /*
-    if (!await checkAdminAccess()) {
-        redirect("/admin") // Go back to gate
-    }
-    */
-    // Actually, layout.tsx *already* gates this. 
-    // If we are here, we passed layout (unless layout didn't run? layout always runs).
-    // The previous code redirected to "/" which confusingly kicked them out.
-    // I will remove the redirect entirely because Layout handles it, 
-    // OR use the correct check so it doesn't false-negative.
+const STATUS_CONFIG: Record<string, { label: string; variant: "default" | "secondary" | "outline" | "destructive"; color: string }> = {
+    processing: { label: "Processing", variant: "outline", color: "bg-yellow-100 text-yellow-800 border-yellow-200" },
+    shipped: { label: "Shipped", variant: "secondary", color: "bg-blue-100 text-blue-800 border-blue-200" },
+    delivered: { label: "Delivered", variant: "default", color: "bg-green-100 text-green-800 border-green-200" },
+}
 
-    // Let's use checkAdminAccess to be safe, but redirect to /admin (login) not /.
+export default async function AdminOrdersPage({
+    searchParams,
+}: {
+    searchParams: Promise<{ status?: string }>
+}) {
     if (!await checkAdminAccess()) {
         redirect("/admin")
     }
 
-    // Fetch all orders - currently getOrders() fetches for the *current user*.
-    // We need an admin version of getOrders that fetches *all* orders.
-    // However, app/actions/orders.ts getOrders() is designed for the user.
-    // WE MISSED THIS IN PLANNING.
-    // We need a new action to fetch ALL Stripe sessions for admin.
-
-    // For now, I will create a temporary placeholder or reused component that calls a new action.
-    // But since this is a server component, I can call the action directly if I create it.
-
-    // Let's create `getAdminOrders` in `app/actions/admin.ts` first? 
-    // Or just put it here since it's a server component? 
-    // Better to have it in a shared action file.
-
-    // Wait, I can't put the action creation in this tool call alongside the page creation if I want to use it immediately.
-    // But I can define the page and then update the action.
-
-    // Actually, `app/actions/orders.ts` `getOrders` filters by userId.
-    // I need `getAdminOrders` in `app/actions/admin.ts`.
-
-    // I'll assume `getAdminOrders` exists and import it, then create it in the next step.
-    // Or I can just inline the stripe fetching here since it's a server component (but keeping actions separate is better).
-
-    // Let's use `getAdminOrders` from `@/app/actions/admin`.
-
+    const { status: filterStatus } = await searchParams
     const orders = await getAdminOrders()
 
+    const counts = {
+        all: orders.length,
+        processing: orders.filter(o => o.status === "processing").length,
+        shipped: orders.filter(o => o.status === "shipped").length,
+        delivered: orders.filter(o => o.status === "delivered").length,
+    }
+
+    const filtered = filterStatus && filterStatus !== "all"
+        ? orders.filter(o => o.status === filterStatus)
+        : orders
+
+    const tabs = [
+        { key: "all", label: "All", count: counts.all, icon: <ShoppingBag className="h-3.5 w-3.5" /> },
+        { key: "processing", label: "Processing", count: counts.processing, icon: <Clock className="h-3.5 w-3.5" /> },
+        { key: "shipped", label: "Shipped", count: counts.shipped, icon: <Truck className="h-3.5 w-3.5" /> },
+        { key: "delivered", label: "Delivered", count: counts.delivered, icon: <CheckCircle className="h-3.5 w-3.5" /> },
+    ]
+
+    const activeTab = filterStatus || "all"
+
     return (
-        <div className="container mx-auto py-8 px-4">
-            <div className="flex items-center justify-between mb-8">
-                <div>
-                    <h1 className="text-3xl font-bold">Orders</h1>
-                    <p className="text-muted-foreground">Manage customer orders and shipping</p>
-                </div>
+        <div className="max-w-[1400px] mx-auto py-8 px-4 space-y-6">
+            {/* Header */}
+            <div>
+                <h1 className="text-2xl font-bold tracking-tight">Orders</h1>
+                <p className="text-muted-foreground text-sm mt-1">
+                    Manage customer orders, shipping, and delivery
+                </p>
             </div>
 
+            {/* Stats row */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                <StatCard label="Total Orders" value={counts.all} icon={<ShoppingBag className="h-3.5 w-3.5" />} />
+                <StatCard label="Processing" value={counts.processing} icon={<Clock className="h-3.5 w-3.5 text-yellow-600" />} />
+                <StatCard label="Shipped" value={counts.shipped} icon={<Truck className="h-3.5 w-3.5 text-blue-600" />} />
+                <StatCard label="Delivered" value={counts.delivered} icon={<CheckCircle className="h-3.5 w-3.5 text-green-600" />} />
+            </div>
+
+            {/* Filter tabs + table */}
             <Card>
-                <CardHeader>
-                    <CardTitle>Recent Orders</CardTitle>
+                <CardHeader className="pb-3">
+                    <div className="flex items-center gap-1 flex-wrap">
+                        {tabs.map((tab) => (
+                            <Link
+                                key={tab.key}
+                                href={tab.key === "all" ? "/admin/orders" : `/admin/orders?status=${tab.key}`}
+                            >
+                                <Button
+                                    variant={activeTab === tab.key ? "default" : "ghost"}
+                                    size="sm"
+                                    className="gap-1.5 h-8 text-xs"
+                                >
+                                    {tab.icon}
+                                    {tab.label}
+                                    <span className={`ml-1 px-1.5 py-0.5 rounded-full text-[10px] font-bold ${
+                                        activeTab === tab.key
+                                            ? "bg-primary-foreground/20 text-primary-foreground"
+                                            : "bg-muted text-muted-foreground"
+                                    }`}>
+                                        {tab.count}
+                                    </span>
+                                </Button>
+                            </Link>
+                        ))}
+                    </div>
                 </CardHeader>
                 <CardContent>
                     <Table>
                         <TableHeader>
                             <TableRow>
-                                <TableHead>Order ID</TableHead>
+                                <TableHead>Order</TableHead>
                                 <TableHead>Date</TableHead>
                                 <TableHead>Customer</TableHead>
                                 <TableHead>Status</TableHead>
@@ -93,57 +115,57 @@ export default async function AdminOrdersPage() {
                             </TableRow>
                         </TableHeader>
                         <TableBody>
-                            {orders.length === 0 ? (
+                            {filtered.length === 0 ? (
                                 <TableRow>
-                                    <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
-                                        No orders found.
+                                    <TableCell colSpan={7} className="text-center py-12 text-muted-foreground">
+                                        {filterStatus ? `No ${filterStatus} orders found.` : "No orders found."}
                                     </TableCell>
                                 </TableRow>
                             ) : (
-                                orders.map((order) => (
-                                    <TableRow key={order.id}>
-                                        <TableCell className="font-mono text-xs">
-                                            {order.id.slice(0, 8).toUpperCase()}
-                                        </TableCell>
-                                        <TableCell>
-                                            {new Date(order.created_at).toLocaleDateString()}
-                                        </TableCell>
-                                        <TableCell>
-                                            <div>{order.shipping_address?.name || "Guest"}</div>
-                                            {order.customer_email && (
-                                                <div className="text-xs text-muted-foreground">{order.customer_email}</div>
-                                            )}
-                                        </TableCell>
-                                        <TableCell>
-                                            <Badge variant={
-                                                order.status === "shipped" ? "secondary" :
-                                                    order.status === "completed" ? "default" : "outline"
-                                            }>
-                                                {order.status}
-                                            </Badge>
-                                        </TableCell>
-                                        <TableCell>
-                                            {order.tracking_number ? (
-                                                <div className="flex items-center gap-1 text-xs">
-                                                    <Truck className="h-3 w-3" />
-                                                    {order.tracking_number}
-                                                </div>
-                                            ) : (
-                                                <span className="text-muted-foreground text-xs">-</span>
-                                            )}
-                                        </TableCell>
-                                        <TableCell className="text-right">
-                                            ${(order.total_cents / 100).toFixed(2)}
-                                        </TableCell>
-                                        <TableCell className="text-right">
-                                            <Button asChild size="sm" variant="outline">
-                                                <Link href={`/admin/orders/${order.id}`}>
-                                                    View
-                                                </Link>
-                                            </Button>
-                                        </TableCell>
-                                    </TableRow>
-                                ))
+                                filtered.map((order) => {
+                                    const cfg = STATUS_CONFIG[order.status] || STATUS_CONFIG.processing
+                                    return (
+                                        <TableRow key={order.id}>
+                                            <TableCell className="font-mono text-xs font-medium">
+                                                #{order.id.slice(0, 8).toUpperCase()}
+                                            </TableCell>
+                                            <TableCell className="text-sm">
+                                                {new Date(order.created_at).toLocaleDateString()}
+                                            </TableCell>
+                                            <TableCell>
+                                                <div className="text-sm font-medium">{order.shipping_address?.name || "Guest"}</div>
+                                                {order.customer_email && (
+                                                    <div className="text-xs text-muted-foreground">{order.customer_email}</div>
+                                                )}
+                                            </TableCell>
+                                            <TableCell>
+                                                <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium border ${cfg.color}`}>
+                                                    {cfg.label}
+                                                </span>
+                                            </TableCell>
+                                            <TableCell>
+                                                {order.tracking_number ? (
+                                                    <div className="flex items-center gap-1.5 text-xs">
+                                                        <Truck className="h-3 w-3 text-muted-foreground" />
+                                                        <span className="font-mono">{order.tracking_number}</span>
+                                                    </div>
+                                                ) : (
+                                                    <span className="text-muted-foreground text-xs">—</span>
+                                                )}
+                                            </TableCell>
+                                            <TableCell className="text-right text-sm font-medium">
+                                                ${(order.total_cents / 100).toFixed(2)}
+                                            </TableCell>
+                                            <TableCell className="text-right">
+                                                <Button asChild size="sm" variant="outline" className="h-7 text-xs">
+                                                    <Link href={`/admin/orders/${order.id}`}>
+                                                        View
+                                                    </Link>
+                                                </Button>
+                                            </TableCell>
+                                        </TableRow>
+                                    )
+                                })
                             )}
                         </TableBody>
                     </Table>
@@ -153,3 +175,18 @@ export default async function AdminOrdersPage() {
     )
 }
 
+function StatCard({ label, value, icon }: { label: string; value: number; icon: React.ReactNode }) {
+    return (
+        <div className="flex items-center gap-3 px-3 py-2.5 rounded-lg border bg-background">
+            <div className="h-8 w-8 rounded-md bg-muted flex items-center justify-center flex-shrink-0">
+                {icon}
+            </div>
+            <div className="min-w-0">
+                <div className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">
+                    {label}
+                </div>
+                <div className="text-xl font-bold tabular-nums">{value}</div>
+            </div>
+        </div>
+    )
+}

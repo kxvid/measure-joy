@@ -4,7 +4,7 @@ import { stripe } from "@/lib/stripe"
 import { checkAdminAccess } from "@/app/actions/auth-admin"
 import { revalidatePath } from "next/cache"
 import { Order, OrderItem, ShippingAddress } from "@/lib/orders"
-import { sendShippingUpdateEmail } from "@/lib/emails"
+import { sendShippingUpdateEmail, sendDeliveryConfirmationEmail } from "@/lib/emails"
 
 export async function getAdminOrders(): Promise<Order[]> {
     if (!await checkAdminAccess()) {
@@ -45,7 +45,7 @@ export async function getAdminOrders(): Promise<Order[]> {
                 id: session.id,
                 user_id: session.metadata?.user_id || "",
                 stripe_session_id: session.id,
-                status: session.metadata?.shipped_at ? "shipped" : "completed",
+                status: session.metadata?.delivered_at ? "delivered" : session.metadata?.shipped_at ? "shipped" : "processing",
                 total_cents: session.amount_total || 0,
                 items,
                 shipping_address,
@@ -53,7 +53,8 @@ export async function getAdminOrders(): Promise<Order[]> {
                 created_at: new Date(session.created * 1000).toISOString(),
                 tracking_number: session.metadata?.tracking_number || null,
                 carrier: session.metadata?.carrier || null,
-                shipped_at: session.metadata?.shipped_at || null
+                shipped_at: session.metadata?.shipped_at || null,
+                delivered_at: session.metadata?.delivered_at || null,
             }
         })
 
@@ -123,6 +124,55 @@ export async function updateOrderTracking(
     } catch (error) {
         console.error("Error updating order tracking:", error)
         return { success: false, error: "Failed to update tracking" }
+    }
+}
+
+export async function markOrderDelivered(orderId: string) {
+    if (!await checkAdminAccess()) {
+        return { success: false, error: "Unauthorized" }
+    }
+
+    try {
+        const deliveredAt = new Date().toISOString()
+
+        const session = await stripe.checkout.sessions.retrieve(orderId, {
+            expand: ["line_items", "line_items.data.price.product"]
+        })
+
+        await stripe.checkout.sessions.update(orderId, {
+            metadata: {
+                ...session.metadata,
+                delivered_at: deliveredAt,
+            }
+        })
+
+        const email = session.customer_details?.email
+        if (email) {
+            const items = (session.line_items?.data || []).map((item: any) => {
+                const product = item.price?.product
+                return {
+                    name: item.description || product?.name || "Unknown Product",
+                    quantity: item.quantity || 1,
+                    productId: typeof product === "string" ? product : product?.id || "",
+                }
+            })
+
+            try {
+                await sendDeliveryConfirmationEmail({ email, orderId, items })
+                console.log(`[Admin] Delivery confirmation sent to ${email} for order ${orderId}`)
+            } catch (emailError) {
+                console.error("[Admin] Failed to send delivery email:", emailError)
+            }
+        }
+
+        revalidatePath(`/admin/orders/${orderId}`)
+        revalidatePath(`/admin/orders`)
+        revalidatePath(`/account/orders`)
+
+        return { success: true }
+    } catch (error) {
+        console.error("Error marking order as delivered:", error)
+        return { success: false, error: "Failed to mark as delivered" }
     }
 }
 
