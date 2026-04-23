@@ -59,11 +59,12 @@ export default async function OrdersPage() {
                         </div>
                         <div className="flex items-center gap-3">
                           <span
-                            className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${order.status === "completed"
+                            className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${
+                              order.status === "delivered"
                                 ? "bg-green-100 text-green-800"
-                                : order.status === "pending"
-                                  ? "bg-yellow-100 text-yellow-800"
-                                  : "bg-gray-100 text-gray-800"
+                                : order.status === "shipped"
+                                  ? "bg-blue-100 text-blue-800"
+                                  : "bg-yellow-100 text-yellow-800"
                               }`}
                           >
                             {order.status.charAt(0).toUpperCase() + order.status.slice(1)}

@@ -49,14 +49,15 @@ export async function getOrders(): Promise<Order[]> {
                 id: session.id,
                 user_id: session.metadata?.user_id || "",
                 stripe_session_id: session.id,
-                status: session.metadata?.shipped_at ? "shipped" : "completed", // Since we filter by status:complete
+                status: session.metadata?.delivered_at ? "delivered" : session.metadata?.shipped_at ? "shipped" : "processing",
                 total_cents: session.amount_total || 0,
                 items,
                 shipping_address,
                 created_at: new Date(session.created * 1000).toISOString(),
                 tracking_number: session.metadata?.tracking_number || null,
                 carrier: session.metadata?.carrier || null,
-                shipped_at: session.metadata?.shipped_at || null
+                shipped_at: session.metadata?.shipped_at || null,
+                delivered_at: session.metadata?.delivered_at || null,
             }
         })
 
@@ -103,14 +104,15 @@ export async function getOrderById(orderId: string): Promise<Order | null> {
             id: session.id,
             user_id: session.metadata?.user_id || "",
             stripe_session_id: session.id,
-            status: session.metadata?.shipped_at ? "shipped" : (session.payment_status === "paid" ? "completed" : "pending"),
+            status: session.metadata?.delivered_at ? "delivered" : session.metadata?.shipped_at ? "shipped" : "processing",
             total_cents: session.amount_total || 0,
             items,
             shipping_address,
             created_at: new Date(session.created * 1000).toISOString(),
             tracking_number: session.metadata?.tracking_number || null,
             carrier: session.metadata?.carrier || null,
-            shipped_at: session.metadata?.shipped_at || null
+            shipped_at: session.metadata?.shipped_at || null,
+            delivered_at: session.metadata?.delivered_at || null,
         }
     } catch (error) {
         console.error("Error fetching order from Stripe:", error)
@@ -143,14 +145,24 @@ export async function getOrderTracking(orderId: string): Promise<OrderTracking |
         tracking_number: order.tracking_number || null,
         carrier: order.carrier || null,
         shipped_at: order.shipped_at || null,
-        delivered_at: null,
-        status_history: order.shipped_at ? [{
-            id: "shipped",
-            order_id: orderId,
-            status: "shipped",
-            description: "Order has been shipped",
-            location: null,
-            created_at: order.shipped_at
-        }] : []
+        delivered_at: order.delivered_at || null,
+        status_history: [
+            ...(order.shipped_at ? [{
+                id: "shipped",
+                order_id: orderId,
+                status: "Shipped",
+                description: "Order has been shipped",
+                location: null,
+                created_at: order.shipped_at
+            }] : []),
+            ...(order.delivered_at ? [{
+                id: "delivered",
+                order_id: orderId,
+                status: "Delivered",
+                description: "Package has been delivered",
+                location: null,
+                created_at: order.delivered_at
+            }] : []),
+        ]
     }
 }

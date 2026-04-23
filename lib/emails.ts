@@ -116,6 +116,80 @@ export async function sendShippingUpdateEmail({
   }
 }
 
+export async function sendDeliveryConfirmationEmail({
+  email,
+  orderId,
+  items,
+}: {
+  email: string
+  orderId: string
+  items: Array<{ name: string; quantity: number; productId?: string }>
+}) {
+  const shopUrl = process.env.NEXT_PUBLIC_APP_URL || "https://measurejoy.org"
+
+  const emailHtml = `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Order Delivered</title>
+</head>
+<body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+  <div style="background: linear-gradient(135deg, #22c55e 0%, #14b8a6 100%); padding: 30px; text-align: center; border-radius: 8px 8px 0 0;">
+    <h1 style="color: white; margin: 0; font-size: 28px;">MEASURE JOY</h1>
+    <p style="color: white; margin: 10px 0 0 0;">Your order has been delivered!</p>
+  </div>
+
+  <div style="background: #f9f9f9; padding: 30px; border-radius: 0 0 8px 8px;">
+    <h2 style="color: #333; margin-top: 0;">Package Delivered!</h2>
+    <p style="font-size: 16px;">Your vintage camera has arrived. We hope you love it as much as we do.</p>
+
+    <div style="background: white; padding: 20px; border-radius: 8px; margin: 20px 0; border: 2px solid #22c55e;">
+      <p style="margin: 0; font-size: 14px; color: #666;">Order ID</p>
+      <p style="margin: 5px 0 0 0; font-size: 18px; font-weight: bold; color: #22c55e;">#${orderId.slice(0, 8).toUpperCase()}</p>
+    </div>
+
+    <h3 style="color: #333; margin-top: 30px;">Items Delivered</h3>
+    <div style="background: white; padding: 15px; border-radius: 8px;">
+      ${items.map((item) => `<p style="margin: 5px 0;">${item.name} x${item.quantity}</p>`).join("")}
+    </div>
+
+    <div style="background: #fef3c7; border-left: 4px solid #f59e0b; padding: 15px; margin: 30px 0; border-radius: 4px;">
+      <p style="margin: 0; font-size: 14px;"><strong>Love your camera?</strong></p>
+      <p style="margin: 10px 0 0 0; font-size: 14px;">Share your first shots with us! Tag @measurejoy on Instagram or leave a review on the product page.</p>
+    </div>
+
+    <div style="text-align: center; margin: 24px 0;">
+      <a href="${shopUrl}/shop" style="display: inline-block; background: #ec4899; color: white; padding: 14px 32px; text-decoration: none; font-weight: 600; font-size: 14px; text-transform: uppercase; letter-spacing: 0.5px; border-radius: 4px;">
+        Browse More Cameras
+      </a>
+    </div>
+
+    <div style="text-align: center; margin-top: 30px; padding-top: 30px; border-top: 1px solid #ddd;">
+      <p style="margin: 0; font-size: 14px; color: #666;">Questions? Email us at <a href="mailto:christianvelasquez363@gmail.com" style="color: #14b8a6;">christianvelasquez363@gmail.com</a></p>
+      <p style="margin: 15px 0 0 0; font-size: 14px; color: #666;">
+        <a href="${shopUrl}/account/orders" style="color: #14b8a6; text-decoration: none;">View Order Status</a> ·
+        <a href="${shopUrl}/faq" style="color: #14b8a6; text-decoration: none;">FAQ</a>
+      </p>
+    </div>
+  </div>
+</body>
+</html>
+  `
+
+  if (resend) {
+    await resend.emails.send({
+      from: "Measure Joy <orders@measurejoy.org>",
+      to: email,
+      subject: `Your Order Has Been Delivered! - #${orderId.slice(0, 8).toUpperCase()}`,
+      html: emailHtml,
+    })
+  } else {
+    console.log("[Email] Resend not configured. Delivery email would be sent to:", email)
+  }
+}
+
 function getCarrierTrackingUrl(carrier: string, trackingNumber: string): string {
   const carrierLower = carrier.toLowerCase()
   if (carrierLower === "usps") return `https://tools.usps.com/go/TrackConfirmAction?tLabels=${trackingNumber}`
