@@ -11,6 +11,7 @@ import {
     LogOut,
     Pencil,
     Boxes,
+    Mail,
     ShieldAlert,
 } from "lucide-react"
 import { SignOutButton } from "@clerk/nextjs"
@@ -21,6 +22,7 @@ const NAV_ITEMS = [
     { href: "/admin/orders", label: "Orders", icon: ShoppingCart },
     { href: "/admin/inventory", label: "Inventory", icon: Boxes },
     { href: "/admin/categories", label: "Categories", icon: Package },
+    { href: "/admin/emails", label: "Emails", icon: Mail },
     { href: "/admin/content", label: "Site Content", icon: FileEdit },
     { href: "/admin/copywriter", label: "AI Copywriter", icon: Pencil },
     { href: "/admin/products", label: "Data Tools", icon: Wand2 },
