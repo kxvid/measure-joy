@@ -324,22 +324,37 @@ export default function ContentEditorPage() {
     // -----------------------------------------------------------------
     if (loading) {
         return (
-            <div className="flex items-center justify-center min-h-[60vh]">
-                <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+            <div className="flex flex-col items-center justify-center min-h-[60vh] gap-3">
+                <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                <p className="text-xs text-muted-foreground">Loading content…</p>
             </div>
         )
     }
 
     return (
-        <div className="flex flex-col h-[calc(100vh-3.5rem)]">
+        <div className="flex flex-col h-[calc(100vh-3.5rem)] bg-muted/20">
             {/* Top area: sidebar + (editor + preview) */}
             <div className="flex flex-1 min-h-0">
                 {/* Sidebar */}
-                <aside className="w-56 border-r bg-background overflow-y-auto flex-shrink-0 hidden md:block">
-                    <div className="p-3">
-                        <h2 className="font-bold text-[10px] uppercase tracking-wider text-muted-foreground mb-3 px-2">
-                            Sections
-                        </h2>
+                <aside className="w-64 border-r bg-background/60 backdrop-blur-sm overflow-y-auto flex-shrink-0 hidden md:block">
+                    <div className="p-4">
+                        <div className="flex items-center justify-between mb-4 px-1">
+                            <div>
+                                <h2 className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground">
+                                    Sections
+                                </h2>
+                                <p className="text-[10px] text-muted-foreground/60 mt-0.5">
+                                    {SECTIONS.length} editable
+                                </p>
+                            </div>
+                            {changedCount > 0 && (
+                                <div className="flex items-center gap-1.5 text-[10px] font-semibold text-pop-pink bg-pop-pink/10 px-2 py-1 rounded-full">
+                                    <span className="h-1.5 w-1.5 rounded-full bg-pop-pink animate-pulse" />
+                                    {changedCount}
+                                </div>
+                            )}
+                        </div>
+
                         <nav className="space-y-0.5">
                             {SECTIONS.map((section) => {
                                 const Icon = section.icon
@@ -352,20 +367,28 @@ export default function ContentEditorPage() {
                                     <button
                                         key={section.id}
                                         onClick={() => setActiveSection(section.id)}
-                                        className={`w-full flex items-center gap-2.5 px-2.5 py-2 rounded-md text-sm font-medium transition-colors ${
+                                        className={`group w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all ${
                                             isActive
-                                                ? "bg-foreground text-background"
-                                                : "hover:bg-secondary text-muted-foreground hover:text-foreground"
+                                                ? "bg-foreground text-background shadow-sm"
+                                                : "text-muted-foreground hover:bg-secondary/60 hover:text-foreground"
                                         }`}
                                     >
-                                        <Icon className="h-4 w-4 flex-shrink-0" />
-                                        <span className="truncate">{section.label}</span>
+                                        <div
+                                            className={`h-7 w-7 rounded-md flex items-center justify-center flex-shrink-0 transition-colors ${
+                                                isActive
+                                                    ? "bg-background/15"
+                                                    : "bg-muted/70 group-hover:bg-background"
+                                            }`}
+                                        >
+                                            <Icon className="h-3.5 w-3.5" />
+                                        </div>
+                                        <span className="truncate flex-1 text-left">{section.label}</span>
                                         {sectionChanges > 0 && (
                                             <span
-                                                className={`ml-auto text-[10px] font-bold rounded-full px-1.5 py-0.5 flex-shrink-0 ${
+                                                className={`text-[10px] font-bold rounded-full h-5 min-w-5 px-1.5 flex items-center justify-center flex-shrink-0 ${
                                                     isActive
                                                         ? "bg-background/20 text-background"
-                                                        : "bg-pop-pink text-background"
+                                                        : "bg-pop-pink text-white"
                                                 }`}
                                                 title={`${sectionChanges} unpublished`}
                                             >
@@ -377,12 +400,12 @@ export default function ContentEditorPage() {
                             })}
                         </nav>
 
-                        <Separator className="my-4" />
+                        <Separator className="my-4 opacity-50" />
 
                         <Button
-                            variant="outline"
+                            variant="ghost"
                             size="sm"
-                            className="w-full gap-2 text-xs"
+                            className="w-full gap-2 text-xs text-muted-foreground hover:text-foreground justify-start"
                             onClick={runSetup}
                             disabled={setupRunning}
                         >
@@ -391,7 +414,7 @@ export default function ContentEditorPage() {
                             ) : (
                                 <Database className="h-3 w-3" />
                             )}
-                            {needsSetup ? "Initialize CMS" : "Re-seed Defaults"}
+                            {needsSetup ? "Initialize CMS" : "Re-seed defaults"}
                         </Button>
                     </div>
                 </aside>
@@ -412,24 +435,26 @@ export default function ContentEditorPage() {
                                 </option>
                             ))}
                         </select>
-                        <Button
-                            size="sm"
-                            variant={narrowView === "edit" ? "default" : "ghost"}
-                            onClick={() => setNarrowView("edit")}
-                            className="h-8 gap-1.5"
-                        >
-                            <Edit3 className="h-3.5 w-3.5" />
-                            Edit
-                        </Button>
-                        <Button
-                            size="sm"
-                            variant={narrowView === "preview" ? "default" : "ghost"}
-                            onClick={() => setNarrowView("preview")}
-                            className="h-8 gap-1.5"
-                        >
-                            <Eye className="h-3.5 w-3.5" />
-                            Preview
-                        </Button>
+                        <div className="ml-auto flex items-center gap-1 bg-muted rounded-lg p-1">
+                            <Button
+                                size="sm"
+                                variant={narrowView === "edit" ? "default" : "ghost"}
+                                onClick={() => setNarrowView("edit")}
+                                className="h-7 px-3 gap-1.5 text-xs"
+                            >
+                                <Edit3 className="h-3 w-3" />
+                                Edit
+                            </Button>
+                            <Button
+                                size="sm"
+                                variant={narrowView === "preview" ? "default" : "ghost"}
+                                onClick={() => setNarrowView("preview")}
+                                className="h-7 px-3 gap-1.5 text-xs"
+                            >
+                                <Eye className="h-3 w-3" />
+                                Preview
+                            </Button>
+                        </div>
                     </div>
 
                     <div className="flex flex-1 min-h-0">
@@ -439,40 +464,69 @@ export default function ContentEditorPage() {
                                 narrowView === "preview" ? "hidden xl:block" : "block"
                             }`}
                         >
-                            <div className="max-w-2xl mx-auto p-6 xl:p-8">
+                            <div className="max-w-3xl mx-auto p-6 xl:p-10">
                                 {/* Section Header */}
-                                <div className="mb-6">
-                                    <h1 className="text-xl font-bold tracking-tight">
-                                        {sectionInfo?.label}
-                                    </h1>
-                                    <p className="text-muted-foreground text-sm">
-                                        {sectionInfo?.description}
-                                    </p>
+                                <div className="mb-8 pb-6 border-b border-border/60">
+                                    <div className="flex items-start gap-4">
+                                        {sectionInfo?.icon && (
+                                            <div className="h-11 w-11 rounded-xl bg-foreground text-background flex items-center justify-center flex-shrink-0 shadow-sm">
+                                                <sectionInfo.icon className="h-5 w-5" />
+                                            </div>
+                                        )}
+                                        <div className="flex-1 min-w-0 pt-0.5">
+                                            <div className="flex items-center gap-2.5">
+                                                <h1 className="text-2xl font-bold tracking-tight">
+                                                    {sectionInfo?.label}
+                                                </h1>
+                                                {(() => {
+                                                    const sectionChanges = countSectionChanges(
+                                                        liveContent[activeSection] || {},
+                                                        editState[activeSection] || {}
+                                                    )
+                                                    return sectionChanges > 0 ? (
+                                                        <span className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-pop-pink bg-pop-pink/10 px-2 py-0.5 rounded-full">
+                                                            <span className="h-1.5 w-1.5 rounded-full bg-pop-pink" />
+                                                            {sectionChanges} unpublished
+                                                        </span>
+                                                    ) : null
+                                                })()}
+                                            </div>
+                                            <p className="text-muted-foreground text-sm mt-1">
+                                                {sectionInfo?.description}
+                                            </p>
+                                        </div>
+                                    </div>
                                 </div>
 
                                 {successMessage && (
-                                    <div className="mb-5 p-3 rounded-lg flex items-center gap-2.5 bg-green-50 border border-green-200 text-green-800 text-sm">
-                                        <CheckCircle2 className="h-4 w-4 flex-shrink-0" />
+                                    <div className="mb-6 p-3.5 rounded-xl flex items-center gap-2.5 bg-green-50 border border-green-200/70 text-green-900 text-sm shadow-sm">
+                                        <CheckCircle2 className="h-4 w-4 flex-shrink-0 text-green-600" />
                                         <p>{successMessage}</p>
                                     </div>
                                 )}
 
                                 {/* Fields */}
-                                <div className="space-y-5">
-                                    {sectionFields.map((field) => (
-                                        <FieldEditor
-                                            key={field.key}
-                                            field={field}
-                                            section={activeSection}
-                                            value={editState[activeSection]?.[field.key]}
-                                            onChange={(val) =>
-                                                updateField(activeSection, field.key, val)
-                                            }
-                                        />
-                                    ))}
+                                <div className="space-y-6">
+                                    {sectionFields.map((field) => {
+                                        const isModified = JSON.stringify(
+                                            liveContent[activeSection]?.[field.key]
+                                        ) !== JSON.stringify(editState[activeSection]?.[field.key])
+                                        return (
+                                            <FieldEditor
+                                                key={field.key}
+                                                field={field}
+                                                section={activeSection}
+                                                value={editState[activeSection]?.[field.key]}
+                                                onChange={(val) =>
+                                                    updateField(activeSection, field.key, val)
+                                                }
+                                                isModified={isModified}
+                                            />
+                                        )
+                                    })}
                                     {sectionFields.length === 0 && (
-                                        <div className="p-8 text-center text-muted-foreground border rounded-lg">
-                                            No editable fields defined for this section.
+                                        <div className="p-12 text-center text-muted-foreground border border-dashed rounded-xl bg-background/40">
+                                            <p className="text-sm">No editable fields defined for this section.</p>
                                         </div>
                                     )}
                                 </div>
