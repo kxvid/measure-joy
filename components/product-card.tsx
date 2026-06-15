@@ -59,7 +59,7 @@ export function ProductCard({ product }: ProductCardProps) {
         onMouseLeave={() => setIsHovered(false)}
       >
         {/* Image card — navigation link wraps only the imagery (no nested buttons) */}
-        <div className="relative aspect-[4/5] overflow-hidden bg-white mb-3 rounded-xl border-2 border-transparent group-hover:border-foreground/10 transition-all duration-300 group-hover:shadow-[6px_6px_0_0_var(--foreground)]">
+        <div className="relative aspect-[4/5] overflow-hidden bg-card mb-3 rounded-xl border-2 border-border/60 group-hover:border-foreground/20 transition-all duration-300 group-hover:shadow-[6px_6px_0_0_var(--foreground)]">
           <Link
             href={`/product/${product.id}`}
             aria-label={`View ${product.name}`}

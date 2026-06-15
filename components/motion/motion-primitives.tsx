@@ -108,9 +108,16 @@ interface StaggerProps {
   className?: string
   once?: boolean
   as?: "div" | "section" | "ul"
+  /**
+   * When true (default) the stagger plays as the container scrolls into view.
+   * When false it plays immediately on mount — use this for primary content
+   * (e.g. a tall product grid) so items can never get stuck hidden if the
+   * container is larger than the viewport.
+   */
+  inView?: boolean
 }
 
-export function Stagger({ children, className, once = true, as = "div" }: StaggerProps) {
+export function Stagger({ children, className, once = true, as = "div", inView = true }: StaggerProps) {
   const reduce = useReducedMotion()
   const MotionTag = motion[as]
 
@@ -119,14 +126,14 @@ export function Stagger({ children, className, once = true, as = "div" }: Stagge
     return <Tag className={className}>{children}</Tag>
   }
 
+  // amount: 0 → trigger as soon as any part intersects, robust for containers
+  // taller than the viewport.
+  const trigger = inView
+    ? { whileInView: "show" as const, viewport: { once, amount: 0 } }
+    : { animate: "show" as const }
+
   return (
-    <MotionTag
-      className={className}
-      variants={STAGGER_CONTAINER}
-      initial="hidden"
-      whileInView="show"
-      viewport={{ once, amount: 0.2 }}
-    >
+    <MotionTag className={className} variants={STAGGER_CONTAINER} initial="hidden" {...trigger}>
       {children}
     </MotionTag>
   )
