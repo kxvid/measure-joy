@@ -10,12 +10,13 @@ import { TrustBanner } from "@/components/trust-banner"
 import { Newsletter } from "@/components/newsletter"
 import { Footer } from "@/components/footer"
 import { getSectionContent } from "@/lib/content"
+import { getStripeProducts } from "@/lib/stripe-products"
 
 export const revalidate = 60 // Revalidate every 60 seconds
 
 export default async function Home() {
-  // Fetch all CMS content in parallel
-  const [hero, promoBanner, trustBadges, trustBanner, trustStory, testimonials, newsletter, footer] =
+  // Fetch all CMS content + products in parallel (server-side — no client waterfall)
+  const [hero, promoBanner, trustBadges, trustBanner, trustStory, testimonials, newsletter, footer, products] =
     await Promise.all([
       getSectionContent("hero"),
       getSectionContent("promo_banner"),
@@ -25,6 +26,7 @@ export default async function Home() {
       getSectionContent("testimonials"),
       getSectionContent("newsletter"),
       getSectionContent("footer"),
+      getStripeProducts(),
     ])
 
   return (
@@ -33,8 +35,8 @@ export default async function Home() {
       <Header />
       <Hero cms={hero} />
       <CategoryGrid />
-      <FeaturedProducts />
-      <AnimatedCategories />
+      <FeaturedProducts products={products} />
+      <AnimatedCategories products={products} />
       <TestimonialsSection cms={testimonials} />
       <TrustStory cms={trustStory} />
       <TrustBanner cms={trustBanner} />

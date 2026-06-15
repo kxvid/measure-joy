@@ -3,6 +3,7 @@
 import type React from "react"
 import { useState } from "react"
 import Link from "next/link"
+import Image from "next/image"
 import { Button } from "@/components/ui/button"
 import { Check, Plus, Star, Flame, Eye } from "lucide-react"
 import { type Product, formatPrice } from "@/lib/products"
@@ -39,7 +40,9 @@ export function ProductCard({ product }: ProductCardProps) {
     setShowQuickView(true)
   }
 
-  const hoverImage = product.images[1] || product.images[0]
+  const baseImage = product.images[0] || "/placeholder.svg"
+  const hoverImage = product.images[1] || product.images[0] || "/placeholder.svg"
+  const hasHoverImage = Boolean(product.images[1])
 
   const savingsPercent = product.originalPriceInCents
     ? Math.round(((product.originalPriceInCents - product.priceInCents) / product.originalPriceInCents) * 100)
@@ -50,118 +53,120 @@ export function ProductCard({ product }: ProductCardProps) {
 
   return (
     <>
-      <Link
-        href={`/product/${product.id}`}
-        className="group block"
+      <div
+        className="group relative"
         onMouseEnter={() => setIsHovered(true)}
         onMouseLeave={() => setIsHovered(false)}
       >
-        {/* Image container */}
-        <div className="aspect-[4/5] overflow-hidden bg-secondary mb-3 relative rounded-lg">
-          {/* Base image */}
-          <img
-            src={product.images[0] || "/placeholder.svg"}
-            alt={product.name}
-            className={`absolute inset-0 w-full h-full object-cover transition-all duration-500 ${isHovered ? "opacity-0 scale-105" : "opacity-100 scale-100"
+        {/* Image card — navigation link wraps only the imagery (no nested buttons) */}
+        <div className="relative aspect-[4/5] overflow-hidden bg-secondary mb-3 rounded-xl border-2 border-transparent group-hover:border-foreground/10 transition-all duration-300 group-hover:shadow-[6px_6px_0_0_var(--foreground)]">
+          <Link
+            href={`/product/${product.id}`}
+            aria-label={`View ${product.name}`}
+            className="absolute inset-0 z-0 block"
+          >
+            <Image
+              src={baseImage}
+              alt={product.name}
+              fill
+              sizes="(max-width: 1024px) 50vw, 25vw"
+              className={`object-cover transition-all duration-500 ${
+                isHovered && hasHoverImage ? "opacity-0 scale-105" : "opacity-100 scale-100 group-hover:scale-105"
               }`}
-          />
+            />
+            {hasHoverImage && (
+              <Image
+                src={hoverImage}
+                alt=""
+                aria-hidden="true"
+                fill
+                sizes="(max-width: 1024px) 50vw, 25vw"
+                className={`object-cover transition-all duration-500 ${
+                  isHovered ? "opacity-100 scale-100" : "opacity-0 scale-110"
+                }`}
+              />
+            )}
+          </Link>
 
-          {/* Hover image */}
-          <img
-            src={hoverImage || "/placeholder.svg"}
-            alt={`${product.name} alternate view`}
-            className={`absolute inset-0 w-full h-full object-cover transition-all duration-500 ${isHovered ? "opacity-100 scale-100" : "opacity-0 scale-110"
-              }`}
-          />
-
-          <div className="absolute top-2 left-2 flex flex-col gap-1.5 z-10">
+          {/* Badges (non-interactive) */}
+          <div className="absolute top-2 left-2 flex flex-col gap-1.5 z-10 pointer-events-none">
             {product.isBestseller && (
-              <span className="bg-gradient-to-r from-pop-yellow to-pop-orange text-foreground text-[10px] lg:text-xs font-black px-2.5 py-1 uppercase tracking-wide shadow-md flex items-center gap-1">
+              <span className="bg-gradient-to-r from-pop-yellow to-pop-orange text-foreground text-[10px] lg:text-xs font-black px-2.5 py-1 rounded-full uppercase tracking-wide shadow-md flex items-center gap-1">
                 <Star className="h-3 w-3 fill-current" />
                 Bestseller
               </span>
             )}
 
             {product.isTrending && (
-              <span className="bg-gradient-to-r from-pop-pink to-pop-red text-white text-[10px] lg:text-xs font-black px-2.5 py-1 uppercase tracking-wide shadow-md flex items-center gap-1 animate-pulse">
+              <span className="bg-gradient-to-r from-pop-pink to-pop-red text-white text-[10px] lg:text-xs font-black px-2.5 py-1 rounded-full uppercase tracking-wide shadow-md flex items-center gap-1 animate-pulse">
                 <Flame className="h-3 w-3" />
                 Trending
               </span>
             )}
 
-            {/* Original badges */}
             {product.badge && !product.isBestseller && !product.isTrending && (
-              <span className="bg-pop-pink text-white text-[10px] lg:text-xs font-bold px-2.5 py-1 uppercase tracking-wide shadow-md">
+              <span className="bg-pop-pink text-white text-[10px] lg:text-xs font-bold px-2.5 py-1 rounded-full uppercase tracking-wide shadow-md">
                 {product.badge}
               </span>
             )}
 
             {product.condition === "Excellent" && (
-              <span className="bg-pop-teal text-white text-[10px] lg:text-xs font-bold px-2.5 py-1 uppercase tracking-wide shadow-md">
+              <span className="bg-pop-teal text-white text-[10px] lg:text-xs font-bold px-2.5 py-1 rounded-full uppercase tracking-wide shadow-md">
                 {product.condition}
               </span>
             )}
 
             {isLowStock && (
               <span
-                className={`${isVeryLowStock ? "bg-pop-red animate-pulse" : "bg-pop-orange"} text-white text-[10px] lg:text-xs font-black px-2.5 py-1 uppercase tracking-wide shadow-md`}
+                className={`${isVeryLowStock ? "bg-pop-red animate-pulse" : "bg-pop-orange"} text-white text-[10px] lg:text-xs font-black px-2.5 py-1 rounded-full uppercase tracking-wide shadow-md`}
               >
                 Only {product.stockCount} left!
               </span>
             )}
 
             {savingsPercent >= 15 && (
-              <span className="bg-gradient-to-r from-pop-red to-pop-pink text-white text-[10px] lg:text-xs font-black px-2.5 py-1 uppercase tracking-wide shadow-md">
+              <span className="bg-gradient-to-r from-pop-red to-pop-pink text-white text-[10px] lg:text-xs font-black px-2.5 py-1 rounded-full uppercase tracking-wide shadow-md">
                 Save {savingsPercent}%
               </span>
             )}
           </div>
 
-          {/* Wishlist button */}
-          <div
-            className={`absolute bottom-2 left-2 transition-all duration-300 z-10 ${isHovered ? "opacity-100" : "opacity-0"}`}
-          >
+          {/* Action buttons — siblings of the link, always tappable on touch,
+              revealed on hover for pointer devices. */}
+          <div className="absolute bottom-2 left-2 flex gap-1.5 z-20 transition-all duration-300 opacity-100 translate-y-0 lg:opacity-0 lg:translate-y-2 lg:group-hover:opacity-100 lg:group-hover:translate-y-0">
             <WishlistButton
               productId={product.id}
               size="icon"
               variant="ghost"
-              className="h-9 w-9 bg-white/90 hover:bg-white shadow-md"
+              className="h-11 w-11 bg-white/90 hover:bg-white shadow-md cursor-pointer"
             />
-          </div>
-
-          {/* Quick View button */}
-          <div
-            className={`absolute bottom-2 left-12 transition-all duration-300 z-10 ${isHovered ? "opacity-100" : "opacity-0"
-              }`}
-          >
             <Button
               size="icon"
               variant="ghost"
-              className="h-9 w-9 bg-white/90 hover:bg-white shadow-md"
+              className="h-11 w-11 bg-white/90 hover:bg-white shadow-md cursor-pointer"
               onClick={handleQuickView}
+              aria-label={`Quick view ${product.name}`}
             >
               <Eye className="h-4 w-4" />
             </Button>
           </div>
 
-          {/* Quick add button */}
-          <div
-            className={`absolute bottom-2 right-2 transition-all duration-300 z-10 ${isHovered ? "opacity-100 translate-y-0" : "opacity-0 translate-y-2"
-              }`}
-          >
+          <div className="absolute bottom-2 right-2 z-20 transition-all duration-300 opacity-100 translate-y-0 lg:opacity-0 lg:translate-y-2 lg:group-hover:opacity-100 lg:group-hover:translate-y-0">
             <Button
               size="icon"
-              className={`h-10 w-10 shadow-lg transition-all ${justAdded ? "bg-pop-green hover:bg-pop-green" : "bg-foreground hover:bg-foreground/90"
-                }`}
+              className={`h-11 w-11 shadow-lg cursor-pointer transition-all ${
+                justAdded ? "bg-pop-green hover:bg-pop-green" : "bg-foreground hover:bg-foreground/90"
+              }`}
               onClick={handleAddToCart}
+              aria-label={justAdded ? "Added to cart" : `Add ${product.name} to cart`}
             >
               {justAdded ? <Check className="h-4 w-4 text-white" /> : <Plus className="h-4 w-4 text-background" />}
             </Button>
           </div>
         </div>
 
-        {/* Product info */}
-        <div className="space-y-1.5">
+        {/* Product info — its own link (no nesting with the buttons above) */}
+        <Link href={`/product/${product.id}`} className="block space-y-1.5">
           <div className="flex items-center justify-between">
             <span className="font-mono text-[10px] lg:text-xs text-muted-foreground uppercase tracking-wide">
               {[product.brand, product.year].filter(Boolean).join(" · ")}
@@ -196,8 +201,8 @@ export function ProductCard({ product }: ProductCardProps) {
               {isVeryLowStock ? "Last one available" : `Only ${product.stockCount} in stock`}
             </p>
           )}
-        </div>
-      </Link>
+        </Link>
+      </div>
 
       <UpsellDrawer open={showUpsell} onClose={() => setShowUpsell(false)} addedProduct={product} />
       <QuickViewModal product={product} open={showQuickView} onClose={() => setShowQuickView(false)} />

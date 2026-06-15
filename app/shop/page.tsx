@@ -12,7 +12,8 @@ import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { type Product } from "@/lib/products"
-import { Search, SlidersHorizontal, X, Grid3X3, LayoutGrid, TrendingUp, Loader2 } from "lucide-react"
+import { Search, SlidersHorizontal, X, Grid3X3, LayoutGrid, TrendingUp } from "lucide-react"
+import { Stagger, StaggerItem } from "@/components/motion/motion-primitives"
 
 const brands = [
   "All",
@@ -41,13 +42,18 @@ function ShopContent() {
   const searchParams = useSearchParams()
   const initialCategory = searchParams.get("category") || "all"
   const initialSubcategory = searchParams.get("sub") || "All"
+  const initialSearch = searchParams.get("q") || searchParams.get("search") || ""
+  const initialBrand = searchParams.get("brand") || "All"
+  const validSorts = ["featured", "price-low", "price-high", "newest"]
+  const sortParam = searchParams.get("sort") || "featured"
+  const initialSort = validSorts.includes(sortParam) ? sortParam : "featured"
 
-  const [searchQuery, setSearchQuery] = useState("")
-  const [selectedBrand, setSelectedBrand] = useState("All")
+  const [searchQuery, setSearchQuery] = useState(initialSearch)
+  const [selectedBrand, setSelectedBrand] = useState(initialBrand)
   const [selectedYear, setSelectedYear] = useState("All")
   const [selectedCategory, setSelectedCategory] = useState(initialCategory)
   const [selectedSubcategory, setSelectedSubcategory] = useState(initialSubcategory)
-  const [sortBy, setSortBy] = useState("featured")
+  const [sortBy, setSortBy] = useState(initialSort)
   const [showFilters, setShowFilters] = useState(false)
   const [gridCols, setGridCols] = useState<3 | 4>(4)
 
@@ -102,7 +108,10 @@ function ShopContent() {
     }
 
     if (selectedBrand !== "All" && selectedCategory !== "accessory") {
-      filtered = filtered.filter((p) => p.name.toLowerCase().includes(selectedBrand.toLowerCase()))
+      const brandLower = selectedBrand.toLowerCase()
+      filtered = filtered.filter(
+        (p) => p.brand?.toLowerCase() === brandLower || p.name.toLowerCase().includes(brandLower),
+      )
     }
 
     if (selectedYear !== "All" && selectedCategory !== "accessory") {
@@ -117,7 +126,7 @@ function ShopContent() {
         filtered.sort((a, b) => b.priceInCents - a.priceInCents)
         break
       case "newest":
-        filtered.sort((a, b) => Number.parseInt(b.year) - Number.parseInt(a.year))
+        filtered.sort((a, b) => Number.parseInt(b.year || "0") - Number.parseInt(a.year || "0"))
         break
       default:
         filtered.sort((a, b) => (b.badge ? 1 : 0) - (a.badge ? 1 : 0))
@@ -364,11 +373,13 @@ function ShopContent() {
 
         {/* Product grid */}
         {filteredProducts.length > 0 ? (
-          <div className={`grid grid-cols-2 gap-5 lg:gap-8 ${gridCols === 3 ? "lg:grid-cols-3" : "lg:grid-cols-4"}`}>
+          <Stagger className={`grid grid-cols-2 gap-5 lg:gap-8 ${gridCols === 3 ? "lg:grid-cols-3" : "lg:grid-cols-4"}`}>
             {filteredProducts.map((product) => (
-              <ProductCard key={product.id} product={product} />
+              <StaggerItem key={product.id}>
+                <ProductCard product={product} />
+              </StaggerItem>
             ))}
-          </div>
+          </Stagger>
         ) : (
           <div className="text-center py-20 bg-secondary/50 rounded-2xl">
             <p className="text-lg font-medium">No products found</p>
