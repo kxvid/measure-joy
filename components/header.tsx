@@ -1,9 +1,11 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import Link from "next/link"
+import { useRouter } from "next/navigation"
 import { Menu, X, ShoppingBag, Search, ChevronDown, Heart } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
 import { useCart } from "@/lib/cart-context"
 import { CartDrawer } from "@/components/cart-drawer"
 import { SignedIn, SignedOut, UserButton, useUser } from "@clerk/nextjs"
@@ -24,7 +26,11 @@ export function Header() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [scrolled, setScrolled] = useState(false)
   const [cartOpen, setCartOpen] = useState(false)
+  const [searchOpen, setSearchOpen] = useState(false)
+  const [searchQuery, setSearchQuery] = useState("")
+  const searchInputRef = useRef<HTMLInputElement>(null)
   const { totalItems } = useCart()
+  const router = useRouter()
 
   useEffect(() => {
     const handleScroll = () => setScrolled(window.scrollY > 10)
@@ -32,78 +38,83 @@ export function Header() {
     return () => window.removeEventListener("scroll", handleScroll)
   }, [])
 
+  useEffect(() => {
+    if (searchOpen) searchInputRef.current?.focus()
+  }, [searchOpen])
+
+  const submitSearch = (e: React.FormEvent) => {
+    e.preventDefault()
+    const q = searchQuery.trim()
+    router.push(q ? `/shop?q=${encodeURIComponent(q)}` : "/shop")
+    setSearchOpen(false)
+    setSearchQuery("")
+  }
+
   return (
     <>
       <header
-        className={`sticky top-0 z-40 transition-all duration-300 ${scrolled ? "bg-background/95 backdrop-blur-xl border-b-2 border-foreground" : "bg-background"
-          }`}
+        className={`sticky top-0 z-40 transition-all duration-300 ${
+          scrolled ? "bg-background/95 backdrop-blur-xl border-b-2 border-foreground" : "bg-background border-b-2 border-transparent"
+        }`}
       >
-        <nav className="mx-auto flex max-w-7xl items-center justify-between px-4 py-3 lg:px-6">
-          {/* Mobile menu button */}
-          <Button variant="ghost" size="icon" className="lg:hidden" onClick={() => setMobileMenuOpen(true)}>
-            <Menu className="h-5 w-5" />
-            <span className="sr-only">Open menu</span>
-          </Button>
+        <nav className="mx-auto grid max-w-7xl grid-cols-[1fr_auto_1fr] items-center px-4 py-3 lg:px-6">
+          {/* Left: mobile menu button + desktop nav */}
+          <div className="flex items-center justify-start">
+            <Button variant="ghost" size="icon" className="lg:hidden cursor-pointer" onClick={() => setMobileMenuOpen(true)}>
+              <Menu className="h-5 w-5" />
+              <span className="sr-only">Open menu</span>
+            </Button>
 
-          {/* Desktop navigation - left */}
-          <div className="hidden lg:flex lg:items-center lg:gap-1">
-            {navigation.map((item) => (
-              <Link
-                key={item.name}
-                href={item.href}
-                className={`px-4 py-2 text-xs font-bold uppercase tracking-wider transition-colors ${item.featured
-                  ? "bg-foreground text-background hover:bg-pop-pink"
-                  : "text-foreground/70 hover:text-foreground hover:bg-secondary"
+            <div className="hidden lg:flex lg:items-center lg:gap-1">
+              {navigation.map((item) => (
+                <Link
+                  key={item.name}
+                  href={item.href}
+                  className={`px-4 py-2 text-xs font-bold uppercase tracking-wider transition-colors rounded-full ${
+                    item.featured
+                      ? "bg-foreground text-background hover:bg-pop-pink"
+                      : "text-foreground/70 hover:text-foreground hover:bg-secondary"
                   }`}
-              >
-                {item.name}
-              </Link>
-            ))}
+                >
+                  {item.name}
+                </Link>
+              ))}
+            </div>
           </div>
 
-          {/* Logo - center */}
-          <Link
-            href="/"
-            className="flex items-center gap-2 group absolute left-1/2 -translate-x-1/2 lg:static lg:translate-x-0 lg:absolute lg:left-1/2 lg:-translate-x-1/2"
-          >
+          {/* Center: logo */}
+          <Link href="/" className="group flex items-center justify-center">
             <div className="relative">
               <span className="text-lg lg:text-xl font-black tracking-tight uppercase">Measure Joy</span>
               <span className="absolute -top-1 -right-6 text-[9px] font-mono font-bold text-pop-pink">Y2K</span>
             </div>
           </Link>
 
-          {/* Right side actions */}
-          <div className="flex items-center gap-1">
-            <Button variant="ghost" size="icon" className="hidden sm:flex" asChild>
-              <Link href="/shop">
-                <Search className="h-5 w-5" />
-                <span className="sr-only">Search</span>
-              </Link>
+          {/* Right: actions */}
+          <div className="flex items-center justify-end gap-1">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="hidden sm:flex cursor-pointer"
+              onClick={() => setSearchOpen((o) => !o)}
+              aria-label="Search"
+              aria-expanded={searchOpen}
+            >
+              <Search className="h-5 w-5" />
             </Button>
 
-            {/* Wishlist link - only show when signed in */}
             <SignedIn>
-              <Button variant="ghost" size="icon" className="hidden sm:flex" asChild>
+              <AdminLink />
+              <Button variant="ghost" size="icon" className="hidden sm:flex cursor-pointer" asChild>
                 <Link href="/account/wishlist">
                   <Heart className="h-5 w-5" />
                   <span className="sr-only">Wishlist</span>
                 </Link>
               </Button>
-            </SignedIn>
-
-            {/* User button - Clerk handles sign in/out */}
-            <SignedIn>
-              <UserButton
-                afterSignOutUrl="/"
-                appearance={{
-                  elements: {
-                    avatarBox: "w-8 h-8"
-                  }
-                }}
-              />
+              <UserButton afterSignOutUrl="/" appearance={{ elements: { avatarBox: "w-8 h-8" } }} />
             </SignedIn>
             <SignedOut>
-              <Button variant="ghost" size="icon" asChild>
+              <Button variant="ghost" size="icon" className="cursor-pointer" asChild>
                 <Link href="/sign-in">
                   <svg
                     xmlns="http://www.w3.org/2000/svg"
@@ -124,10 +135,10 @@ export function Header() {
               </Button>
             </SignedOut>
 
-            <Button variant="ghost" size="icon" className="relative" onClick={() => setCartOpen(true)}>
+            <Button variant="ghost" size="icon" className="relative cursor-pointer" onClick={() => setCartOpen(true)}>
               <ShoppingBag className="h-5 w-5" />
               {totalItems > 0 && (
-                <span className="absolute -top-0.5 -right-0.5 h-5 w-5 bg-pop-pink text-[10px] font-bold text-white flex items-center justify-center">
+                <span className="absolute -top-0.5 -right-0.5 h-5 w-5 rounded-full bg-pop-pink text-[10px] font-bold text-white flex items-center justify-center">
                   {totalItems}
                 </span>
               )}
@@ -136,16 +147,58 @@ export function Header() {
           </div>
         </nav>
 
+        {/* Search bar (expands under nav) */}
+        {searchOpen && (
+          <div className="border-t border-border bg-background">
+            <form onSubmit={submitSearch} className="mx-auto max-w-7xl px-4 lg:px-6 py-3">
+              <div className="relative">
+                <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  ref={searchInputRef}
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="Search cameras, brands, accessories..."
+                  className="pl-11 pr-24 h-12 rounded-full bg-secondary border-0"
+                />
+                <Button
+                  type="submit"
+                  size="sm"
+                  className="absolute right-1.5 top-1/2 -translate-y-1/2 h-9 rounded-full font-bold uppercase tracking-wide cursor-pointer"
+                >
+                  Search
+                </Button>
+              </div>
+            </form>
+          </div>
+        )}
+
         {/* Mobile menu - full screen overlay */}
         {mobileMenuOpen && (
           <div className="lg:hidden fixed inset-0 z-50 bg-background overflow-hidden">
             <div className="flex items-center justify-between px-4 py-3 border-b-2 border-foreground bg-background">
               <span className="text-lg font-black tracking-tight uppercase">Measure Joy</span>
-              <Button variant="ghost" size="icon" onClick={() => setMobileMenuOpen(false)}>
+              <Button variant="ghost" size="icon" className="cursor-pointer" onClick={() => setMobileMenuOpen(false)}>
                 <X className="h-5 w-5" />
               </Button>
             </div>
-            <div className="p-6 bg-background h-[calc(100vh-60px)] overflow-y-auto">
+            <div className="p-6 bg-background h-[calc(100dvh-60px)] overflow-y-auto">
+              {/* Mobile search */}
+              <form
+                onSubmit={(e) => {
+                  submitSearch(e)
+                  setMobileMenuOpen(false)
+                }}
+                className="relative mb-6"
+              >
+                <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="Search products..."
+                  className="pl-11 h-12 rounded-full bg-secondary border-0"
+                />
+              </form>
+
               <nav className="space-y-1">
                 {navigation.map((item) => (
                   <Link
@@ -190,10 +243,8 @@ export function Header() {
               </nav>
 
               {/* Mobile promo */}
-              <div className="mt-8 p-5 bg-pop-yellow">
-                <p className="font-mono text-xs text-foreground font-bold uppercase tracking-wide mb-2">
-                  ★ Limited Time
-                </p>
+              <div className="mt-8 p-5 bg-pop-yellow rounded-2xl">
+                <p className="font-mono text-xs text-foreground font-bold uppercase tracking-wide mb-2">★ Limited Time</p>
                 <p className="text-lg font-bold text-foreground">Free shipping on orders $75+</p>
               </div>
             </div>
@@ -206,9 +257,10 @@ export function Header() {
     </>
   )
 }
+
 function MobileAdminLink({ setOpen }: { setOpen: (open: boolean) => void }) {
   const { user } = useUser()
-  if (user?.publicMetadata?.role !== 'admin') return null
+  if (user?.publicMetadata?.role !== "admin") return null
 
   return (
     <Link
@@ -224,12 +276,12 @@ function MobileAdminLink({ setOpen }: { setOpen: (open: boolean) => void }) {
 
 function AdminLink() {
   const { user } = useUser()
-  if (user?.publicMetadata?.role !== 'admin') return null
+  if (user?.publicMetadata?.role !== "admin") return null
 
   return (
     <Link
       href="/admin/orders"
-      className="hidden lg:flex items-center gap-2 px-4 py-2 text-xs font-bold uppercase tracking-wider text-pop-pink hover:bg-secondary transition-colors"
+      className="hidden lg:flex items-center gap-2 px-4 py-2 text-xs font-bold uppercase tracking-wider text-pop-pink hover:bg-secondary rounded-full transition-colors"
     >
       Admin
     </Link>

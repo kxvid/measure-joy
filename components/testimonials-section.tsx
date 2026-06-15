@@ -1,4 +1,6 @@
+import Image from "next/image"
 import { Star } from "lucide-react"
+import { Reveal, Stagger, StaggerItem } from "@/components/motion/motion-primitives"
 
 interface TestimonialsSectionProps {
   cms?: Record<string, any>
@@ -42,55 +44,58 @@ export function TestimonialsSection({ cms = {} }: TestimonialsSectionProps) {
   return (
     <section className="py-16 lg:py-24 bg-secondary/30">
       <div className="mx-auto max-w-7xl px-6 lg:px-8">
-        <div className="text-center mb-12">
-          <h2 className="text-3xl lg:text-4xl font-bold tracking-tight mb-4">{heading}</h2>
-          <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-            {subtitle}
-          </p>
-        </div>
-
-        <div className="grid md:grid-cols-3 gap-6 lg:gap-8">
-          {testimonials.map((testimonial: any, index: number) => (
-            <div
-              key={index}
-              className="bg-background p-6 lg:p-8 rounded-2xl border-2 border-border hover:border-accent/50 transition-colors"
-            >
-              <div className="flex items-center gap-0.5 mb-4">
-                {[...Array(testimonial.rating || 5)].map((_, i) => (
-                  <Star key={i} className="h-4 w-4 fill-pop-yellow text-pop-yellow" />
-                ))}
-              </div>
-
-              <p className="text-muted-foreground mb-6 leading-relaxed">"{testimonial.text}"</p>
-
-              <div className="flex items-center gap-3">
-                <div className="w-12 h-12 rounded-full bg-secondary overflow-hidden">
-                  <img
-                    src={testimonial.image || "/placeholder.svg"}
-                    alt={testimonial.name}
-                    className="w-full h-full object-cover"
-                  />
-                </div>
-                <div>
-                  <p className="font-bold text-sm">{testimonial.name}</p>
-                  <p className="text-xs text-muted-foreground">{testimonial.location}</p>
-                </div>
-              </div>
-
-              <div className="mt-4 pt-4 border-t border-border">
-                <p className="text-xs text-muted-foreground">Verified Purchase</p>
-                <p className="text-sm font-medium mt-1">{testimonial.product}</p>
-              </div>
-            </div>
-          ))}
-        </div>
-
-        <div className="text-center mt-12">
-          <div className="inline-flex items-center gap-2 bg-pop-yellow px-6 py-3 rounded-full">
-            <Star className="h-5 w-5 fill-foreground text-foreground" />
-            <span className="font-bold">Top-rated store for vintage tech</span>
+        <Reveal>
+          <div className="text-center mb-12">
+            <h2 className="text-3xl lg:text-4xl font-black uppercase tracking-tight mb-4">{heading}</h2>
+            <p className="text-lg text-muted-foreground max-w-2xl mx-auto">{subtitle}</p>
           </div>
-        </div>
+        </Reveal>
+
+        <Stagger className="grid md:grid-cols-3 gap-6 lg:gap-8">
+          {testimonials.map((testimonial: any, index: number) => (
+            <StaggerItem key={index}>
+              <div className="h-full bg-background p-6 lg:p-8 rounded-2xl border-2 border-border hover:border-pop-pink/50 hover:-translate-y-1 transition-all duration-300">
+                <div className="flex items-center gap-0.5 mb-4">
+                  {[...Array(testimonial.rating || 5)].map((_, i) => (
+                    <Star key={i} className="h-4 w-4 fill-pop-yellow text-pop-yellow" />
+                  ))}
+                </div>
+
+                <p className="text-muted-foreground mb-6 leading-relaxed">"{testimonial.text}"</p>
+
+                <div className="flex items-center gap-3">
+                  <div className="relative w-12 h-12 rounded-full bg-secondary overflow-hidden">
+                    <Image
+                      src={testimonial.image || "/placeholder.svg"}
+                      alt={testimonial.name}
+                      fill
+                      sizes="48px"
+                      className="object-cover"
+                    />
+                  </div>
+                  <div>
+                    <p className="font-bold text-sm">{testimonial.name}</p>
+                    <p className="text-xs text-muted-foreground">{testimonial.location}</p>
+                  </div>
+                </div>
+
+                <div className="mt-4 pt-4 border-t border-border">
+                  <p className="text-xs text-muted-foreground">Verified Purchase</p>
+                  <p className="text-sm font-medium mt-1">{testimonial.product}</p>
+                </div>
+              </div>
+            </StaggerItem>
+          ))}
+        </Stagger>
+
+        <Reveal delay={0.1}>
+          <div className="text-center mt-12">
+            <div className="inline-flex items-center gap-2 bg-pop-yellow px-6 py-3 rounded-full">
+              <Star className="h-5 w-5 fill-foreground text-foreground" />
+              <span className="font-bold">Top-rated store for vintage tech</span>
+            </div>
+          </div>
+        </Reveal>
       </div>
     </section>
   )

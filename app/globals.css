@@ -32,6 +32,7 @@
   --pop-blue: oklch(0.55 0.18 250);
   --pop-green: oklch(0.55 0.16 165);
   --pop-teal: oklch(0.45 0.12 185);
+  --pop-red: oklch(0.6 0.24 27);
 
   --chart-1: oklch(0.646 0.222 41.116);
   --chart-2: oklch(0.6 0.118 184.704);
@@ -73,6 +74,7 @@
   --pop-blue: oklch(0.55 0.18 250);
   --pop-green: oklch(0.55 0.16 165);
   --pop-teal: oklch(0.45 0.12 185);
+  --pop-red: oklch(0.65 0.24 27);
   --sidebar: oklch(0.205 0 0);
   --sidebar-foreground: oklch(0.985 0 0);
   --sidebar-primary: oklch(0.488 0.243 264.376);
@@ -111,6 +113,7 @@
   --color-pop-green: var(--pop-green);
   --color-pop-yellow: var(--pop-yellow);
   --color-pop-teal: var(--pop-teal);
+  --color-pop-red: var(--pop-red);
   --color-chart-1: var(--chart-1);
   --color-chart-2: var(--chart-2);
   --color-chart-3: var(--chart-3);
@@ -291,4 +294,48 @@ html {
       oklch(0.7 0.22 350) 8px,
       oklch(0.15 0.02 45) 8px,
       oklch(0.15 0.02 45) 16px);
+}
+
+/* Radial spotlight glow behind hero product */
+.bg-spotlight {
+  background: radial-gradient(circle at center,
+      oklch(0.92 0.2 95 / 0.55) 0%,
+      oklch(0.7 0.22 350 / 0.18) 38%,
+      transparent 70%);
+}
+
+/* 3D scene helpers for pointer-tilt / camera-style motion */
+.perspective-1000 {
+  perspective: 1000px;
+}
+
+.preserve-3d {
+  transform-style: preserve-3d;
+}
+
+/* Respect user motion preferences: kill infinite/decorative animation
+   and scroll smoothing for anyone who asks for reduced motion. */
+@media (prefers-reduced-motion: reduce) {
+
+  html {
+    scroll-behavior: auto;
+  }
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+
+  .animate-marquee,
+  .animate-marquee-reverse,
+  .animate-bounce-subtle,
+  .animate-pulse-glow,
+  .animate-float,
+  .animate-shimmer::after {
+    animation: none !important;
+  }
 }

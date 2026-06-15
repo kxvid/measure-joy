@@ -5,6 +5,7 @@ import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { ArrowRight, Sparkles, Loader2 } from "lucide-react"
+import { Reveal } from "@/components/motion/motion-primitives"
 
 interface NewsletterProps {
   cms?: Record<string, any>
@@ -55,7 +56,7 @@ export function Newsletter({ cms = {} }: NewsletterProps) {
   return (
     <section className="py-12 lg:py-20 bg-pop-yellow">
       <div className="mx-auto max-w-7xl px-4 lg:px-6">
-        <div className="max-w-2xl mx-auto text-center">
+        <Reveal className="max-w-2xl mx-auto text-center">
           <span className="inline-block px-4 py-1 bg-foreground text-pop-yellow text-xs font-bold uppercase tracking-wider mb-4">
             {c.badge}
           </span>
@@ -109,7 +110,7 @@ export function Newsletter({ cms = {} }: NewsletterProps) {
           )}
 
           <p className="text-xs text-foreground/50 mt-5 uppercase tracking-wide">{c.disclaimer}</p>
-        </div>
+        </Reveal>
       </div>
     </section>
   )
