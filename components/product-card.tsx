@@ -59,33 +59,41 @@ export function ProductCard({ product }: ProductCardProps) {
         onMouseLeave={() => setIsHovered(false)}
       >
         {/* Image card — navigation link wraps only the imagery (no nested buttons) */}
-        <div className="relative aspect-[4/5] overflow-hidden bg-secondary mb-3 rounded-xl border-2 border-transparent group-hover:border-foreground/10 transition-all duration-300 group-hover:shadow-[6px_6px_0_0_var(--foreground)]">
+        <div className="relative aspect-[4/5] overflow-hidden bg-white mb-3 rounded-xl border-2 border-transparent group-hover:border-foreground/10 transition-all duration-300 group-hover:shadow-[6px_6px_0_0_var(--foreground)]">
           <Link
             href={`/product/${product.id}`}
             aria-label={`View ${product.name}`}
             className="absolute inset-0 z-0 block"
           >
-            <Image
-              src={baseImage}
-              alt={product.name}
-              fill
-              sizes="(max-width: 1024px) 50vw, 25vw"
-              className={`object-cover transition-all duration-500 ${
-                isHovered && hasHoverImage ? "opacity-0 scale-105" : "opacity-100 scale-100 group-hover:scale-105"
-              }`}
-            />
-            {hasHoverImage && (
+            {/* Padded inner area so the full camera is presented cleanly
+                (object-contain) with breathing room, like a product catalog. */}
+            <div className="absolute inset-4 lg:inset-6">
               <Image
-                src={hoverImage}
-                alt=""
-                aria-hidden="true"
+                src={baseImage}
+                alt={product.name}
                 fill
                 sizes="(max-width: 1024px) 50vw, 25vw"
-                className={`object-cover transition-all duration-500 ${
-                  isHovered ? "opacity-100 scale-100" : "opacity-0 scale-110"
+                className={`object-contain transition-all duration-500 ${
+                  hasHoverImage
+                    ? isHovered
+                      ? "opacity-0"
+                      : "opacity-100"
+                    : "opacity-100 group-hover:scale-105"
                 }`}
               />
-            )}
+              {hasHoverImage && (
+                <Image
+                  src={hoverImage}
+                  alt=""
+                  aria-hidden="true"
+                  fill
+                  sizes="(max-width: 1024px) 50vw, 25vw"
+                  className={`object-contain transition-opacity duration-500 ${
+                    isHovered ? "opacity-100" : "opacity-0"
+                  }`}
+                />
+              )}
+            </div>
           </Link>
 
           {/* Badges (non-interactive) */}

@@ -64,7 +64,11 @@ const nextConfig = {
     ignoreBuildErrors: true,
   },
   images: {
-    unoptimized: true,
+    // Optimize images (WebP/AVIF, srcset, lazy). Product photos are served
+    // from Stripe; local /public images need no remote pattern.
+    remotePatterns: [
+      { protocol: "https", hostname: "files.stripe.com" },
+    ],
   },
   async headers() {
     return [
