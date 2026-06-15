@@ -162,9 +162,15 @@ function ShopContent() {
 
         {/* Page header */}
         <div className="mb-10">
-          <span className="font-mono text-xs text-accent tracking-wide uppercase">Collection</span>
-          <h1 className="text-3xl lg:text-4xl font-bold mt-2 tracking-tight">Shop</h1>
-          <p className="text-muted-foreground mt-2">Browse our curated collection of Y2K cameras and accessories</p>
+          <span className="inline-block px-3 py-1 bg-pop-pink text-white text-xs font-bold uppercase tracking-wider rounded-full mb-3">
+            Collection
+          </span>
+          <h1 className="text-4xl lg:text-6xl font-black uppercase tracking-tight leading-[0.9]">
+            Shop <span className="text-pop-pink">Y2K</span>
+          </h1>
+          <p className="text-muted-foreground mt-3 text-base lg:text-lg max-w-xl">
+            Browse our curated collection of Y2K cameras and accessories — tested, cleaned, and ready to shoot.
+          </p>
         </div>
 
         {/* Featured/Trending section for social proof */}
@@ -230,7 +236,8 @@ function ShopContent() {
                 {selectedCategory !== "accessory" && (
                   <>
                     <Select value={selectedBrand} onValueChange={setSelectedBrand}>
-                      <SelectTrigger className="w-[140px] h-12 rounded-xl bg-secondary border-0">
+                      <SelectTrigger className="w-[150px] h-12 rounded-xl bg-secondary border-0">
+                        <span className="text-muted-foreground text-xs font-semibold uppercase tracking-wide mr-1.5">Brand</span>
                         <SelectValue placeholder="Brand" />
                       </SelectTrigger>
                       <SelectContent>
@@ -243,7 +250,8 @@ function ShopContent() {
                     </Select>
 
                     <Select value={selectedYear} onValueChange={setSelectedYear}>
-                      <SelectTrigger className="w-[120px] h-12 rounded-xl bg-secondary border-0">
+                      <SelectTrigger className="w-[130px] h-12 rounded-xl bg-secondary border-0">
+                        <span className="text-muted-foreground text-xs font-semibold uppercase tracking-wide mr-1.5">Year</span>
                         <SelectValue placeholder="Year" />
                       </SelectTrigger>
                       <SelectContent>
@@ -259,7 +267,8 @@ function ShopContent() {
 
                 {selectedCategory === "accessory" && (
                   <Select value={selectedSubcategory} onValueChange={setSelectedSubcategory}>
-                    <SelectTrigger className="w-[150px] h-12 rounded-xl bg-secondary border-0">
+                    <SelectTrigger className="w-[160px] h-12 rounded-xl bg-secondary border-0 capitalize">
+                      <span className="text-muted-foreground text-xs font-semibold uppercase tracking-wide mr-1.5">Type</span>
                       <SelectValue placeholder="Type" />
                     </SelectTrigger>
                     <SelectContent>
@@ -273,7 +282,8 @@ function ShopContent() {
                 )}
 
                 <Select value={sortBy} onValueChange={setSortBy}>
-                  <SelectTrigger className="w-[160px] h-12 rounded-xl bg-secondary border-0">
+                  <SelectTrigger className="w-[180px] h-12 rounded-xl bg-secondary border-0">
+                    <span className="text-muted-foreground text-xs font-semibold uppercase tracking-wide mr-1.5">Sort</span>
                     <SelectValue placeholder="Sort by" />
                   </SelectTrigger>
                   <SelectContent>
@@ -373,7 +383,7 @@ function ShopContent() {
 
         {/* Product grid */}
         {filteredProducts.length > 0 ? (
-          <Stagger className={`grid grid-cols-2 gap-5 lg:gap-8 ${gridCols === 3 ? "lg:grid-cols-3" : "lg:grid-cols-4"}`}>
+          <Stagger inView={false} className={`grid grid-cols-2 gap-5 lg:gap-8 ${gridCols === 3 ? "lg:grid-cols-3" : "lg:grid-cols-4"}`}>
             {filteredProducts.map((product) => (
               <StaggerItem key={product.id}>
                 <ProductCard product={product} />
