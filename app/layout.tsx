@@ -1,14 +1,21 @@
 import type React from "react"
 import type { Metadata } from "next"
 import { ClerkProvider } from "@clerk/nextjs"
-import { DM_Sans, Space_Mono } from "next/font/google"
+import { Inter, Playfair_Display, Space_Mono } from "next/font/google"
 import { Analytics } from "@vercel/analytics/next"
 import { CartProvider } from "@/lib/cart-context"
 import { ExitIntentPopup } from "@/components/exit-intent-popup"
 import { SocialProofToasts } from "@/components/social-proof-toasts"
 import "./globals.css"
 
-const _dmSans = DM_Sans({ subsets: ["latin"], variable: "--font-dm-sans" })
+// Editorial type system: Inter (body) + Playfair Display (display) + Space Mono (instrument)
+const _inter = Inter({ subsets: ["latin"], variable: "--font-inter" })
+const _playfair = Playfair_Display({
+  subsets: ["latin"],
+  weight: ["400", "500", "600", "700"],
+  style: ["normal", "italic"],
+  variable: "--font-playfair",
+})
 const _spaceMono = Space_Mono({
   subsets: ["latin"],
   weight: ["400", "700"],
@@ -47,7 +54,7 @@ export default function RootLayout({
   return (
     <ClerkProvider>
       <html lang="en">
-        <body className={`font-sans antialiased ${_dmSans.variable} ${_spaceMono.variable}`}>
+        <body className={`font-sans antialiased ${_inter.variable} ${_playfair.variable} ${_spaceMono.variable}`}>
           <CartProvider>
             {children}
             <ExitIntentPopup />

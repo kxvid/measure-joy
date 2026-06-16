@@ -24,13 +24,13 @@ export function FeaturedProducts({ products = [] }: FeaturedProductsProps) {
         <Reveal>
           <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4 mb-8 lg:mb-12">
             <div>
-              <span className="inline-block px-4 py-1 bg-pop-pink text-white text-xs font-bold uppercase tracking-wider mb-4 rounded-full">
+              <span className="inline-block font-mono text-xs uppercase tracking-[0.18em] text-brand mb-3">
                 Just Dropped
               </span>
-              <h2 className="text-3xl lg:text-5xl font-black uppercase tracking-tight">
-                New <span className="text-pop-pink">Arrivals</span>
+              <h2 className="font-display text-4xl lg:text-5xl tracking-tight leading-[1.05]">
+                New <span className="italic text-brand">Arrivals</span>
               </h2>
-              <p className="text-sm font-mono text-muted-foreground mt-2">Latest drop: {latestDropLabel}</p>
+              <p className="text-sm font-mono text-muted-foreground mt-3">Latest drop: {latestDropLabel}</p>
             </div>
             <Button
               variant="outline"

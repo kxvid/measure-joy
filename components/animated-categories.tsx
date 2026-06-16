@@ -91,13 +91,13 @@ export function AnimatedCategories({ products = [] }: AnimatedCategoriesProps) {
         {/* Section header */}
         <Reveal>
           <div className="text-center mb-8 lg:mb-12">
-            <span className="inline-block px-4 py-1 bg-pop-yellow text-foreground text-xs font-bold uppercase tracking-wider mb-4 rounded-full">
+            <span className="inline-block font-mono text-xs uppercase tracking-[0.18em] text-muted-foreground mb-3">
               Shop by Brand
             </span>
-            <h2 className="text-3xl lg:text-5xl font-black uppercase tracking-tight">
-              Your Favorite <span className="text-pop-pink">Y2K Brands</span>
+            <h2 className="font-display text-4xl lg:text-5xl tracking-tight leading-[1.05]">
+              Your favorite <span className="italic text-brand">Y2K brands</span>
             </h2>
-            <p className="text-muted-foreground mt-2">Currently in stock</p>
+            <p className="text-muted-foreground mt-3">Currently in stock</p>
           </div>
         </Reveal>
 

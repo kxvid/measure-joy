@@ -46,7 +46,7 @@ export function TestimonialsSection({ cms = {} }: TestimonialsSectionProps) {
       <div className="mx-auto max-w-7xl px-6 lg:px-8">
         <Reveal>
           <div className="text-center mb-12">
-            <h2 className="text-3xl lg:text-4xl font-black uppercase tracking-tight mb-4">{heading}</h2>
+            <h2 className="font-display text-4xl lg:text-5xl tracking-tight mb-4">{heading}</h2>
             <p className="text-lg text-muted-foreground max-w-2xl mx-auto">{subtitle}</p>
           </div>
         </Reveal>
