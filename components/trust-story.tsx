@@ -1,6 +1,6 @@
 "use client"
 
-import { CheckCircle2, Shield, RefreshCw, Star, Users } from "lucide-react"
+import { CheckCircle2, Shield, RefreshCw } from "lucide-react"
 
 interface TrustStoryProps {
   cms?: Record<string, any>
@@ -28,10 +28,6 @@ export function TrustStory({ cms = {} }: TrustStoryProps) {
     "We're not just reselling old cameras. We're curators, technicians, and fellow Y2K enthusiasts dedicated to bringing vintage tech back to life."
   const points = Array.isArray(cms.points) ? cms.points : DEFAULT_POINTS
   const stats = Array.isArray(cms.stats) ? cms.stats : DEFAULT_STATS
-  const quote =
-    cms.quote ||
-    "The camera arrived in better condition than described. You can tell they actually test and care for these vintage gems. Will definitely buy again!"
-  const quoteAttribution = cms.quote_attribution || "— Verified Buyer, via email"
 
   return (
     <section className="border-b border-border py-16 lg:py-24">
@@ -66,18 +62,6 @@ export function TrustStory({ cms = {} }: TrustStoryProps) {
           ))}
         </div>
 
-        <div className="mt-12 text-center">
-          <div className="mb-4 inline-flex items-center gap-1">
-            {[...Array(5)].map((_, i) => (
-              <Star key={i} className="h-4 w-4 fill-foreground text-foreground" />
-            ))}
-          </div>
-          <blockquote className="mx-auto mb-4 max-w-2xl text-lg lg:text-xl font-medium leading-snug">"{quote}"</blockquote>
-          <div className="flex items-center justify-center gap-2 text-muted-foreground">
-            <Users className="h-4 w-4" strokeWidth={1.5} />
-            <span className="font-display text-[11px] uppercase tracking-[0.1em]">{quoteAttribution}</span>
-          </div>
-        </div>
       </div>
     </section>
   )

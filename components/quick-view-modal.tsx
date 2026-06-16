@@ -3,7 +3,7 @@
 import { useState } from "react"
 import Link from "next/link"
 import Image from "next/image"
-import { X, Plus, Check, Star, ChevronLeft, ChevronRight } from "lucide-react"
+import { X, Plus, Check, ChevronLeft, ChevronRight } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { type Product, formatPrice } from "@/lib/products"
 import { useCart } from "@/lib/cart-context"
@@ -97,17 +97,6 @@ export function QuickViewModal({ product, open, onClose }: QuickViewModalProps) 
                   {[product.brand, product.year].filter(Boolean).join(" · ")}
                 </p>
                 <h2 className="mt-2 font-display text-xl font-extrabold uppercase tracking-tight leading-tight">{product.name}</h2>
-
-                {product.rating && product.reviewCount && product.reviewCount > 0 && (
-                  <div className="mt-3 flex items-center gap-2">
-                    <div className="flex items-center gap-0.5">
-                      {[...Array(5)].map((_, i) => (
-                        <Star key={i} className={`h-4 w-4 ${i < Math.round(product.rating!) ? "fill-foreground text-foreground" : "text-muted-foreground/30"}`} />
-                      ))}
-                    </div>
-                    <span className="font-display text-xs text-muted-foreground">({product.reviewCount})</span>
-                  </div>
-                )}
 
                 <div className="mt-4 flex items-baseline gap-3">
                   <span className="font-display text-2xl font-extrabold">{formatPrice(product.priceInCents)}</span>
