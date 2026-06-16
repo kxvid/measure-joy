@@ -18,7 +18,7 @@ export const revalidate = 60 // Revalidate every 60 seconds
 
 export default async function Home() {
   // Fetch all CMS content + products in parallel (server-side — no client waterfall)
-  const [hero, promoBanner, trustBadges, trustBanner, trustStory, newsletter, footer, products, latestReviews] =
+  const [hero, promoBanner, trustBadges, trustBanner, trustStory, newsletter, footer, products, latestReviews, social, categories] =
     await Promise.all([
       getSectionContent("hero"),
       getSectionContent("promo_banner"),
@@ -29,6 +29,8 @@ export default async function Home() {
       getSectionContent("footer"),
       getStripeProducts(),
       getLatestReviews(6),
+      getSectionContent("social"),
+      getSectionContent("categories"),
     ])
 
   const bestSellers = products.filter((p) => p.isBestseller || p.isTrending)
@@ -42,7 +44,7 @@ export default async function Home() {
       <PromoBanner cms={promoBanner} />
       <Header />
       <Hero cms={hero} />
-      <CategoryShowcase />
+      <CategoryShowcase cms={categories} />
       <ProductSlider eyebrow="Just Dropped" title="New Arrivals" products={products} />
       <AnimatedCategories products={products} />
       {bestSellers.length > 0 && (
@@ -51,7 +53,7 @@ export default async function Home() {
       <CustomerReviews reviews={reviewsWithNames} />
       <TrustStory cms={trustStory} />
       <TrustBanner cms={trustBanner} />
-      <SocialFeed />
+      <SocialFeed cms={social} />
       <Newsletter cms={newsletter} />
       <Footer cms={footer} />
     </main>

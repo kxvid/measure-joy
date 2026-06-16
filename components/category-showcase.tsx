@@ -15,9 +15,15 @@ const categories = [
   { name: "Straps", sub: "Accessories", href: "/shop?category=accessory&sub=strap", image: "/category-straps-v2.png", text: "text-brand", chip: "bg-brand text-brand-foreground" },
 ]
 
-export function CategoryShowcase() {
+interface CategoryShowcaseProps {
+  cms?: Record<string, any>
+}
+
+export function CategoryShowcase({ cms = {} }: CategoryShowcaseProps) {
   const [active, setActive] = useState(0)
   const reduce = useReducedMotion()
+  const eyebrow = cms.eyebrow || "Browse"
+  const heading = cms.heading || "Shop by Category"
 
   return (
     <section className="border-b border-border py-12 lg:py-20">
@@ -25,10 +31,10 @@ export function CategoryShowcase() {
         <Reveal>
           <div className="mb-8 lg:mb-12">
             <span className="block font-display text-[11px] font-medium uppercase tracking-[0.2em] text-muted-foreground">
-              Browse
+              {eyebrow}
             </span>
             <h2 className="mt-2 font-display text-2xl lg:text-4xl font-extrabold uppercase tracking-tight">
-              Shop by Category
+              {heading}
             </h2>
           </div>
         </Reveal>

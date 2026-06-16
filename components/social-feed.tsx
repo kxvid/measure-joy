@@ -5,28 +5,28 @@ import { ArrowUpRight } from "lucide-react"
 import { Reveal, Stagger, StaggerItem } from "@/components/motion/motion-primitives"
 
 /* ------------------------------------------------------------------ *
- * Social integration — just point to your posts.
+ * Social integration — CMS-editable, just point to your posts.
  *
- * Edit PROFILES with your handles, and POSTS with the URL of each
- * Instagram / TikTok post plus a thumbnail image (drop the image in
- * /public or use an existing one). Each tile links straight to the post.
- * No API keys required.
+ * Editable via the headless CMS (section "social"): set `instagram`,
+ * `tiktok`, `heading`, `eyebrow`, and `posts` (array of
+ * { platform, href, image, caption }). Falls back to the defaults below.
+ * Each tile links straight to a post — no API keys.
  * ------------------------------------------------------------------ */
 
-const PROFILES = {
+const DEFAULT_PROFILES = {
   instagram: "https://www.instagram.com/measurejoy/",
   tiktok: "https://www.tiktok.com/@measurejoy",
 }
 
 type Post = { platform: "instagram" | "tiktok"; href: string; image: string; caption?: string }
 
-const POSTS: Post[] = [
-  { platform: "instagram", href: PROFILES.instagram, image: "/colorful-digital-cameras-pink-blue-y2k-aesthetic.jpg", caption: "New drops every week" },
-  { platform: "tiktok", href: PROFILES.tiktok, image: "/editorial-y2k-flatlay.png", caption: "Tested & restored" },
-  { platform: "instagram", href: PROFILES.instagram, image: "/fujifilm-finepix-pink-digital-camera-cute-y2k.jpg", caption: "Pink FinePix" },
-  { platform: "tiktok", href: PROFILES.tiktok, image: "/aesthetic-flat-lay-vintage-digital-cameras-y2k-nos.jpg", caption: "Behind the bench" },
-  { platform: "instagram", href: PROFILES.instagram, image: "/colorful-camera-neck-strap-y2k-pattern.jpg", caption: "Strap drop" },
-  { platform: "instagram", href: PROFILES.instagram, image: "/collection-of-vintage-cameras.jpg", caption: "The collection" },
+const DEFAULT_POSTS: Post[] = [
+  { platform: "instagram", href: DEFAULT_PROFILES.instagram, image: "/colorful-digital-cameras-pink-blue-y2k-aesthetic.jpg", caption: "New drops every week" },
+  { platform: "tiktok", href: DEFAULT_PROFILES.tiktok, image: "/editorial-y2k-flatlay.png", caption: "Tested & restored" },
+  { platform: "instagram", href: DEFAULT_PROFILES.instagram, image: "/fujifilm-finepix-pink-digital-camera-cute-y2k.jpg", caption: "Pink FinePix" },
+  { platform: "tiktok", href: DEFAULT_PROFILES.tiktok, image: "/aesthetic-flat-lay-vintage-digital-cameras-y2k-nos.jpg", caption: "Behind the bench" },
+  { platform: "instagram", href: DEFAULT_PROFILES.instagram, image: "/colorful-camera-neck-strap-y2k-pattern.jpg", caption: "Strap drop" },
+  { platform: "instagram", href: DEFAULT_PROFILES.instagram, image: "/collection-of-vintage-cameras.jpg", caption: "The collection" },
 ]
 
 function InstagramIcon({ className }: { className?: string }) {
@@ -45,7 +45,17 @@ function TikTokIcon({ className }: { className?: string }) {
   )
 }
 
-export function SocialFeed() {
+interface SocialFeedProps {
+  cms?: Record<string, any>
+}
+
+export function SocialFeed({ cms = {} }: SocialFeedProps) {
+  const instagram = cms.instagram || DEFAULT_PROFILES.instagram
+  const tiktok = cms.tiktok || DEFAULT_PROFILES.tiktok
+  const heading = cms.heading || "@measurejoy"
+  const eyebrow = cms.eyebrow || "Follow Along"
+  const posts: Post[] = Array.isArray(cms.posts) && cms.posts.length > 0 ? cms.posts : DEFAULT_POSTS
+
   return (
     <section className="border-b border-border py-14 lg:py-20">
       <div className="mx-auto max-w-[1400px] px-5 lg:px-8">
@@ -53,15 +63,15 @@ export function SocialFeed() {
           <div className="mb-8 flex flex-col items-start justify-between gap-5 sm:flex-row sm:items-end">
             <div>
               <span className="font-display text-[11px] font-medium uppercase tracking-[0.2em] text-muted-foreground">
-                Follow Along
+                {eyebrow}
               </span>
               <h2 className="mt-2 font-display text-2xl lg:text-4xl font-extrabold uppercase tracking-tight">
-                @measurejoy
+                {heading}
               </h2>
             </div>
             <div className="flex items-center gap-2.5">
               <a
-                href={PROFILES.instagram}
+                href={instagram}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="inline-flex items-center gap-2 px-4 py-2.5 font-display text-[12px] font-semibold uppercase tracking-[0.1em] text-white transition-opacity hover:opacity-90 cursor-pointer [background:linear-gradient(45deg,#f09433,#e6683c_25%,#dc2743_50%,#cc2366_75%,#bc1888)]"
@@ -70,7 +80,7 @@ export function SocialFeed() {
                 Instagram
               </a>
               <a
-                href={PROFILES.tiktok}
+                href={tiktok}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="inline-flex items-center gap-2 bg-foreground px-4 py-2.5 font-display text-[12px] font-semibold uppercase tracking-[0.1em] text-background transition-opacity hover:opacity-90 cursor-pointer"
@@ -83,7 +93,7 @@ export function SocialFeed() {
         </Reveal>
 
         <Stagger className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6 lg:gap-4">
-          {POSTS.map((post, i) => (
+          {posts.map((post, i) => (
             <StaggerItem key={i}>
               <a
                 href={post.href}
@@ -100,7 +110,7 @@ export function SocialFeed() {
                 />
                 <div className="absolute inset-0 bg-foreground/0 transition-colors duration-300 group-hover:bg-foreground/40" />
                 <span className="absolute right-2 top-2 text-white drop-shadow">
-                  {post.platform === "instagram" ? <InstagramIcon className="h-5 w-5" /> : <TikTokIcon className="h-5 w-5" />}
+                  {post.platform === "tiktok" ? <TikTokIcon className="h-5 w-5" /> : <InstagramIcon className="h-5 w-5" />}
                 </span>
                 <span className="absolute bottom-2 left-2 right-2 flex items-center gap-1 font-display text-[10px] font-semibold uppercase tracking-[0.08em] text-white opacity-0 transition-opacity duration-300 group-hover:opacity-100">
                   <ArrowUpRight className="h-3.5 w-3.5" strokeWidth={1.5} />
