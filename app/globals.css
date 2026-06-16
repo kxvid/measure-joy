@@ -288,16 +288,11 @@ html {
   animation: float 4s ease-in-out infinite;
 }
 
-/* Advanced tech-inspired dot and grid pattern */
+/* Subtle dot texture — faint dots only (no grid lines), never crosses text */
 .bg-dot-pattern {
-  background-image:
-    radial-gradient(var(--foreground) 1px, transparent 1px),
-    linear-gradient(to right, oklch(0.15 0.02 45 / 0.03) 1px, transparent 1px),
-    linear-gradient(to bottom, oklch(0.15 0.02 45 / 0.03) 1px, transparent 1px);
-  background-size: 24px 24px, 48px 48px, 48px 48px;
+  background-image: radial-gradient(oklch(0.15 0.02 45 / 0.07) 1.2px, transparent 1.2px);
+  background-size: 22px 22px;
   background-position: 0 0;
-  opacity: 0.8;
-  /* Higher opacity since patterns are subtle */
 }
 
 /* Diagonal stripes pattern */
