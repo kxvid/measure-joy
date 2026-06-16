@@ -1,0 +1,21 @@
+<svg viewBox="0 0 260 280" fill="none" xmlns="http://www.w3.org/2000/svg">
+<g transform="translate(130,110) scale(0.38)">
+<path d="M0 -122 C42 -82 42 -32 0 0 C22 -62 16 -102 0 -122Z" fill="#1a1816" opacity="0.92"/>
+<path d="M0 -122 C-42 -82 -42 -32 0 0 C-22 -62 -16 -102 0 -122Z" fill="#1a1816" opacity="0.65"/>
+<path d="M106 -74 C86 -24 42 0 0 0 C56 -26 88 -54 106 -74Z" fill="#1a1816" opacity="0.87"/>
+<path d="M106 -74 C106 -22 80 12 0 0 C70 -4 100 -40 106 -74Z" fill="#1a1816" opacity="0.6"/>
+<path d="M106 80 C66 70 30 36 0 0 C54 30 90 56 106 80Z" fill="#1a1816" opacity="0.82"/>
+<path d="M106 80 C82 48 58 20 0 0 C62 16 96 52 106 80Z" fill="#1a1816" opacity="0.55"/>
+<path d="M0 132 C-6 78 -6 36 0 0 C6 36 6 78 0 132Z" fill="#1a1816" opacity="0.72"/>
+<path d="M0 132 C-34 88 -28 42 0 0 C-16 46 -24 92 0 132Z" fill="#1a1816" opacity="0.48"/>
+<path d="M-106 80 C-82 52 -48 22 0 0 C-46 36 -82 64 -106 80Z" fill="#1a1816" opacity="0.82"/>
+<path d="M-106 80 C-88 44 -54 18 0 0 C-58 24 -94 56 -106 80Z" fill="#1a1816" opacity="0.55"/>
+<path d="M-106 -74 C-82 -44 -42 -16 0 0 C-54 -24 -88 -52 -106 -74Z" fill="#1a1816" opacity="0.87"/>
+<path d="M-106 -74 C-94 -32 -62 -4 0 0 C-66 -10 -96 -42 -106 -74Z" fill="#1a1816" opacity="0.6"/>
+<circle cx="-16" cy="-11" r="5.5" fill="#E84B8A"/>
+<circle cx="16" cy="-11" r="5.5" fill="#E84B8A"/>
+<path d="M-26 10 Q-13 32 0 35 Q13 32 26 10" stroke="#1a1816" stroke-width="3.8" stroke-linecap="round" fill="none" opacity="0.9"/>
+</g>
+<text x="130" y="240" font-family="Outfit, sans-serif" font-weight="700" font-size="28" fill="#1a1816" text-anchor="middle" letter-spacing="2">MEASURE</text>
+<text x="130" y="268" font-family="Outfit, sans-serif" font-weight="800" font-size="28" fill="#E84B8A" text-anchor="middle" letter-spacing="2">JOY</text>
+</svg>
