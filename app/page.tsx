@@ -1,6 +1,7 @@
 import { Header } from "@/components/header"
 import { PromoBanner } from "@/components/promo-banner"
 import { Hero } from "@/components/hero"
+import { CategoryShowcase } from "@/components/category-showcase"
 import { ProductSlider } from "@/components/product-slider"
 import { AnimatedCategories } from "@/components/animated-categories"
 import { TestimonialsSection } from "@/components/testimonials-section"
@@ -35,6 +36,7 @@ export default async function Home() {
       <PromoBanner cms={promoBanner} />
       <Header />
       <Hero cms={hero} />
+      <CategoryShowcase />
       <ProductSlider eyebrow="Just Dropped" title="New Arrivals" products={products} />
       <AnimatedCategories products={products} />
       {bestSellers.length > 0 && (
