@@ -98,7 +98,7 @@ ${description}
                 <Wrench className="h-4 w-4" />
                 <span className="font-mono text-xs font-bold uppercase tracking-wider">Camera Service</span>
               </div>
-              <h1 className="text-4xl lg:text-6xl font-black uppercase leading-none">
+              <h1 className="text-4xl lg:text-6xl font-display font-extrabold uppercase leading-none">
                 We Fix
                 <br />
                 <span className="text-pop-yellow">Y2K Cameras</span>
@@ -111,15 +111,15 @@ ${description}
               {/* Stats */}
               <div className="grid grid-cols-3 gap-6 mt-10">
                 <div>
-                  <p className="text-3xl font-black text-pop-yellow">500+</p>
+                  <p className="text-3xl font-display font-extrabold text-pop-yellow">500+</p>
                   <p className="text-xs font-mono uppercase text-background/50 mt-1">Cameras Fixed</p>
                 </div>
                 <div>
-                  <p className="text-3xl font-black text-pop-pink">48hr</p>
+                  <p className="text-3xl font-display font-extrabold text-pop-pink">48hr</p>
                   <p className="text-xs font-mono uppercase text-background/50 mt-1">Avg Turnaround</p>
                 </div>
                 <div>
-                  <p className="text-3xl font-black text-pop-teal">90 Day</p>
+                  <p className="text-3xl font-display font-extrabold text-pop-teal">90 Day</p>
                   <p className="text-xs font-mono uppercase text-background/50 mt-1">Warranty</p>
                 </div>
               </div>
@@ -142,10 +142,10 @@ ${description}
                 <h3 className="font-bold text-lg">Cleaning</h3>
                 <p className="text-sm mt-2 text-foreground/70">Sensor & lens deep cleaning service</p>
               </div>
-              <div className="bg-purple-400 p-6 text-foreground">
+              <div className="bg-pop-blue p-6 text-white">
                 <Film className="h-8 w-8 mb-4" />
                 <h3 className="font-bold text-lg">Film Dev</h3>
-                <p className="text-sm mt-2 text-foreground/70">35mm & disposable film processing + scans</p>
+                <p className="text-sm mt-2 text-white/70">35mm & disposable film processing + scans</p>
               </div>
               <div className="col-span-2 bg-background/10 p-6 text-background border border-background/20">
                 <CircleDollarSign className="h-8 w-8 mb-4" />
@@ -207,7 +207,7 @@ ${description}
           <div className="grid lg:grid-cols-2 gap-12 lg:gap-16">
             {/* Form info */}
             <div>
-              <h2 className="text-3xl lg:text-4xl font-black uppercase">Request a Repair</h2>
+              <h2 className="text-3xl lg:text-4xl font-display font-extrabold uppercase">Request a Repair</h2>
               <p className="text-muted-foreground mt-4 max-w-md">
                 Fill out the form and we'll get back to you within 24 hours with an assessment and quote. No commitment
                 required.
@@ -216,7 +216,7 @@ ${description}
               {/* Process steps */}
               <div className="mt-10 space-y-6">
                 <div className="flex gap-4">
-                  <div className="w-10 h-10 bg-pop-yellow text-foreground flex items-center justify-center shrink-0 font-black">
+                  <div className="w-10 h-10 bg-pop-yellow text-foreground flex items-center justify-center shrink-0 font-display font-extrabold">
                     1
                   </div>
                   <div>
@@ -225,7 +225,7 @@ ${description}
                   </div>
                 </div>
                 <div className="flex gap-4">
-                  <div className="w-10 h-10 bg-pop-pink text-foreground flex items-center justify-center shrink-0 font-black">
+                  <div className="w-10 h-10 bg-pop-pink text-foreground flex items-center justify-center shrink-0 font-display font-extrabold">
                     2
                   </div>
                   <div>
@@ -236,7 +236,7 @@ ${description}
                   </div>
                 </div>
                 <div className="flex gap-4">
-                  <div className="w-10 h-10 bg-pop-teal text-foreground flex items-center justify-center shrink-0 font-black">
+                  <div className="w-10 h-10 bg-pop-teal text-foreground flex items-center justify-center shrink-0 font-display font-extrabold">
                     3
                   </div>
                   <div>
@@ -247,7 +247,7 @@ ${description}
                   </div>
                 </div>
                 <div className="flex gap-4">
-                  <div className="w-10 h-10 bg-foreground text-background flex items-center justify-center shrink-0 font-black">
+                  <div className="w-10 h-10 bg-foreground text-background flex items-center justify-center shrink-0 font-display font-extrabold">
                     4
                   </div>
                   <div>
@@ -274,13 +274,13 @@ ${description}
 
             {/* Form */}
             <div>
-              <div className="bg-card border-4 border-foreground p-6 lg:p-8">
+              <div className="bg-card border border-foreground p-6 lg:p-8">
                 {submitted ? (
                   <div className="text-center py-12">
                     <div className="w-20 h-20 bg-pop-teal flex items-center justify-center mx-auto">
                       <Check className="h-10 w-10 text-foreground" />
                     </div>
-                    <h3 className="text-2xl font-black uppercase mt-6">Request Sent!</h3>
+                    <h3 className="text-2xl font-display font-extrabold uppercase mt-6">Request Sent!</h3>
                     <p className="text-muted-foreground mt-3">
                       Your email app should have opened with the repair request. If not, please email us directly at
                       christianvelasquez363@gmail.com

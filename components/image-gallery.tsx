@@ -1,6 +1,7 @@
 "use client"
 
 import { useState } from "react"
+import Image from "next/image"
 import { cn } from "@/lib/utils"
 import { ChevronLeft, ChevronRight, ZoomIn } from "lucide-react"
 
@@ -13,89 +14,72 @@ export function ImageGallery({ images, productName }: ImageGalleryProps) {
   const [selectedIndex, setSelectedIndex] = useState(0)
   const [isZoomed, setIsZoomed] = useState(false)
 
-  const handlePrevious = () => {
-    setSelectedIndex((prev) => (prev === 0 ? images.length - 1 : prev - 1))
-  }
-
-  const handleNext = () => {
-    setSelectedIndex((prev) => (prev === images.length - 1 ? 0 : prev + 1))
-  }
+  const handlePrevious = () => setSelectedIndex((prev) => (prev === 0 ? images.length - 1 : prev - 1))
+  const handleNext = () => setSelectedIndex((prev) => (prev === images.length - 1 ? 0 : prev + 1))
 
   if (images.length === 0) {
     return (
-      <div className="aspect-square rounded-2xl bg-secondary flex items-center justify-center">
-        <span className="text-muted-foreground">No image available</span>
+      <div className="aspect-square bg-secondary flex items-center justify-center">
+        <span className="font-display text-xs uppercase tracking-[0.1em] text-muted-foreground">No image available</span>
       </div>
     )
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-3">
       {/* Main image */}
-      <div className="relative aspect-square rounded-2xl overflow-hidden bg-secondary group">
-        <img
-          src={images[selectedIndex] || "/placeholder.svg"}
-          alt={`${productName} - Image ${selectedIndex + 1}`}
-          className={cn(
-            "w-full h-full object-contain transition-transform duration-500",
-            isZoomed && "scale-150 cursor-zoom-out",
-          )}
-          onClick={() => setIsZoomed(!isZoomed)}
-        />
+      <div className="relative aspect-square overflow-hidden bg-secondary group">
+        <div className="absolute inset-[8%]">
+          <Image
+            src={images[selectedIndex] || "/placeholder.svg"}
+            alt={`${productName} - Image ${selectedIndex + 1}`}
+            fill
+            sizes="(max-width: 1024px) 100vw, 50vw"
+            priority
+            className={cn("object-contain transition-transform duration-500", isZoomed ? "scale-150 cursor-zoom-out" : "cursor-zoom-in")}
+            onClick={() => setIsZoomed(!isZoomed)}
+          />
+        </div>
 
-        {/* Zoom indicator */}
         {!isZoomed && (
           <button
             onClick={() => setIsZoomed(true)}
-            className="absolute top-4 right-4 p-2 bg-background/80 backdrop-blur-sm rounded-xl opacity-0 group-hover:opacity-100 transition-opacity"
+            aria-label="Zoom"
+            className="absolute top-3 right-3 p-2 bg-background/80 backdrop-blur-sm opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
           >
-            <ZoomIn className="h-5 w-5" />
+            <ZoomIn className="h-5 w-5" strokeWidth={1.5} />
           </button>
         )}
 
-        {/* Navigation arrows */}
         {images.length > 1 && (
           <>
-            <button
-              onClick={handlePrevious}
-              className="absolute left-4 top-1/2 -translate-y-1/2 p-2 bg-background/80 backdrop-blur-sm rounded-xl opacity-0 group-hover:opacity-100 transition-opacity hover:bg-background"
-            >
-              <ChevronLeft className="h-5 w-5" />
+            <button onClick={handlePrevious} aria-label="Previous image" className="absolute left-3 top-1/2 -translate-y-1/2 p-2 bg-background/80 backdrop-blur-sm opacity-0 group-hover:opacity-100 transition-opacity hover:bg-background cursor-pointer">
+              <ChevronLeft className="h-5 w-5" strokeWidth={1.5} />
             </button>
-            <button
-              onClick={handleNext}
-              className="absolute right-4 top-1/2 -translate-y-1/2 p-2 bg-background/80 backdrop-blur-sm rounded-xl opacity-0 group-hover:opacity-100 transition-opacity hover:bg-background"
-            >
-              <ChevronRight className="h-5 w-5" />
+            <button onClick={handleNext} aria-label="Next image" className="absolute right-3 top-1/2 -translate-y-1/2 p-2 bg-background/80 backdrop-blur-sm opacity-0 group-hover:opacity-100 transition-opacity hover:bg-background cursor-pointer">
+              <ChevronRight className="h-5 w-5" strokeWidth={1.5} />
             </button>
+            <div className="absolute bottom-3 left-1/2 -translate-x-1/2 px-2.5 py-1 bg-background/80 backdrop-blur-sm font-display text-[11px] tabular-nums tracking-[0.08em]">
+              {selectedIndex + 1} / {images.length}
+            </div>
           </>
-        )}
-
-        {/* Image counter */}
-        {images.length > 1 && (
-          <div className="absolute bottom-4 left-1/2 -translate-x-1/2 px-3 py-1.5 bg-background/80 backdrop-blur-sm rounded-full text-sm font-mono">
-            {selectedIndex + 1} / {images.length}
-          </div>
         )}
       </div>
 
       {/* Thumbnails */}
       {images.length > 1 && (
-        <div className="flex gap-3 overflow-x-auto pb-2">
+        <div className="flex gap-2.5 overflow-x-auto pb-1">
           {images.map((image, index) => (
             <button
               key={index}
               onClick={() => setSelectedIndex(index)}
+              aria-label={`View image ${index + 1}`}
               className={cn(
-                "relative w-20 h-20 flex-shrink-0 rounded-xl overflow-hidden transition-all",
-                selectedIndex === index ? "ring-2 ring-foreground ring-offset-2" : "opacity-60 hover:opacity-100",
+                "relative w-20 h-20 shrink-0 overflow-hidden bg-secondary transition-all cursor-pointer border",
+                selectedIndex === index ? "border-foreground" : "border-transparent opacity-60 hover:opacity-100",
               )}
             >
-              <img
-                src={image || "/placeholder.svg"}
-                alt={`${productName} thumbnail ${index + 1}`}
-                className="w-full h-full object-cover"
-              />
+              <Image src={image || "/placeholder.svg"} alt={`${productName} thumbnail ${index + 1}`} fill sizes="80px" className="object-contain p-1.5" />
             </button>
           ))}
         </div>

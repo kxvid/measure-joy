@@ -54,14 +54,14 @@ export function Newsletter({ cms = {} }: NewsletterProps) {
   }
 
   return (
-    <section className="py-12 lg:py-20 bg-pop-yellow">
+    <section className="py-16 lg:py-24 bg-secondary border-y border-border">
       <div className="mx-auto max-w-7xl px-4 lg:px-6">
         <Reveal className="max-w-2xl mx-auto text-center">
-          <span className="inline-block px-4 py-1 bg-foreground text-pop-yellow text-xs font-bold uppercase tracking-wider mb-4">
+          <span className="inline-block font-display text-[11px] font-medium uppercase tracking-[0.2em] text-muted-foreground mb-3">
             {c.badge}
           </span>
 
-          <h2 className="text-3xl lg:text-5xl font-black uppercase tracking-tight text-foreground mb-4">
+          <h2 className="font-display text-3xl lg:text-5xl font-extrabold uppercase tracking-tight text-foreground mb-4">
             {c.heading}
           </h2>
           <p className="text-foreground/70 text-base lg:text-lg leading-relaxed mb-8">

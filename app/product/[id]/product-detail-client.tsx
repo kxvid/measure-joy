@@ -122,7 +122,7 @@ export function ProductDetailClient({ product, relatedProducts }: ProductDetailC
                 </Badge>
               </div>
 
-              <h1 className="text-3xl lg:text-4xl font-bold mt-4 tracking-tight text-balance">{product.name}</h1>
+              <h1 className="font-display text-3xl lg:text-4xl font-extrabold uppercase mt-4 tracking-tight text-balance">{product.name}</h1>
 
               {/* Price */}
               <div className="flex items-baseline gap-3 mt-6">
@@ -154,7 +154,7 @@ export function ProductDetailClient({ product, relatedProducts }: ProductDetailC
                   { icon: Shield, label: "90-Day Warranty", sublabel: "Full coverage" },
                   { icon: RotateCcw, label: "Easy Returns", sublabel: "No hassle" },
                 ].map((item) => (
-                  <div key={item.label} className="text-center p-4 bg-secondary/50 rounded-2xl">
+                  <div key={item.label} className="text-center p-4 bg-secondary/50 rounded-none">
                     <item.icon className="h-6 w-6 mx-auto text-muted-foreground" />
                     <p className="text-sm font-medium mt-2">{item.label}</p>
                     <p className="text-xs text-muted-foreground">{item.sublabel}</p>
@@ -166,7 +166,7 @@ export function ProductDetailClient({ product, relatedProducts }: ProductDetailC
               <div className="mt-8 space-y-3">
                 {/* Quantity selector */}
                 {product.inStock && (
-                  <div className="flex items-center justify-between p-3 border-2 border-border rounded-xl">
+                  <div className="flex items-center justify-between p-3 border-2 border-border rounded-none">
                     <span className="text-sm font-medium">Quantity</span>
                     <div className="flex items-center gap-3">
                       <Button
@@ -204,7 +204,7 @@ export function ProductDetailClient({ product, relatedProducts }: ProductDetailC
                 <div className="flex gap-3">
                   <Button
                     size="lg"
-                    className="flex-1 h-14 gap-2 rounded-xl text-base bg-foreground hover:bg-foreground/90"
+                    className="flex-1 h-14 gap-2 rounded-none bg-foreground hover:bg-foreground/90 font-display text-sm font-semibold uppercase tracking-[0.12em]"
                     onClick={handleAddToCart}
                     disabled={justAdded || !product.inStock}
                   >
@@ -220,13 +220,13 @@ export function ProductDetailClient({ product, relatedProducts }: ProductDetailC
                       </>
                     )}
                   </Button>
-                  <WishlistButton productId={product.id} size="lg" className="h-14 w-14 rounded-xl" />
+                  <WishlistButton productId={product.id} size="lg" className="h-14 w-14 rounded-none" />
                 </div>
 
                 <Button
                   variant="secondary"
                   size="lg"
-                  className="w-full h-14 rounded-xl text-base"
+                  className="w-full h-14 rounded-none text-base"
                   asChild
                   disabled={!product.inStock}
                 >
@@ -239,7 +239,7 @@ export function ProductDetailClient({ product, relatedProducts }: ProductDetailC
 
               {/* Upsells for cameras */}
               {upsells.length > 0 && (
-                <div className="mt-8 p-6 bg-pop-yellow/10 border border-pop-yellow/30 rounded-2xl">
+                <div className="mt-8 p-6 bg-pop-yellow/10 border border-pop-yellow/30 rounded-none">
                   <h3 className="font-bold flex items-center gap-2">
                     <Award className="h-5 w-5 text-pop-orange" />
                     Complete Your Setup
@@ -251,7 +251,7 @@ export function ProductDetailClient({ product, relatedProducts }: ProductDetailC
                       return (
                         <div
                           key={upsell.id}
-                          className={`flex items-center gap-3 p-3 rounded-xl border bg-background transition-colors ${isAdded ? "border-green-200 bg-green-50" : "border-border hover:border-accent/50"
+                          className={`flex items-center gap-3 p-3 rounded-none border bg-background transition-colors ${isAdded ? "border-green-200 bg-green-50" : "border-border hover:border-accent/50"
                             }`}
                         >
                           <div className="w-12 h-12 rounded-lg overflow-hidden bg-secondary flex-shrink-0">
@@ -304,19 +304,19 @@ export function ProductDetailClient({ product, relatedProducts }: ProductDetailC
             <TabsList className="w-full justify-start border-b rounded-none h-auto p-0 bg-transparent">
               <TabsTrigger
                 value="description"
-                className="rounded-none border-b-2 border-transparent data-[state=active]:border-foreground data-[state=active]:bg-transparent px-6 py-4 text-base"
+                className="rounded-none border-b-2 border-transparent data-[state=active]:border-foreground data-[state=active]:bg-transparent px-6 py-4 font-display text-sm font-medium uppercase tracking-[0.1em]"
               >
                 Description
               </TabsTrigger>
               <TabsTrigger
                 value="specifications"
-                className="rounded-none border-b-2 border-transparent data-[state=active]:border-foreground data-[state=active]:bg-transparent px-6 py-4 text-base"
+                className="rounded-none border-b-2 border-transparent data-[state=active]:border-foreground data-[state=active]:bg-transparent px-6 py-4 font-display text-sm font-medium uppercase tracking-[0.1em]"
               >
                 Specifications
               </TabsTrigger>
               <TabsTrigger
                 value="shipping"
-                className="rounded-none border-b-2 border-transparent data-[state=active]:border-foreground data-[state=active]:bg-transparent px-6 py-4 text-base"
+                className="rounded-none border-b-2 border-transparent data-[state=active]:border-foreground data-[state=active]:bg-transparent px-6 py-4 font-display text-sm font-medium uppercase tracking-[0.1em]"
               >
                 Shipping & Returns
               </TabsTrigger>
@@ -416,7 +416,7 @@ export function ProductDetailClient({ product, relatedProducts }: ProductDetailC
         {/* Related products */}
         {relatedProducts.length > 0 && (
           <section className="mt-20 lg:mt-28">
-            <h2 className="text-2xl font-bold mb-8 tracking-tight">You Might Also Like</h2>
+            <h2 className="font-display text-2xl lg:text-3xl font-extrabold uppercase mb-8 tracking-tight">You Might Also Like</h2>
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-5 lg:gap-8">
               {relatedProducts.map((p) => (
                 <ProductCard key={p.id} product={p} />

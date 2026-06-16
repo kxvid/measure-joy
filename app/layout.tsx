@@ -1,14 +1,20 @@
 import type React from "react"
 import type { Metadata } from "next"
 import { ClerkProvider } from "@clerk/nextjs"
-import { DM_Sans, Space_Mono } from "next/font/google"
+import { Inter, Archivo, Space_Mono } from "next/font/google"
 import { Analytics } from "@vercel/analytics/next"
 import { CartProvider } from "@/lib/cart-context"
 import { ExitIntentPopup } from "@/components/exit-intent-popup"
 import { SocialProofToasts } from "@/components/social-proof-toasts"
 import "./globals.css"
 
-const _dmSans = DM_Sans({ subsets: ["latin"], variable: "--font-dm-sans" })
+// Retrospekt-style type system: Inter (body) + Archivo (display/labels, tracked uppercase) + Space Mono
+const _inter = Inter({ subsets: ["latin"], variable: "--font-inter" })
+const _archivo = Archivo({
+  subsets: ["latin"],
+  weight: ["400", "500", "600", "700", "800"],
+  variable: "--font-archivo",
+})
 const _spaceMono = Space_Mono({
   subsets: ["latin"],
   weight: ["400", "700"],
@@ -47,7 +53,7 @@ export default function RootLayout({
   return (
     <ClerkProvider>
       <html lang="en">
-        <body className={`font-sans antialiased ${_dmSans.variable} ${_spaceMono.variable}`}>
+        <body className={`font-sans antialiased ${_inter.variable} ${_archivo.variable} ${_spaceMono.variable}`}>
           <CartProvider>
             {children}
             <ExitIntentPopup />

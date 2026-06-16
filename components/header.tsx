@@ -2,25 +2,97 @@
 
 import { useState, useEffect, useRef } from "react"
 import Link from "next/link"
+import Image from "next/image"
 import { useRouter } from "next/navigation"
-import { Menu, X, ShoppingBag, Search, ChevronDown, Heart } from "lucide-react"
+import { Menu, X, ShoppingBag, Search, ChevronDown, Heart, User, ArrowRight } from "lucide-react"
+import { AnimatePresence, motion, useReducedMotion } from "motion/react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { useCart } from "@/lib/cart-context"
 import { CartDrawer } from "@/components/cart-drawer"
 import { SignedIn, SignedOut, UserButton, useUser } from "@clerk/nextjs"
 
-const navigation = [
+interface MegaColumn {
+  heading: string
+  links: { name: string; href: string }[]
+}
+interface NavItem {
+  name: string
+  href: string
+  menu?: {
+    columns: MegaColumn[]
+    featured: { title: string; href: string; image: string }
+  }
+}
+
+const navigation: NavItem[] = [
+  { name: "Shop All", href: "/shop" },
   {
-    name: "Shop All",
-    href: "/shop",
-    featured: true,
+    name: "Cameras",
+    href: "/shop?category=camera",
+    menu: {
+      columns: [
+        {
+          heading: "By Type",
+          links: [
+            { name: "Point & Shoot", href: "/shop?category=camera" },
+            { name: "Premium Compacts", href: "/shop?category=camera" },
+            { name: "Shop All Cameras", href: "/shop?category=camera" },
+          ],
+        },
+        {
+          heading: "By Brand",
+          links: [
+            { name: "Canon", href: "/shop?brand=Canon" },
+            { name: "Sony", href: "/shop?brand=Sony" },
+            { name: "Nikon", href: "/shop?brand=Nikon" },
+            { name: "Fujifilm", href: "/shop?brand=Fujifilm" },
+            { name: "Olympus", href: "/shop?brand=Olympus" },
+          ],
+        },
+      ],
+      featured: {
+        title: "New arrivals, every week",
+        href: "/shop?sort=newest",
+        image: "/editorial-y2k-flatlay.png",
+      },
+    },
   },
-  { name: "Cameras", href: "/shop?category=camera" },
-  { name: "Accessories", href: "/shop?category=accessory" },
+  {
+    name: "Accessories",
+    href: "/shop?category=accessory",
+    menu: {
+      columns: [
+        {
+          heading: "Gear",
+          links: [
+            { name: "Cases & Bags", href: "/shop?category=accessory&sub=case" },
+            { name: "Straps", href: "/shop?category=accessory&sub=strap" },
+            { name: "Memory Cards", href: "/shop?category=accessory&sub=memory" },
+          ],
+        },
+        {
+          heading: "More",
+          links: [
+            { name: "Cleaning Kits", href: "/shop?category=accessory&sub=cleaning" },
+            { name: "Tripods", href: "/shop?category=accessory&sub=tripod" },
+            { name: "Shop All", href: "/shop?category=accessory" },
+          ],
+        },
+      ],
+      featured: {
+        title: "Keep your kit shooting",
+        href: "/shop?category=accessory",
+        image: "/camera-cleaning-kit-complete.jpg",
+      },
+    },
+  },
   { name: "Repair", href: "/repair" },
   { name: "About", href: "/about" },
 ]
+
+const navLinkClass =
+  "font-display text-[13px] font-medium uppercase tracking-[0.12em] text-foreground/80 hover:text-foreground transition-colors relative after:absolute after:-bottom-1.5 after:left-0 after:h-px after:bg-foreground after:transition-all"
 
 export function Header() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
@@ -28,9 +100,11 @@ export function Header() {
   const [cartOpen, setCartOpen] = useState(false)
   const [searchOpen, setSearchOpen] = useState(false)
   const [searchQuery, setSearchQuery] = useState("")
+  const [activeMenu, setActiveMenu] = useState<string | null>(null)
   const searchInputRef = useRef<HTMLInputElement>(null)
   const { totalItems } = useCart()
   const router = useRouter()
+  const reduce = useReducedMotion()
 
   useEffect(() => {
     const handleScroll = () => setScrolled(window.scrollY > 10)
@@ -50,95 +124,72 @@ export function Header() {
     setSearchQuery("")
   }
 
+  const active = navigation.find((n) => n.name === activeMenu && n.menu)?.menu
+
   return (
     <>
       <header
-        className={`sticky top-0 z-40 transition-all duration-300 ${
-          scrolled ? "bg-background/95 backdrop-blur-xl border-b-2 border-foreground" : "bg-background border-b-2 border-transparent"
+        className={`sticky top-0 z-40 bg-background transition-shadow duration-300 ${
+          scrolled || activeMenu ? "border-b border-border" : "border-b border-transparent"
         }`}
+        onMouseLeave={() => setActiveMenu(null)}
       >
-        <nav className="mx-auto grid max-w-7xl grid-cols-[1fr_auto_1fr] items-center px-4 py-3 lg:px-6">
-          {/* Left: mobile menu button + desktop nav */}
-          <div className="flex items-center justify-start">
-            <Button variant="ghost" size="icon" className="lg:hidden cursor-pointer" onClick={() => setMobileMenuOpen(true)}>
+        <nav className="mx-auto flex max-w-[1400px] items-center justify-between gap-4 px-5 py-4 lg:px-8">
+          {/* Left: logo + desktop nav */}
+          <div className="flex items-center gap-8">
+            <Button variant="ghost" size="icon" className="lg:hidden -ml-2 cursor-pointer" onClick={() => setMobileMenuOpen(true)}>
               <Menu className="h-5 w-5" />
               <span className="sr-only">Open menu</span>
             </Button>
 
-            <div className="hidden lg:flex lg:items-center lg:gap-1">
+            <Link href="/" className="shrink-0" onMouseEnter={() => setActiveMenu(null)}>
+              <span className="inline-block bg-foreground px-2.5 py-1 font-display text-base lg:text-lg font-extrabold uppercase tracking-tight text-background">
+                Measure Joy
+              </span>
+            </Link>
+
+            <div className="hidden lg:flex items-center gap-7">
               {navigation.map((item) => (
-                <Link
-                  key={item.name}
-                  href={item.href}
-                  className={`px-4 py-2 text-xs font-bold uppercase tracking-wider transition-colors rounded-full ${
-                    item.featured
-                      ? "bg-foreground text-background hover:bg-pop-pink"
-                      : "text-foreground/70 hover:text-foreground hover:bg-secondary"
-                  }`}
-                >
-                  {item.name}
-                </Link>
+                <div key={item.name} onMouseEnter={() => setActiveMenu(item.menu ? item.name : null)}>
+                  <Link href={item.href} className={`${navLinkClass} ${activeMenu === item.name ? "after:w-full text-foreground" : "after:w-0 hover:after:w-full"}`}>
+                    {item.name}
+                  </Link>
+                </div>
               ))}
+              <SignedIn>
+                <span onMouseEnter={() => setActiveMenu(null)}>
+                  <AdminLink />
+                </span>
+              </SignedIn>
             </div>
           </div>
 
-          {/* Center: logo */}
-          <Link href="/" className="group flex items-center justify-center">
-            <div className="relative">
-              <span className="text-lg lg:text-xl font-black tracking-tight uppercase">Measure Joy</span>
-              <span className="absolute -top-1 -right-6 text-[9px] font-mono font-bold text-pop-pink">Y2K</span>
-            </div>
-          </Link>
-
-          {/* Right: actions */}
-          <div className="flex items-center justify-end gap-1">
-            <Button
-              variant="ghost"
-              size="icon"
-              className="hidden sm:flex cursor-pointer"
-              onClick={() => setSearchOpen((o) => !o)}
-              aria-label="Search"
-              aria-expanded={searchOpen}
-            >
-              <Search className="h-5 w-5" />
+          {/* Right: icon actions */}
+          <div className="flex items-center gap-1" onMouseEnter={() => setActiveMenu(null)}>
+            <Button variant="ghost" size="icon" className="cursor-pointer" onClick={() => setSearchOpen((o) => !o)} aria-label="Search" aria-expanded={searchOpen}>
+              <Search className="h-5 w-5" strokeWidth={1.5} />
             </Button>
-
             <SignedIn>
-              <AdminLink />
               <Button variant="ghost" size="icon" className="hidden sm:flex cursor-pointer" asChild>
                 <Link href="/account/wishlist">
-                  <Heart className="h-5 w-5" />
+                  <Heart className="h-5 w-5" strokeWidth={1.5} />
                   <span className="sr-only">Wishlist</span>
                 </Link>
               </Button>
-              <UserButton afterSignOutUrl="/" appearance={{ elements: { avatarBox: "w-8 h-8" } }} />
+              <UserButton afterSignOutUrl="/" appearance={{ elements: { avatarBox: "w-7 h-7" } }} />
             </SignedIn>
             <SignedOut>
               <Button variant="ghost" size="icon" className="cursor-pointer" asChild>
                 <Link href="/sign-in">
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    width="20"
-                    height="20"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  >
-                    <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2" />
-                    <circle cx="12" cy="7" r="4" />
-                  </svg>
-                  <span className="sr-only">Sign In</span>
+                  <User className="h-5 w-5" strokeWidth={1.5} />
+                  <span className="sr-only">Account</span>
                 </Link>
               </Button>
             </SignedOut>
-
             <Button variant="ghost" size="icon" className="relative cursor-pointer" onClick={() => setCartOpen(true)}>
-              <ShoppingBag className="h-5 w-5" />
+              <ShoppingBag className="h-5 w-5" strokeWidth={1.5} />
               {totalItems > 0 && (
-                <span className="absolute -top-0.5 -right-0.5 h-5 w-5 rounded-full bg-pop-pink text-[10px] font-bold text-white flex items-center justify-center">
+                <span className="absolute -top-1 -right-1 flex h-4 min-w-4 items-center justify-center bg-foreground px-1 text-[10px] font-bold text-background">
                   {totalItems}
                 </span>
               )}
@@ -147,24 +198,70 @@ export function Header() {
           </div>
         </nav>
 
-        {/* Search bar (expands under nav) */}
+        {/* Mega-menu panel */}
+        <AnimatePresence>
+          {active && (
+            <motion.div
+              key={activeMenu}
+              initial={reduce ? undefined : { opacity: 0, y: -8 }}
+              animate={reduce ? undefined : { opacity: 1, y: 0 }}
+              exit={reduce ? undefined : { opacity: 0, y: -8 }}
+              transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }}
+              className="absolute inset-x-0 top-full hidden lg:block border-t border-border bg-background shadow-[0_12px_24px_-12px_rgba(0,0,0,0.12)]"
+            >
+              <div className="mx-auto grid max-w-[1400px] grid-cols-12 gap-8 px-8 py-10">
+                {active.columns.map((col) => (
+                  <div key={col.heading} className="col-span-3">
+                    <p className="mb-4 font-display text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+                      {col.heading}
+                    </p>
+                    <ul className="space-y-2.5">
+                      {col.links.map((l) => (
+                        <li key={l.name}>
+                          <Link
+                            href={l.href}
+                            onClick={() => setActiveMenu(null)}
+                            className="font-display text-sm uppercase tracking-[0.06em] text-foreground/75 hover:text-foreground transition-colors"
+                          >
+                            {l.name}
+                          </Link>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                ))}
+                <Link
+                  href={active.featured.href}
+                  onClick={() => setActiveMenu(null)}
+                  className="group col-span-6 col-start-7 relative overflow-hidden bg-secondary"
+                >
+                  <div className="relative aspect-[16/7]">
+                    <Image src={active.featured.image} alt={active.featured.title} fill sizes="50vw" className="object-cover transition-transform duration-500 group-hover:scale-105" />
+                  </div>
+                  <span className="absolute bottom-4 left-4 flex items-center gap-2 bg-background px-3 py-2 font-display text-xs font-semibold uppercase tracking-[0.1em]">
+                    {active.featured.title}
+                    <ArrowRight className="h-3.5 w-3.5 group-hover:translate-x-1 transition-transform" strokeWidth={1.5} />
+                  </span>
+                </Link>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* Search bar */}
         {searchOpen && (
           <div className="border-t border-border bg-background">
-            <form onSubmit={submitSearch} className="mx-auto max-w-7xl px-4 lg:px-6 py-3">
+            <form onSubmit={submitSearch} className="mx-auto max-w-[1400px] px-5 lg:px-8 py-3">
               <div className="relative">
-                <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" strokeWidth={1.5} />
                 <Input
                   ref={searchInputRef}
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder="Search cameras, brands, accessories..."
-                  className="pl-11 pr-24 h-12 rounded-full bg-secondary border-0"
+                  placeholder="SEARCH CAMERAS, BRANDS, ACCESSORIES"
+                  className="h-12 rounded-none border-border bg-background pl-10 pr-24 font-display text-sm uppercase tracking-[0.08em] placeholder:text-muted-foreground/70"
                 />
-                <Button
-                  type="submit"
-                  size="sm"
-                  className="absolute right-1.5 top-1/2 -translate-y-1/2 h-9 rounded-full font-bold uppercase tracking-wide cursor-pointer"
-                >
+                <Button type="submit" size="sm" className="absolute right-1.5 top-1/2 -translate-y-1/2 h-9 rounded-none font-display text-xs font-semibold uppercase tracking-[0.1em] cursor-pointer">
                   Search
                 </Button>
               </div>
@@ -172,87 +269,52 @@ export function Header() {
           </div>
         )}
 
-        {/* Mobile menu - full screen overlay */}
+        {/* Mobile menu */}
         {mobileMenuOpen && (
           <div className="lg:hidden fixed inset-0 z-50 bg-background overflow-hidden">
-            <div className="flex items-center justify-between px-4 py-3 border-b-2 border-foreground bg-background">
-              <span className="text-lg font-black tracking-tight uppercase">Measure Joy</span>
+            <div className="flex items-center justify-between px-5 py-4 border-b border-border">
+              <span className="inline-block bg-foreground px-2.5 py-1 font-display text-base font-extrabold uppercase tracking-tight text-background">
+                Measure Joy
+              </span>
               <Button variant="ghost" size="icon" className="cursor-pointer" onClick={() => setMobileMenuOpen(false)}>
                 <X className="h-5 w-5" />
               </Button>
             </div>
-            <div className="p-6 bg-background h-[calc(100dvh-60px)] overflow-y-auto">
-              {/* Mobile search */}
-              <form
-                onSubmit={(e) => {
-                  submitSearch(e)
-                  setMobileMenuOpen(false)
-                }}
-                className="relative mb-6"
-              >
-                <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder="Search products..."
-                  className="pl-11 h-12 rounded-full bg-secondary border-0"
-                />
+            <div className="p-5 h-[calc(100dvh-65px)] overflow-y-auto">
+              <form onSubmit={(e) => { submitSearch(e); setMobileMenuOpen(false) }} className="relative mb-6">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" strokeWidth={1.5} />
+                <Input value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} placeholder="SEARCH" className="h-12 rounded-none border-border bg-background pl-10 font-display text-sm uppercase tracking-[0.08em]" />
               </form>
-
-              <nav className="space-y-1">
+              <nav>
                 {navigation.map((item) => (
-                  <Link
-                    key={item.name}
-                    href={item.href}
-                    className="flex items-center justify-between py-4 text-xl font-bold text-foreground uppercase tracking-wide hover:text-pop-pink transition-colors border-b border-border"
-                    onClick={() => setMobileMenuOpen(false)}
-                  >
+                  <Link key={item.name} href={item.href} className="flex items-center justify-between py-4 font-display text-lg font-medium uppercase tracking-[0.08em] text-foreground border-b border-border" onClick={() => setMobileMenuOpen(false)}>
                     {item.name}
-                    <ChevronDown className="h-5 w-5 -rotate-90" />
+                    <ChevronDown className="h-5 w-5 -rotate-90 text-muted-foreground" />
                   </Link>
                 ))}
                 <SignedIn>
                   <MobileAdminLink setOpen={setMobileMenuOpen} />
-                  <Link
-                    href="/account/wishlist"
-                    className="flex items-center justify-between py-4 text-xl font-bold text-foreground uppercase tracking-wide hover:text-pop-pink transition-colors border-b border-border"
-                    onClick={() => setMobileMenuOpen(false)}
-                  >
-                    Wishlist
-                    <Heart className="h-5 w-5" />
+                  <Link href="/account/wishlist" className="flex items-center justify-between py-4 font-display text-lg font-medium uppercase tracking-[0.08em] text-foreground border-b border-border" onClick={() => setMobileMenuOpen(false)}>
+                    Wishlist <Heart className="h-5 w-5 text-muted-foreground" strokeWidth={1.5} />
                   </Link>
-                  <Link
-                    href="/account"
-                    className="flex items-center justify-between py-4 text-xl font-bold text-foreground uppercase tracking-wide hover:text-pop-pink transition-colors border-b border-border"
-                    onClick={() => setMobileMenuOpen(false)}
-                  >
-                    Account
-                    <ChevronDown className="h-5 w-5 -rotate-90" />
+                  <Link href="/account" className="flex items-center justify-between py-4 font-display text-lg font-medium uppercase tracking-[0.08em] text-foreground border-b border-border" onClick={() => setMobileMenuOpen(false)}>
+                    Account <ChevronDown className="h-5 w-5 -rotate-90 text-muted-foreground" />
                   </Link>
                 </SignedIn>
                 <SignedOut>
-                  <Link
-                    href="/sign-in"
-                    className="flex items-center justify-between py-4 text-xl font-bold text-foreground uppercase tracking-wide hover:text-pop-pink transition-colors border-b border-border"
-                    onClick={() => setMobileMenuOpen(false)}
-                  >
-                    Sign In
-                    <ChevronDown className="h-5 w-5 -rotate-90" />
+                  <Link href="/sign-in" className="flex items-center justify-between py-4 font-display text-lg font-medium uppercase tracking-[0.08em] text-foreground border-b border-border" onClick={() => setMobileMenuOpen(false)}>
+                    Account <ChevronDown className="h-5 w-5 -rotate-90 text-muted-foreground" />
                   </Link>
                 </SignedOut>
               </nav>
-
-              {/* Mobile promo */}
-              <div className="mt-8 p-5 bg-pop-yellow rounded-2xl">
-                <p className="font-mono text-xs text-foreground font-bold uppercase tracking-wide mb-2">★ Limited Time</p>
-                <p className="text-lg font-bold text-foreground">Free shipping on orders $75+</p>
+              <div className="mt-8 bg-brand px-5 py-4">
+                <p className="font-display text-xs font-semibold uppercase tracking-[0.12em] text-brand-foreground">Free US shipping on orders $99+</p>
               </div>
             </div>
           </div>
         )}
       </header>
 
-      {/* Cart drawer component */}
       <CartDrawer open={cartOpen} onClose={() => setCartOpen(false)} />
     </>
   )
@@ -261,15 +323,9 @@ export function Header() {
 function MobileAdminLink({ setOpen }: { setOpen: (open: boolean) => void }) {
   const { user } = useUser()
   if (user?.publicMetadata?.role !== "admin") return null
-
   return (
-    <Link
-      href="/admin/orders"
-      className="flex items-center justify-between py-4 text-xl font-bold text-pop-pink uppercase tracking-wide hover:text-pop-pink/80 transition-colors border-b border-border"
-      onClick={() => setOpen(false)}
-    >
-      Admin Panel
-      <ChevronDown className="h-5 w-5 -rotate-90" />
+    <Link href="/admin/orders" className="flex items-center justify-between py-4 font-display text-lg font-medium uppercase tracking-[0.08em] text-foreground border-b border-border" onClick={() => setOpen(false)}>
+      Admin Panel <ChevronDown className="h-5 w-5 -rotate-90 text-muted-foreground" />
     </Link>
   )
 }
@@ -277,12 +333,8 @@ function MobileAdminLink({ setOpen }: { setOpen: (open: boolean) => void }) {
 function AdminLink() {
   const { user } = useUser()
   if (user?.publicMetadata?.role !== "admin") return null
-
   return (
-    <Link
-      href="/admin/orders"
-      className="hidden lg:flex items-center gap-2 px-4 py-2 text-xs font-bold uppercase tracking-wider text-pop-pink hover:bg-secondary rounded-full transition-colors"
-    >
+    <Link href="/admin/orders" className="font-display text-[13px] font-medium uppercase tracking-[0.12em] text-foreground/80 hover:text-foreground transition-colors">
       Admin
     </Link>
   )
