@@ -56,7 +56,7 @@ export function Footer({ cms = {} }: FooterProps) {
             <Link href="/" className="inline-block" aria-label="Measure Joy — home">
               <span className="inline-flex bg-background p-3">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src="/stacked-cream.svg" alt="Measure Joy" className="h-16 w-auto" />
+                <img src="/stacked-cream.svg" alt="Measure Joy" className="h-20 w-auto" />
               </span>
             </Link>
             <p className="mt-5 max-w-xs text-sm leading-relaxed text-background/60">{tagline}</p>

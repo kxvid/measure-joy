@@ -144,7 +144,7 @@ export function Header() {
 
             <Link href="/" className="shrink-0" aria-label="Measure Joy — home" onMouseEnter={() => setActiveMenu(null)}>
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src="/stacked-cream.svg" alt="Measure Joy" className="h-11 w-auto lg:h-12" />
+              <img src="/stacked-cream.svg" alt="Measure Joy" className="h-12 w-auto lg:h-14" />
             </Link>
 
             <div className="hidden lg:flex items-center gap-7">
@@ -273,7 +273,7 @@ export function Header() {
           <div className="lg:hidden fixed inset-0 z-50 bg-background overflow-hidden">
             <div className="flex items-center justify-between px-5 py-4 border-b border-border">
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src="/stacked-cream.svg" alt="Measure Joy" className="h-10 w-auto" />
+              <img src="/stacked-cream.svg" alt="Measure Joy" className="h-12 w-auto" />
               <Button variant="ghost" size="icon" className="cursor-pointer" onClick={() => setMobileMenuOpen(false)}>
                 <X className="h-5 w-5" />
               </Button>
