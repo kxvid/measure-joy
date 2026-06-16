@@ -1,8 +1,7 @@
 import { Header } from "@/components/header"
 import { PromoBanner } from "@/components/promo-banner"
 import { Hero } from "@/components/hero"
-import { CategoryGrid } from "@/components/category-grid"
-import { FeaturedProducts } from "@/components/featured-products"
+import { ProductSlider } from "@/components/product-slider"
 import { AnimatedCategories } from "@/components/animated-categories"
 import { TestimonialsSection } from "@/components/testimonials-section"
 import { TrustStory } from "@/components/trust-story"
@@ -29,14 +28,18 @@ export default async function Home() {
       getStripeProducts(),
     ])
 
+  const bestSellers = products.filter((p) => p.isBestseller || p.isTrending)
+
   return (
     <main className="min-h-screen bg-background">
       <PromoBanner cms={promoBanner} />
       <Header />
       <Hero cms={hero} />
-      <CategoryGrid />
-      <FeaturedProducts products={products} />
+      <ProductSlider eyebrow="Just Dropped" title="New Arrivals" products={products} />
       <AnimatedCategories products={products} />
+      {bestSellers.length > 0 && (
+        <ProductSlider eyebrow="Fan Favorites" title="Best Sellers" products={bestSellers} />
+      )}
       <TestimonialsSection cms={testimonials} />
       <TrustStory cms={trustStory} />
       <TrustBanner cms={trustBanner} />
