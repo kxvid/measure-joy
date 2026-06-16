@@ -48,16 +48,18 @@ export function ProductCard({ product }: ProductCardProps) {
   const isLowStock = product.stockCount !== undefined && product.stockCount <= 3
   const isVeryLowStock = product.stockCount === 1
 
-  // One badge only (Retrospekt-style black tag), by priority.
+  // One badge only, color-coded by type.
   const badge = product.isBestseller
-    ? "Best Seller"
+    ? { label: "Best Seller", className: "bg-pop-yellow text-foreground" }
     : product.isTrending
-      ? "Trending"
+      ? { label: "Trending", className: "bg-pop-pink text-white" }
       : isVeryLowStock
-        ? "Last One"
+        ? { label: "Last One", className: "bg-pop-red text-white" }
         : savingsPercent >= 15
-          ? `Save ${savingsPercent}%`
-          : product.badge || null
+          ? { label: `Save ${savingsPercent}%`, className: "bg-pop-red text-white" }
+          : product.badge
+            ? { label: product.badge, className: "bg-foreground text-background" }
+            : null
 
   return (
     <>
@@ -92,10 +94,10 @@ export function ProductCard({ product }: ProductCardProps) {
             </div>
           </Link>
 
-          {/* Single black tag */}
+          {/* Single color-coded tag */}
           {badge && (
-            <span className="pointer-events-none absolute left-0 top-0 z-10 bg-foreground px-2.5 py-1 font-display text-[10px] font-semibold uppercase tracking-[0.1em] text-background">
-              {badge}
+            <span className={`pointer-events-none absolute left-0 top-0 z-10 px-2.5 py-1 font-display text-[10px] font-semibold uppercase tracking-[0.1em] ${badge.className}`}>
+              {badge.label}
             </span>
           )}
 

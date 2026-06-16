@@ -1,7 +1,21 @@
 import Link from "next/link"
+import { Instagram } from "lucide-react"
 
 interface FooterProps {
   cms?: Record<string, any>
+}
+
+const SOCIAL = {
+  instagram: "https://www.instagram.com/measurejoy/",
+  tiktok: "https://www.tiktok.com/@measurejoy",
+}
+
+function TikTokIcon({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" className={className} fill="currentColor" aria-hidden="true">
+      <path d="M16.6 5.82a4.28 4.28 0 0 1-1.04-2.82h-3.1v12.4a2.32 2.32 0 1 1-2.32-2.32c.24 0 .47.04.69.1v-3.16a5.46 5.46 0 0 0-.69-.04 5.43 5.43 0 1 0 5.43 5.43V9.01a7.3 7.3 0 0 0 4.27 1.37V7.27a4.28 4.28 0 0 1-3.24-1.45Z" />
+    </svg>
+  )
 }
 
 const footerLinks = {
@@ -45,6 +59,26 @@ export function Footer({ cms = {} }: FooterProps) {
               </span>
             </Link>
             <p className="mt-5 max-w-xs text-sm leading-relaxed text-background/60">{tagline}</p>
+            <div className="mt-6 flex items-center gap-3">
+              <a
+                href={SOCIAL.instagram}
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label="Measure Joy on Instagram"
+                className="flex h-10 w-10 items-center justify-center border border-background/25 text-background/80 transition-colors hover:border-background hover:text-background"
+              >
+                <Instagram className="h-5 w-5" strokeWidth={1.5} />
+              </a>
+              <a
+                href={SOCIAL.tiktok}
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label="Measure Joy on TikTok"
+                className="flex h-10 w-10 items-center justify-center border border-background/25 text-background/80 transition-colors hover:border-background hover:text-background"
+              >
+                <TikTokIcon className="h-5 w-5" />
+              </a>
+            </div>
           </div>
 
           {Object.entries(footerLinks).map(([heading, links]) => (

@@ -7,6 +7,7 @@ import { AnimatedCategories } from "@/components/animated-categories"
 import { TestimonialsSection } from "@/components/testimonials-section"
 import { TrustStory } from "@/components/trust-story"
 import { TrustBanner } from "@/components/trust-banner"
+import { SocialFeed } from "@/components/social-feed"
 import { Newsletter } from "@/components/newsletter"
 import { Footer } from "@/components/footer"
 import { getSectionContent } from "@/lib/content"
@@ -45,6 +46,7 @@ export default async function Home() {
       <TestimonialsSection cms={testimonials} />
       <TrustStory cms={trustStory} />
       <TrustBanner cms={trustBanner} />
+      <SocialFeed />
       <Newsletter cms={newsletter} />
       <Footer cms={footer} />
     </main>

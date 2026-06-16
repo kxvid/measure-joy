@@ -8,11 +8,11 @@ import { ArrowUpRight } from "lucide-react"
 import { Reveal } from "@/components/motion/motion-primitives"
 
 const categories = [
-  { name: "Point & Shoot", sub: "Cameras", href: "/shop?category=camera", image: "/category-point-shoot-v2.png" },
-  { name: "Premium", sub: "Compacts", href: "/shop?category=camera", image: "/category-premium-v2.png" },
-  { name: "Memory Cards", sub: "Storage", href: "/shop?category=accessory&sub=memory", image: "/category-memory-v2.png" },
-  { name: "Cases & Bags", sub: "Protection", href: "/shop?category=accessory&sub=case", image: "/category-cases-v2.png" },
-  { name: "Straps", sub: "Accessories", href: "/shop?category=accessory&sub=strap", image: "/category-straps-v2.png" },
+  { name: "Point & Shoot", sub: "Cameras", href: "/shop?category=camera", image: "/category-point-shoot-v2.png", text: "text-pop-pink", chip: "bg-pop-pink text-white" },
+  { name: "Premium", sub: "Compacts", href: "/shop?category=camera", image: "/category-premium-v2.png", text: "text-pop-blue", chip: "bg-pop-blue text-white" },
+  { name: "Memory Cards", sub: "Storage", href: "/shop?category=accessory&sub=memory", image: "/category-memory-v2.png", text: "text-pop-teal", chip: "bg-pop-teal text-white" },
+  { name: "Cases & Bags", sub: "Protection", href: "/shop?category=accessory&sub=case", image: "/category-cases-v2.png", text: "text-pop-orange", chip: "bg-pop-orange text-foreground" },
+  { name: "Straps", sub: "Accessories", href: "/shop?category=accessory&sub=strap", image: "/category-straps-v2.png", text: "text-brand", chip: "bg-brand text-brand-foreground" },
 ]
 
 export function CategoryShowcase() {
@@ -48,7 +48,7 @@ export function CategoryShowcase() {
                     </span>
                     <span
                       className={`font-display text-2xl lg:text-4xl font-extrabold uppercase tracking-tight transition-colors duration-300 ${
-                        active === i ? "text-foreground" : "text-foreground/35 group-hover:text-foreground"
+                        active === i ? cat.text : "text-foreground/35 group-hover:text-foreground"
                       }`}
                     >
                       {cat.name}
@@ -86,7 +86,7 @@ export function CategoryShowcase() {
                   />
                 </motion.div>
               </AnimatePresence>
-              <span className="absolute bottom-4 left-4 flex items-center gap-2 bg-background px-3 py-2 font-display text-xs font-semibold uppercase tracking-[0.1em]">
+              <span className={`absolute bottom-4 left-4 flex items-center gap-2 px-3 py-2 font-display text-xs font-semibold uppercase tracking-[0.1em] ${categories[active].chip}`}>
                 Shop {categories[active].sub}
                 <ArrowUpRight className="h-3.5 w-3.5 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" strokeWidth={1.5} />
               </span>
