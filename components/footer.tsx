@@ -53,9 +53,10 @@ export function Footer({ cms = {} }: FooterProps) {
       <div className="mx-auto max-w-[1400px] px-5 lg:px-8 py-14 lg:py-20">
         <div className="grid grid-cols-2 gap-10 md:grid-cols-5 lg:gap-12">
           <div className="col-span-2">
-            <Link href="/" className="inline-block">
-              <span className="inline-block bg-background px-2.5 py-1 font-display text-lg font-extrabold uppercase tracking-tight text-foreground">
-                Measure Joy
+            <Link href="/" className="inline-block" aria-label="Measure Joy — home">
+              <span className="inline-flex bg-background p-3">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src="/stacked-cream.svg" alt="Measure Joy" className="h-16 w-auto" />
               </span>
             </Link>
             <p className="mt-5 max-w-xs text-sm leading-relaxed text-background/60">{tagline}</p>
