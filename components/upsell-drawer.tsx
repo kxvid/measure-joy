@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet"
@@ -20,11 +20,33 @@ interface UpsellDrawerProps {
 export function UpsellDrawer({ open, onClose, addedProduct }: UpsellDrawerProps) {
   const { addItem, totalItems, totalPrice } = useCart()
   const [addedUpsells, setAddedUpsells] = useState<Set<string>>(new Set())
+  const [upsells, setUpsells] = useState<Product[]>([])
 
-  // TODO: Implement dynamic upsells from Stripe when upsell relationships are defined
-  const upsells: Product[] = []
+  // Recommend accessories to complete the kit (SD cards, readers, cables, cases…)
+  // when a camera is added — the highest-intent "complete your setup" moment.
+  useEffect(() => {
+    if (!open || addedProduct.category !== "camera") return
+    let cancelled = false
+    async function fetchAccessories() {
+      try {
+        const res = await fetch("/api/products")
+        if (!res.ok) return
+        const all: Product[] = await res.json()
+        const recs = all
+          .filter((p) => p.category === "accessory" && p.inStock && p.id !== addedProduct.id)
+          .slice(0, 4)
+        if (!cancelled) setUpsells(recs)
+      } catch (e) {
+        console.error("Upsell fetch failed:", e)
+      }
+    }
+    fetchAccessories()
+    return () => {
+      cancelled = true
+    }
+  }, [open, addedProduct])
 
-  const freeShippingThreshold = 10000 // $100
+  const freeShippingThreshold = 9900 // $99
   const remainingForFreeShipping = Math.max(freeShippingThreshold - totalPrice, 0)
 
   const handleAddUpsell = (product: Product) => {
@@ -65,39 +87,31 @@ export function UpsellDrawer({ open, onClose, addedProduct }: UpsellDrawerProps)
           {/* Upsells */}
           {upsells.length > 0 && (
             <div className="mt-6">
-              <h4 className="font-medium mb-4 flex items-center gap-2">
-                <span>Complete your setup</span>
-                <Badge variant="secondary" className="text-xs">
-                  Recommended
-                </Badge>
+              <h4 className="mb-4 flex items-center gap-2 font-display text-[12px] font-semibold uppercase tracking-[0.1em]">
+                Complete Your Kit
+                <span className="bg-brand px-2 py-0.5 font-display text-[9px] font-bold uppercase tracking-[0.08em] text-brand-foreground">Save on bundle</span>
               </h4>
 
-              <div className="space-y-3">
+              <div className="space-y-2.5">
                 {upsells.map((upsell) => {
                   const isAdded = addedUpsells.has(upsell.id)
 
                   return (
                     <div
                       key={upsell.id}
-                      className={`flex gap-4 p-4 rounded-none border transition-colors ${isAdded ? "border-green-200 bg-green-50" : "border-border hover:border-accent/50"
-                        }`}
+                      className="flex items-center gap-3 border border-border p-2.5"
                     >
-                      <div className="w-16 h-16 rounded-none overflow-hidden bg-secondary flex-shrink-0">
-                        <img
-                          src={upsell.images[0] || "/placeholder.svg"}
-                          alt={upsell.name}
-                          className="w-full h-full object-cover"
-                        />
+                      <div className="relative h-14 w-14 shrink-0 overflow-hidden bg-secondary">
+                        <Image src={upsell.images[0] || "/placeholder.svg"} alt={upsell.name} fill sizes="56px" className="object-contain p-1" />
                       </div>
                       <div className="flex-1 min-w-0">
-                        <h5 className="font-medium text-sm">{upsell.name}</h5>
-                        <p className="text-xs text-muted-foreground mt-0.5 line-clamp-1">{upsell.description}</p>
-                        <div className="flex items-center justify-between mt-2">
-                          <span className="font-semibold text-sm">{formatPrice(upsell.priceInCents)}</span>
+                        <h5 className="truncate font-display text-[12px] font-medium uppercase tracking-[0.04em]">{upsell.name}</h5>
+                        <div className="mt-1.5 flex items-center justify-between gap-2">
+                          <span className="font-display text-[12px] font-semibold">{formatPrice(upsell.priceInCents)}</span>
                           <Button
                             size="sm"
                             variant={isAdded ? "secondary" : "outline"}
-                            className="h-8 rounded-none"
+                            className="h-8 rounded-none border-border font-display text-[11px] font-semibold uppercase tracking-[0.08em] cursor-pointer"
                             onClick={() => handleAddUpsell(upsell)}
                             disabled={isAdded}
                           >
