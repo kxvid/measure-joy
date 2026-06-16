@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { Menu, X, ShoppingBag, Search, ChevronDown, Heart } from "lucide-react"
+import { Menu, X, ShoppingBag, Search, ChevronDown, Heart, User } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { useCart } from "@/lib/cart-context"
@@ -11,16 +11,15 @@ import { CartDrawer } from "@/components/cart-drawer"
 import { SignedIn, SignedOut, UserButton, useUser } from "@clerk/nextjs"
 
 const navigation = [
-  {
-    name: "Shop All",
-    href: "/shop",
-    featured: true,
-  },
+  { name: "Shop All", href: "/shop" },
   { name: "Cameras", href: "/shop?category=camera" },
   { name: "Accessories", href: "/shop?category=accessory" },
   { name: "Repair", href: "/repair" },
   { name: "About", href: "/about" },
 ]
+
+const navLinkClass =
+  "font-display text-[13px] font-medium uppercase tracking-[0.12em] text-foreground/80 hover:text-foreground transition-colors relative after:absolute after:-bottom-1.5 after:left-0 after:h-px after:w-0 after:bg-foreground hover:after:w-full after:transition-all"
 
 export function Header() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
@@ -53,92 +52,71 @@ export function Header() {
   return (
     <>
       <header
-        className={`sticky top-0 z-40 transition-all duration-300 ${
-          scrolled ? "bg-background/95 backdrop-blur-xl border-b-2 border-foreground" : "bg-background border-b-2 border-transparent"
+        className={`sticky top-0 z-40 bg-background transition-shadow duration-300 ${
+          scrolled ? "border-b border-border" : "border-b border-transparent"
         }`}
       >
-        <nav className="mx-auto grid max-w-7xl grid-cols-[1fr_auto_1fr] items-center px-4 py-3 lg:px-6">
-          {/* Left: mobile menu button + desktop nav */}
-          <div className="flex items-center justify-start">
-            <Button variant="ghost" size="icon" className="lg:hidden cursor-pointer" onClick={() => setMobileMenuOpen(true)}>
+        <nav className="mx-auto flex max-w-[1400px] items-center justify-between gap-4 px-5 py-4 lg:px-8">
+          {/* Left: logo (black box) + desktop nav */}
+          <div className="flex items-center gap-8">
+            <Button variant="ghost" size="icon" className="lg:hidden -ml-2 cursor-pointer" onClick={() => setMobileMenuOpen(true)}>
               <Menu className="h-5 w-5" />
               <span className="sr-only">Open menu</span>
             </Button>
 
-            <div className="hidden lg:flex lg:items-center lg:gap-1">
+            <Link href="/" className="shrink-0">
+              <span className="inline-block bg-foreground px-2.5 py-1 font-display text-base lg:text-lg font-extrabold uppercase tracking-tight text-background">
+                Measure Joy
+              </span>
+            </Link>
+
+            <div className="hidden lg:flex items-center gap-7">
               {navigation.map((item) => (
-                <Link
-                  key={item.name}
-                  href={item.href}
-                  className={`px-4 py-2 text-xs font-bold uppercase tracking-wider transition-colors rounded-full ${
-                    item.featured
-                      ? "bg-foreground text-background hover:bg-brand"
-                      : "text-foreground/70 hover:text-foreground hover:bg-secondary"
-                  }`}
-                >
+                <Link key={item.name} href={item.href} className={navLinkClass}>
                   {item.name}
                 </Link>
               ))}
+              <SignedIn>
+                <AdminLink />
+              </SignedIn>
             </div>
           </div>
 
-          {/* Center: logo */}
-          <Link href="/" className="group flex items-center justify-center">
-            <div className="relative">
-              <span className="font-display text-xl lg:text-2xl font-semibold tracking-tight">Measure Joy</span>
-              <span className="absolute -top-0.5 -right-6 font-mono text-[9px] uppercase tracking-wider text-muted-foreground">Y2K</span>
-            </div>
-          </Link>
-
-          {/* Right: actions */}
-          <div className="flex items-center justify-end gap-1">
+          {/* Right: thin-line icon actions */}
+          <div className="flex items-center gap-1">
             <Button
               variant="ghost"
               size="icon"
-              className="hidden sm:flex cursor-pointer"
+              className="cursor-pointer"
               onClick={() => setSearchOpen((o) => !o)}
               aria-label="Search"
               aria-expanded={searchOpen}
             >
-              <Search className="h-5 w-5" />
+              <Search className="h-5 w-5" strokeWidth={1.5} />
             </Button>
 
             <SignedIn>
-              <AdminLink />
               <Button variant="ghost" size="icon" className="hidden sm:flex cursor-pointer" asChild>
                 <Link href="/account/wishlist">
-                  <Heart className="h-5 w-5" />
+                  <Heart className="h-5 w-5" strokeWidth={1.5} />
                   <span className="sr-only">Wishlist</span>
                 </Link>
               </Button>
-              <UserButton afterSignOutUrl="/" appearance={{ elements: { avatarBox: "w-8 h-8" } }} />
+              <UserButton afterSignOutUrl="/" appearance={{ elements: { avatarBox: "w-7 h-7" } }} />
             </SignedIn>
             <SignedOut>
               <Button variant="ghost" size="icon" className="cursor-pointer" asChild>
                 <Link href="/sign-in">
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    width="20"
-                    height="20"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  >
-                    <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2" />
-                    <circle cx="12" cy="7" r="4" />
-                  </svg>
-                  <span className="sr-only">Sign In</span>
+                  <User className="h-5 w-5" strokeWidth={1.5} />
+                  <span className="sr-only">Account</span>
                 </Link>
               </Button>
             </SignedOut>
 
             <Button variant="ghost" size="icon" className="relative cursor-pointer" onClick={() => setCartOpen(true)}>
-              <ShoppingBag className="h-5 w-5" />
+              <ShoppingBag className="h-5 w-5" strokeWidth={1.5} />
               {totalItems > 0 && (
-                <span className="absolute -top-0.5 -right-0.5 h-5 w-5 rounded-full bg-brand text-[10px] font-bold text-white flex items-center justify-center">
+                <span className="absolute -top-1 -right-1 flex h-4 min-w-4 items-center justify-center bg-foreground px-1 text-[10px] font-bold text-background">
                   {totalItems}
                 </span>
               )}
@@ -150,20 +128,20 @@ export function Header() {
         {/* Search bar (expands under nav) */}
         {searchOpen && (
           <div className="border-t border-border bg-background">
-            <form onSubmit={submitSearch} className="mx-auto max-w-7xl px-4 lg:px-6 py-3">
+            <form onSubmit={submitSearch} className="mx-auto max-w-[1400px] px-5 lg:px-8 py-3">
               <div className="relative">
-                <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" strokeWidth={1.5} />
                 <Input
                   ref={searchInputRef}
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder="Search cameras, brands, accessories..."
-                  className="pl-11 pr-24 h-12 rounded-full bg-secondary border-0"
+                  placeholder="SEARCH CAMERAS, BRANDS, ACCESSORIES"
+                  className="h-12 rounded-none border-border bg-background pl-10 pr-24 font-display text-sm uppercase tracking-[0.08em] placeholder:text-muted-foreground/70"
                 />
                 <Button
                   type="submit"
                   size="sm"
-                  className="absolute right-1.5 top-1/2 -translate-y-1/2 h-9 rounded-full font-bold uppercase tracking-wide cursor-pointer"
+                  className="absolute right-1.5 top-1/2 -translate-y-1/2 h-9 rounded-none font-display text-xs font-semibold uppercase tracking-[0.1em] cursor-pointer"
                 >
                   Search
                 </Button>
@@ -172,17 +150,18 @@ export function Header() {
           </div>
         )}
 
-        {/* Mobile menu - full screen overlay */}
+        {/* Mobile menu */}
         {mobileMenuOpen && (
           <div className="lg:hidden fixed inset-0 z-50 bg-background overflow-hidden">
-            <div className="flex items-center justify-between px-4 py-3 border-b-2 border-foreground bg-background">
-              <span className="text-lg font-black tracking-tight uppercase">Measure Joy</span>
+            <div className="flex items-center justify-between px-5 py-4 border-b border-border">
+              <span className="inline-block bg-foreground px-2.5 py-1 font-display text-base font-extrabold uppercase tracking-tight text-background">
+                Measure Joy
+              </span>
               <Button variant="ghost" size="icon" className="cursor-pointer" onClick={() => setMobileMenuOpen(false)}>
                 <X className="h-5 w-5" />
               </Button>
             </div>
-            <div className="p-6 bg-background h-[calc(100dvh-60px)] overflow-y-auto">
-              {/* Mobile search */}
+            <div className="p-5 h-[calc(100dvh-65px)] overflow-y-auto">
               <form
                 onSubmit={(e) => {
                   submitSearch(e)
@@ -190,69 +169,68 @@ export function Header() {
                 }}
                 className="relative mb-6"
               >
-                <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" strokeWidth={1.5} />
                 <Input
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder="Search products..."
-                  className="pl-11 h-12 rounded-full bg-secondary border-0"
+                  placeholder="SEARCH"
+                  className="h-12 rounded-none border-border bg-background pl-10 font-display text-sm uppercase tracking-[0.08em]"
                 />
               </form>
 
-              <nav className="space-y-1">
+              <nav>
                 {navigation.map((item) => (
                   <Link
                     key={item.name}
                     href={item.href}
-                    className="flex items-center justify-between py-4 text-xl font-bold text-foreground uppercase tracking-wide hover:text-brand transition-colors border-b border-border"
+                    className="flex items-center justify-between py-4 font-display text-lg font-medium uppercase tracking-[0.08em] text-foreground border-b border-border"
                     onClick={() => setMobileMenuOpen(false)}
                   >
                     {item.name}
-                    <ChevronDown className="h-5 w-5 -rotate-90" />
+                    <ChevronDown className="h-5 w-5 -rotate-90 text-muted-foreground" />
                   </Link>
                 ))}
                 <SignedIn>
                   <MobileAdminLink setOpen={setMobileMenuOpen} />
                   <Link
                     href="/account/wishlist"
-                    className="flex items-center justify-between py-4 text-xl font-bold text-foreground uppercase tracking-wide hover:text-brand transition-colors border-b border-border"
+                    className="flex items-center justify-between py-4 font-display text-lg font-medium uppercase tracking-[0.08em] text-foreground border-b border-border"
                     onClick={() => setMobileMenuOpen(false)}
                   >
                     Wishlist
-                    <Heart className="h-5 w-5" />
+                    <Heart className="h-5 w-5 text-muted-foreground" strokeWidth={1.5} />
                   </Link>
                   <Link
                     href="/account"
-                    className="flex items-center justify-between py-4 text-xl font-bold text-foreground uppercase tracking-wide hover:text-brand transition-colors border-b border-border"
+                    className="flex items-center justify-between py-4 font-display text-lg font-medium uppercase tracking-[0.08em] text-foreground border-b border-border"
                     onClick={() => setMobileMenuOpen(false)}
                   >
                     Account
-                    <ChevronDown className="h-5 w-5 -rotate-90" />
+                    <ChevronDown className="h-5 w-5 -rotate-90 text-muted-foreground" />
                   </Link>
                 </SignedIn>
                 <SignedOut>
                   <Link
                     href="/sign-in"
-                    className="flex items-center justify-between py-4 text-xl font-bold text-foreground uppercase tracking-wide hover:text-brand transition-colors border-b border-border"
+                    className="flex items-center justify-between py-4 font-display text-lg font-medium uppercase tracking-[0.08em] text-foreground border-b border-border"
                     onClick={() => setMobileMenuOpen(false)}
                   >
-                    Sign In
-                    <ChevronDown className="h-5 w-5 -rotate-90" />
+                    Account
+                    <ChevronDown className="h-5 w-5 -rotate-90 text-muted-foreground" />
                   </Link>
                 </SignedOut>
               </nav>
 
-              {/* Mobile promo */}
-              <div className="mt-8 p-5 bg-pop-yellow rounded-2xl">
-                <p className="font-mono text-xs text-foreground font-bold uppercase tracking-wide mb-2">★ Limited Time</p>
-                <p className="text-lg font-bold text-foreground">Free shipping on orders $75+</p>
+              <div className="mt-8 bg-brand px-5 py-4">
+                <p className="font-display text-xs font-semibold uppercase tracking-[0.12em] text-brand-foreground">
+                  Free US shipping on orders $99+
+                </p>
               </div>
             </div>
           </div>
         )}
       </header>
 
-      {/* Cart drawer component */}
       <CartDrawer open={cartOpen} onClose={() => setCartOpen(false)} />
     </>
   )
@@ -265,11 +243,11 @@ function MobileAdminLink({ setOpen }: { setOpen: (open: boolean) => void }) {
   return (
     <Link
       href="/admin/orders"
-      className="flex items-center justify-between py-4 text-xl font-bold text-brand uppercase tracking-wide hover:text-brand/80 transition-colors border-b border-border"
+      className="flex items-center justify-between py-4 font-display text-lg font-medium uppercase tracking-[0.08em] text-foreground border-b border-border"
       onClick={() => setOpen(false)}
     >
       Admin Panel
-      <ChevronDown className="h-5 w-5 -rotate-90" />
+      <ChevronDown className="h-5 w-5 -rotate-90 text-muted-foreground" />
     </Link>
   )
 }
@@ -281,7 +259,7 @@ function AdminLink() {
   return (
     <Link
       href="/admin/orders"
-      className="hidden lg:flex items-center gap-2 px-4 py-2 text-xs font-bold uppercase tracking-wider text-brand hover:bg-secondary rounded-full transition-colors"
+      className="font-display text-[13px] font-medium uppercase tracking-[0.12em] text-foreground/80 hover:text-foreground transition-colors"
     >
       Admin
     </Link>
