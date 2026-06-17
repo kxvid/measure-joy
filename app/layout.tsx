@@ -3,6 +3,7 @@ import type { Metadata } from "next"
 import { ClerkProvider } from "@clerk/nextjs"
 import { Inter, Archivo, Space_Mono } from "next/font/google"
 import { Analytics } from "@vercel/analytics/next"
+import { SpeedInsights } from "@vercel/speed-insights/next"
 import { CartProvider } from "@/lib/cart-context"
 import { ExitIntentPopup } from "@/components/exit-intent-popup"
 import { SocialProofToasts } from "@/components/social-proof-toasts"
@@ -60,6 +61,7 @@ export default function RootLayout({
             <SocialProofToasts />
           </CartProvider>
           <Analytics />
+          <SpeedInsights />
         </body>
       </html>
     </ClerkProvider>
