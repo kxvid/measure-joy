@@ -6,7 +6,7 @@ interface FooterProps {
 }
 
 const SOCIAL = {
-  instagram: "https://www.instagram.com/measurejoy/",
+  instagram: "https://www.instagram.com/measurejoycamera/",
   tiktok: "https://www.tiktok.com/@measurejoy",
 }
 
@@ -108,6 +108,16 @@ export function Footer({ cms = {} }: FooterProps) {
           <p className="font-display text-[11px] uppercase tracking-[0.12em] text-background/45">
             © {new Date().getFullYear()} Measure Joy. All rights reserved.
           </p>
+          <a
+            href={SOCIAL.instagram}
+            target="_blank"
+            rel="noopener noreferrer"
+            aria-label="Follow Measure Joy on Instagram"
+            className="inline-flex items-center gap-2 font-display text-[11px] uppercase tracking-[0.12em] text-background/45 transition-colors hover:text-background"
+          >
+            <Instagram className="h-3.5 w-3.5" strokeWidth={1.5} />
+            @measurejoycamera
+          </a>
           <p className="font-display text-[11px] uppercase tracking-[0.12em] text-background/45">{bottomText}</p>
         </div>
       </div>
