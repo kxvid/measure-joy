@@ -7,7 +7,7 @@ interface PromoBannerProps {
   cms?: Record<string, any>
 }
 
-const DEFAULT_MESSAGE = "Free US shipping on orders $99+"
+const DEFAULT_MESSAGE = "Free US shipping on orders $75+"
 
 export function PromoBanner({ cms = {} }: PromoBannerProps) {
   const [isVisible, setIsVisible] = useState(true)

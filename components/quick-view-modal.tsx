@@ -1,5 +1,6 @@
 "use client"
 
+import { productPath } from "@/lib/seo"
 import { useState } from "react"
 import Link from "next/link"
 import Image from "next/image"
@@ -128,7 +129,7 @@ export function QuickViewModal({ product, open, onClose }: QuickViewModalProps) 
                   <WishlistButton productId={product.id} variant="outline" className="h-12 w-12 rounded-none border-border" />
                 </div>
                 <Button asChild variant="outline" className="w-full h-11 rounded-none border-border bg-transparent font-display text-[12px] font-semibold uppercase tracking-[0.1em] cursor-pointer">
-                  <Link href={`/product/${product.id}`} onClick={onClose}>View Full Details</Link>
+                  <Link href={productPath(product)} onClick={onClose}>View Full Details</Link>
                 </Button>
               </div>
             </div>

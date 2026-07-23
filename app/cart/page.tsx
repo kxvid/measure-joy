@@ -1,5 +1,6 @@
 "use client"
 
+import { productPath } from "@/lib/seo"
 import Link from "next/link"
 import Image from "next/image"
 import { Header } from "@/components/header"
@@ -12,7 +13,7 @@ import { Minus, Plus, Trash2, ShoppingBag, ArrowRight, Lock } from "lucide-react
 export default function CartPage() {
   const { items, removeItem, updateQuantity, totalPrice } = useCart()
 
-  const shippingCost = totalPrice >= 9900 ? 0 : 999
+  const shippingCost = totalPrice >= 7500 ? 0 : 999
   const finalTotal = totalPrice + shippingCost
 
   if (items.length === 0) {
@@ -50,12 +51,12 @@ export default function CartPage() {
                 const atMaxStock = maxStock !== undefined && item.quantity >= maxStock
                 return (
                   <div key={item.product.id} className="flex gap-5 border-b border-border py-6">
-                    <Link href={`/product/${item.product.id}`} className="relative shrink-0 w-24 h-24 overflow-hidden bg-secondary">
+                    <Link href={productPath(item.product)} className="relative shrink-0 w-24 h-24 overflow-hidden bg-secondary">
                       <Image src={item.product.images[0] || "/placeholder.svg"} alt={item.product.name} fill sizes="96px" className="object-contain p-2" />
                     </Link>
 
                     <div className="flex-1 min-w-0">
-                      <Link href={`/product/${item.product.id}`}>
+                      <Link href={productPath(item.product)}>
                         <h3 className="font-display text-sm font-medium uppercase tracking-[0.04em] leading-snug hover:opacity-70 transition-opacity">
                           {item.product.name}
                         </h3>
@@ -105,9 +106,9 @@ export default function CartPage() {
                   <span className="text-muted-foreground">Shipping</span>
                   <span className="font-medium">{shippingCost === 0 ? "Free" : formatPrice(shippingCost)}</span>
                 </div>
-                {totalPrice < 9900 && (
+                {totalPrice < 7500 && (
                   <p className="border border-border p-3 text-[11px] normal-case tracking-normal text-muted-foreground">
-                    Add <span className="font-semibold text-foreground">{formatPrice(9900 - totalPrice)}</span> more for free shipping
+                    Add <span className="font-semibold text-foreground">{formatPrice(7500 - totalPrice)}</span> more for free shipping
                   </p>
                 )}
               </div>

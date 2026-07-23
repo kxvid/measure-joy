@@ -3,9 +3,10 @@ import { Footer } from "@/components/footer"
 import { Button } from "@/components/ui/button"
 import Link from "next/link"
 import type { Metadata } from "next"
+import { permanentRedirect } from "next/navigation"
 import { ProductDetailClient } from "./product-detail-client"
-import { getStripeProductById } from "@/lib/stripe-products"
-import { productJsonLd, SITE_URL } from "@/lib/seo"
+import { getStripeProductById, getStripeProducts } from "@/lib/stripe-products"
+import { productJsonLd, productPath, resolveProductParam, SITE_URL } from "@/lib/seo"
 
 export async function generateMetadata({
   params,
@@ -13,7 +14,7 @@ export async function generateMetadata({
   params: Promise<{ id: string }>
 }): Promise<Metadata> {
   const { id } = await params
-  const product = await getStripeProductById(id)
+  const product = await getStripeProductById(resolveProductParam(id))
 
   if (!product) {
     return { title: "Product Not Found" }
@@ -24,16 +25,17 @@ export async function generateMetadata({
     product.description ||
     `${product.name} — tested Y2K digital camera from Measure Joy. Ships with battery and 90-day warranty.`
   const image = product.images?.[0]
+  const canonical = productPath(product)
 
   return {
     title,
     description,
-    alternates: { canonical: `/product/${product.id}` },
+    alternates: { canonical },
     openGraph: {
       type: "website",
       title,
       description,
-      url: `${SITE_URL}/product/${product.id}`,
+      url: `${SITE_URL}${canonical}`,
       images: image ? [{ url: image, alt: product.name }] : undefined,
     },
     twitter: {
@@ -48,8 +50,8 @@ export async function generateMetadata({
 export default async function ProductPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
 
-  // Fetch product from Stripe
-  const product = await getStripeProductById(id)
+  // Fetch product from Stripe — the param may be a raw prod_ id or a slug path
+  const product = await getStripeProductById(resolveProductParam(id))
 
   if (!product) {
     return (
@@ -67,14 +69,37 @@ export default async function ProductPage({ params }: { params: Promise<{ id: st
     )
   }
 
-  // Related products will be empty for now since we can't easily query by category
-  const relatedProducts: any[] = []
+  // 301 old raw-id URLs (and stale slugs) to the canonical descriptive slug —
+  // Google recommends readable ecommerce URLs, and the redirect preserves
+  // any link equity pointing at the legacy /product/prod_XXX addresses.
+  const canonical = productPath(product)
+  if (`/product/${id}` !== canonical) {
+    permanentRedirect(canonical)
+  }
+
+  // Similar cameras — shown on every page, and essential on sold-out
+  // one-of-one listings so the page keeps converting after the sale.
+  let relatedProducts: any[] = []
+  try {
+    const all = await getStripeProducts({ category: product.category })
+    const brand = product.brand?.toLowerCase()
+    relatedProducts = all
+      .filter((p) => p.id !== product.id && p.inStock)
+      .sort((a, b) => {
+        const aBrand = brand && a.brand?.toLowerCase() === brand ? 1 : 0
+        const bBrand = brand && b.brand?.toLowerCase() === brand ? 1 : 0
+        return bBrand - aBrand
+      })
+      .slice(0, 4)
+  } catch {
+    relatedProducts = []
+  }
 
   return (
     <>
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(productJsonLd(product)) }}
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(productJsonLd(product, canonical)) }}
       />
       <ProductDetailClient product={product} relatedProducts={relatedProducts} />
     </>

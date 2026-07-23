@@ -9,7 +9,7 @@ interface TrustBannerProps {
 const ICON_MAP: Record<string, any> = { Truck, RotateCcw, Shield, Package }
 
 const DEFAULT_FEATURES = [
-  { icon: "Truck", title: "Free Shipping", description: "On orders over $99" },
+  { icon: "Truck", title: "Free Shipping", description: "On orders over $75" },
   { icon: "RotateCcw", title: "Easy Returns", description: "30-day return policy" },
   { icon: "Shield", title: "90-Day Warranty", description: "Tested & guaranteed" },
   { icon: "Package", title: "Secure Packaging", description: "Safe delivery always" },

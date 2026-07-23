@@ -1,15 +1,20 @@
 # Measure Joy
 
-> Measure Joy (measurejoy.org) is an e-commerce store specializing in curated, tested Y2K-era digital cameras (roughly 1998–2008) and accessories. Every camera is professionally inspected with a 15-point test and ships with a compatible battery and a 90-day functionality warranty. The brand serves creators, photographers, and nostalgia lovers who want the authentic digital grain and aesthetic of early digital photography.
+> Measure Joy (measurejoy.org) is a Southern California e-commerce store specializing in curated, tested Y2K-era digital cameras (roughly 1998–2008) and accessories. Based in Covina, CA, it serves San Dimas, Glendora, West Covina and the greater Los Angeles area, and ships across the US. Every camera is professionally inspected with a 15-point test and ships with a compatible battery and a 90-day functionality warranty. The brand serves creators, photographers, and nostalgia lovers who want the authentic digital grain and aesthetic of early digital photography.
 
 Measure Joy sells vintage compact digital cameras from brands like Canon (PowerShot), Sony (Cyber-shot), Nikon (Coolpix), Fujifilm (FinePix), Olympus, Kodak (EasyShare), Casio (Exilim), Panasonic (Lumix), Pentax (Optio), Samsung, and HP — plus accessories such as SD/xD/Memory Stick cards, camera cases, straps, tripods, batteries, screen protectors, and cleaning kits.
 
 ## Key Pages
 
 - [Shop All Products](https://www.measurejoy.org/shop): Full catalog of Y2K digital cameras and accessories
-- [Collections](https://www.measurejoy.org/collections): Curated camera collections by style and category
+- [Los Angeles Y2K Camera Store](https://www.measurejoy.org/los-angeles-y2k-digital-camera-store): Local page — Covina location, service areas, current inventory
+- [Collections](https://www.measurejoy.org/collections): Curated camera collections by brand and category
+- [Canon PowerShot](https://www.measurejoy.org/collections/canon-powershot): Tested Canon PowerShot digicams
+- [Sony Cyber-shot](https://www.measurejoy.org/collections/sony-cyber-shot): Tested Sony Cyber-shot digicams
+- [Nikon Coolpix](https://www.measurejoy.org/collections/nikon-coolpix): Tested Nikon Coolpix digicams
+- [Y2K Digital Cameras](https://www.measurejoy.org/collections/y2k-digital-cameras): Every tested camera in stock
 - [About](https://www.measurejoy.org/about): The Measure Joy story and mission
-- [Journal](https://www.measurejoy.org/journal): Articles on Y2K cameras, digicam culture, and photography tips
+- [Journal](https://www.measurejoy.org/journal): Buying guides and articles on Y2K cameras, digicam culture, and photography tips
 - [FAQ](https://www.measurejoy.org/faq): Answers on shipping, returns, warranty, camera condition, and payment
 
 ## Policies
@@ -21,10 +26,13 @@ Measure Joy sells vintage compact digital cameras from brands like Canon (PowerS
 
 ## Facts
 
+- Based in Covina, California (San Gabriel Valley); serves San Dimas, Glendora, West Covina, Pomona, Azusa, and greater Los Angeles
 - Every camera passes a 15-point inspection (lens clarity, LCD, buttons, flash, image quality)
 - A compatible battery is included with every camera
+- Free US shipping on orders over $75; standard shipping $9.99 (3–5 business days)
 - Payments are processed securely via Stripe (Visa, Mastercard, Amex, Apple Pay, Google Pay)
 - Condition grades: Excellent (minimal wear, fully functional), Good, Fair — described per listing
+- Sold one-of-one cameras keep their product pages live as Out of Stock with similar alternatives
 
 ## Social
 

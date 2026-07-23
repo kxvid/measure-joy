@@ -118,7 +118,12 @@ export async function getStripeProducts(options?: {
 }
 
 /**
- * Fetch a single product by ID from Stripe
+ * Fetch a single product by ID from Stripe.
+ *
+ * Archived (sold) products are returned too — one-of-one camera pages must
+ * stay live as Out of Stock instead of 404ing, so their search rankings and
+ * inbound links are preserved. transformStripeProduct already marks inactive
+ * products as inStock: false, which drives the OutOfStock UI and schema.
  */
 export async function getStripeProductById(productId: string): Promise<Product | null> {
     try {
@@ -128,15 +133,32 @@ export async function getStripeProductById(productId: string): Promise<Product |
             expand: ["default_price"],
         })
 
-        if (!product.active) {
-            return null
-        }
-
         const defaultPrice = product.default_price as Stripe.Price | null
         return transformStripeProduct(product, defaultPrice)
     } catch (error) {
         console.error(`[Stripe Products] Error fetching product ${productId}:`, error)
         return null
+    }
+}
+
+/**
+ * Fetch every product including archived/sold ones — used by the sitemap so
+ * sold one-of-one camera pages stay indexed as Out of Stock.
+ */
+export async function getAllStripeProducts(): Promise<Product[]> {
+    try {
+        const stripe = getStripe()
+        if (!stripe) return []
+        const products = await stripe.products.list({
+            limit: 100,
+            expand: ["data.default_price"],
+        })
+        return products.data.map((product) =>
+            transformStripeProduct(product, product.default_price as Stripe.Price | null)
+        )
+    } catch (error) {
+        console.error("[Stripe Products] Error fetching all products:", error)
+        return []
     }
 }
 

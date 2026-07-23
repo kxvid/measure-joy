@@ -43,11 +43,11 @@ const navigation: NavItem[] = [
         {
           heading: "By Brand",
           links: [
-            { name: "Canon", href: "/shop?brand=Canon" },
-            { name: "Sony", href: "/shop?brand=Sony" },
-            { name: "Nikon", href: "/shop?brand=Nikon" },
-            { name: "Fujifilm", href: "/shop?brand=Fujifilm" },
-            { name: "Olympus", href: "/shop?brand=Olympus" },
+            { name: "Canon", href: "/collections/canon-powershot" },
+            { name: "Sony", href: "/collections/sony-cyber-shot" },
+            { name: "Nikon", href: "/collections/nikon-coolpix" },
+            { name: "Fujifilm", href: "/collections/fujifilm-finepix" },
+            { name: "Olympus", href: "/collections/olympus-digicams" },
           ],
         },
       ],
@@ -308,7 +308,7 @@ export function Header() {
                 </SignedOut>
               </nav>
               <div className="mt-8 bg-brand px-5 py-4">
-                <p className="font-display text-xs font-semibold uppercase tracking-[0.12em] text-brand-foreground">Free US shipping on orders $99+</p>
+                <p className="font-display text-xs font-semibold uppercase tracking-[0.12em] text-brand-foreground">Free US shipping on orders $75+</p>
               </div>
             </div>
           </div>

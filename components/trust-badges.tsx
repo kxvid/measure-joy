@@ -3,7 +3,7 @@ import { Shield, Truck, RefreshCw, CreditCard } from "lucide-react"
 export function TrustBadges() {
   const badges = [
     { icon: Shield, text: "Secure Checkout" },
-    { icon: Truck, text: "Free Shipping $99+" },
+    { icon: Truck, text: "Free Shipping $75+" },
     { icon: RefreshCw, text: "30-Day Returns" },
     { icon: CreditCard, text: "Stripe Protected" },
   ]
