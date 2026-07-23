@@ -24,7 +24,7 @@ export function UpsellDrawer({ open, onClose, addedProduct }: UpsellDrawerProps)
   // TODO: Implement dynamic upsells from Stripe when upsell relationships are defined
   const upsells: Product[] = []
 
-  const freeShippingThreshold = 10000 // $100
+  const freeShippingThreshold = 7500 // $75
   const remainingForFreeShipping = Math.max(freeShippingThreshold - totalPrice, 0)
 
   const handleAddUpsell = (product: Product) => {

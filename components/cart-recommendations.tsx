@@ -1,5 +1,6 @@
 "use client"
 
+import { productPath } from "@/lib/seo"
 import { useState, useEffect } from "react"
 import Link from "next/link"
 import Image from "next/image"
@@ -63,12 +64,12 @@ export function CartRecommendations({ cartItems, onClose }: CartRecommendationsP
           const isAdded = addedItems.has(product.id)
           return (
             <div key={product.id} className="flex items-center gap-3 border border-border p-2">
-              <Link href={`/product/${product.id}`} onClick={onClose} className="relative h-12 w-12 shrink-0 overflow-hidden bg-secondary">
+              <Link href={productPath(product)} onClick={onClose} className="relative h-12 w-12 shrink-0 overflow-hidden bg-secondary">
                 <Image src={product.images[0] || "/placeholder.svg"} alt={product.name} fill sizes="48px" className="object-contain p-1" />
               </Link>
 
               <div className="min-w-0 flex-1">
-                <Link href={`/product/${product.id}`} onClick={onClose} className="block truncate font-display text-[11px] font-medium uppercase tracking-[0.04em] hover:opacity-70 transition-opacity">
+                <Link href={productPath(product)} onClick={onClose} className="block truncate font-display text-[11px] font-medium uppercase tracking-[0.04em] hover:opacity-70 transition-opacity">
                   {product.name}
                 </Link>
                 <p className="font-display text-[11px] uppercase tracking-[0.04em] text-muted-foreground">{formatPrice(product.priceInCents)}</p>

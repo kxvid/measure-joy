@@ -13,6 +13,7 @@ const collections = [
     name: "Sony Cybershot",
     description: "Iconic cameras with Carl Zeiss optics",
     query: "Sony",
+    href: "/collections/sony-cyber-shot",
     image: "/sony-cybershot-dsc-p200-silver-digital-camera-y2k.jpg",
   },
   {
@@ -20,6 +21,7 @@ const collections = [
     name: "Canon PowerShot",
     description: "Reliable image quality with renowned color science",
     query: "Canon",
+    href: "/collections/canon-powershot",
     image: "/canon-powershot-a520-digital-camera-silver-compact.jpg",
   },
   {
@@ -27,6 +29,7 @@ const collections = [
     name: "Nikon Coolpix",
     description: "Legendary optics in pocket-friendly form",
     query: "Nikon",
+    href: "/collections/nikon-coolpix",
     image: "/nikon-coolpix-s500-silver-digital-camera-sleek.jpg",
   },
   {
@@ -34,6 +37,7 @@ const collections = [
     name: "Fujifilm FinePix",
     description: "Fashion-forward cameras with face detection",
     query: "Fujifilm",
+    href: "/collections/fujifilm-finepix",
     image: "/fujifilm-finepix-z5fd-pink-digital-camera-cute-y2k.jpg",
   },
   {
@@ -41,6 +45,7 @@ const collections = [
     name: "Olympus",
     description: "Compact and colorful with advanced stabilization",
     query: "Olympus",
+    href: "/collections/olympus-digicams",
     image: "/olympus-fe-280-digital-camera-blue-metallic-compac.jpg",
   },
   {
@@ -48,6 +53,8 @@ const collections = [
     name: "Panasonic Lumix",
     description: "Leica optics and wide-angle excellence",
     query: "Panasonic",
+    // No dedicated landing page yet — falls back to the filtered shop view.
+    href: undefined,
     image: "/panasonic-lumix-dmc-fx01-silver-digital-camera-lei.jpg",
   },
 ]
@@ -109,7 +116,7 @@ export default function CollectionsPage() {
               return (
                 <Link
                   key={collection.id}
-                  href={`/shop?brand=${collection.query}`}
+                  href={collection.href ?? `/shop?brand=${collection.query}`}
                   className="group relative aspect-[4/3] rounded-lg overflow-hidden bg-secondary"
                 >
                   <img

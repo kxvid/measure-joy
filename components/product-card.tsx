@@ -1,5 +1,6 @@
 "use client"
 
+import { productPath } from "@/lib/seo"
 import type React from "react"
 import { useState } from "react"
 import Link from "next/link"
@@ -70,7 +71,7 @@ export function ProductCard({ product }: ProductCardProps) {
       >
         {/* Gray product tile — full camera shown with breathing room */}
         <div className="relative aspect-square overflow-hidden bg-secondary">
-          <Link href={`/product/${product.id}`} aria-label={product.name} className="absolute inset-0 z-0 block">
+          <Link href={productPath(product)} aria-label={product.name} className="absolute inset-0 z-0 block">
             <div className="absolute inset-[12%]">
               <Image
                 src={baseImage}
@@ -130,7 +131,7 @@ export function ProductCard({ product }: ProductCardProps) {
         </div>
 
         {/* Info — uppercase tracked title + gray price */}
-        <Link href={`/product/${product.id}`} className="mt-4 block">
+        <Link href={productPath(product)} className="mt-4 block">
           <h3 className="font-display text-[13px] font-medium uppercase leading-snug tracking-[0.06em] text-foreground line-clamp-2">
             {product.name}
           </h3>

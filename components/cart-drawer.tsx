@@ -1,4 +1,5 @@
 "use client"
+import { productPath } from "@/lib/seo"
 import Link from "next/link"
 import Image from "next/image"
 import { X, ShoppingBag, ArrowRight, Minus, Plus, Trash2 } from "lucide-react"
@@ -16,7 +17,7 @@ interface CartDrawerProps {
 export function CartDrawer({ open, onClose }: CartDrawerProps) {
   const { items, removeItem, updateQuantity, totalPrice } = useCart()
 
-  const freeShippingThreshold = 9900 // $99
+  const freeShippingThreshold = 7500 // $75
   const shippingProgress = Math.min((totalPrice / freeShippingThreshold) * 100, 100)
   const remainingForFreeShipping = Math.max(freeShippingThreshold - totalPrice, 0)
   const count = items.reduce((sum, item) => sum + item.quantity, 0)
@@ -74,12 +75,12 @@ export function CartDrawer({ open, onClose }: CartDrawerProps) {
                 const atMaxStock = maxStock !== undefined && item.quantity >= maxStock
                 return (
                   <div key={item.product.id} className="flex gap-4">
-                    <Link href={`/product/${item.product.id}`} onClick={onClose} className="relative shrink-0 w-20 h-20 overflow-hidden bg-secondary">
+                    <Link href={productPath(item.product)} onClick={onClose} className="relative shrink-0 w-20 h-20 overflow-hidden bg-secondary">
                       <Image src={item.product.images[0] || "/placeholder.svg"} alt={item.product.name} fill sizes="80px" className="object-contain p-2" />
                     </Link>
 
                     <div className="flex-1 min-w-0">
-                      <Link href={`/product/${item.product.id}`} onClick={onClose}>
+                      <Link href={productPath(item.product)} onClick={onClose}>
                         <h3 className="font-display text-[12px] font-medium uppercase tracking-[0.04em] leading-snug line-clamp-2 hover:opacity-70 transition-opacity">
                           {item.product.name}
                         </h3>

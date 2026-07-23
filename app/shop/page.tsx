@@ -54,7 +54,7 @@ function ShopContent() {
 
   const [searchQuery, setSearchQuery] = useState(initialSearch)
   const [selectedBrand, setSelectedBrand] = useState(initialBrand)
-  const [selectedYear, setSelectedYear] = useState("All")
+  const [selectedYear, setSelectedYear] = useState(searchParams.get("year") || "All")
   const [selectedCategory, setSelectedCategory] = useState(initialCategory)
   const [selectedCondition, setSelectedCondition] = useState("All")
   const [inStockOnly, setInStockOnly] = useState(false)

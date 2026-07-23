@@ -1,5 +1,6 @@
 "use client"
 
+import { productPath } from "@/lib/seo"
 import { useEffect, useState } from "react"
 import Link from "next/link"
 import Image from "next/image"
@@ -45,7 +46,7 @@ export function RecentlyViewed({ currentProductId }: { currentProductId?: string
 
       <div className="grid grid-cols-2 gap-x-4 gap-y-8 lg:grid-cols-4 lg:gap-x-6">
         {viewedProducts.map((product) => (
-          <Link key={product.id} href={`/product/${product.id}`} className="group block">
+          <Link key={product.id} href={productPath(product)} className="group block">
             <div className="relative aspect-square overflow-hidden bg-secondary">
               <div className="absolute inset-[12%]">
                 <Image

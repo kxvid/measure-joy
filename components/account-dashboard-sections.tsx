@@ -1,5 +1,6 @@
 "use client"
 
+import { productPath } from "@/lib/seo"
 import { useEffect, useState } from "react"
 import Link from "next/link"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
@@ -94,7 +95,7 @@ export function AccountDashboardSections({ orders }: AccountDashboardSectionsPro
                             {recentlyViewed.map((product) => (
                                 <Link
                                     key={product.id}
-                                    href={`/product/${product.id}`}
+                                    href={productPath(product)}
                                     className="group block"
                                 >
                                     <div className="aspect-square rounded-xl bg-secondary overflow-hidden mb-2">

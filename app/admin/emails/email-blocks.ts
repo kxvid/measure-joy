@@ -200,7 +200,7 @@ export function createDefaultBlock(type: BlockType): EmailBlock {
                 columns: 3,
                 items: [
                     { icon: "✨", label: "Tested", description: "Every camera verified working" },
-                    { icon: "📦", label: "Free shipping", description: "On orders over $50" },
+                    { icon: "📦", label: "Free shipping", description: "On orders over $75" },
                     { icon: "🛡️", label: "90-day warranty", description: "If it breaks, we fix it" },
                 ],
             }

@@ -1,5 +1,6 @@
 "use client"
 
+import { productPath } from "@/lib/seo"
 import { useState, useEffect } from "react"
 // import { createClient } from "@/lib/supabase/client" 
 import { useAuth } from "@clerk/nextjs"
@@ -101,7 +102,7 @@ export default function WishlistPage() {
               <Card key={product!.id} className="border-2 overflow-hidden group">
                 <CardContent className="p-0">
                   <div className="flex">
-                    <Link href={`/product/${product!.id}`} className="w-32 h-32 bg-secondary shrink-0">
+                    <Link href={productPath(product!)} className="w-32 h-32 bg-secondary shrink-0">
                       <img
                         src={product!.images[0] || "/placeholder.svg"}
                         alt={product!.name}
@@ -110,7 +111,7 @@ export default function WishlistPage() {
                     </Link>
                     <div className="flex-1 p-4 flex flex-col">
                       <Link
-                        href={`/product/${product!.id}`}
+                        href={productPath(product!)}
                         className="font-medium hover:text-accent transition-colors"
                       >
                         {product!.name}
