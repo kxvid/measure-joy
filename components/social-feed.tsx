@@ -14,7 +14,7 @@ import { Reveal, Stagger, StaggerItem } from "@/components/motion/motion-primiti
  * ------------------------------------------------------------------ */
 
 const PROFILES = {
-  instagram: "https://www.instagram.com/measurejoy/",
+  instagram: "https://www.instagram.com/measurejoycamera/",
   tiktok: "https://www.tiktok.com/@measurejoy",
 }
 
@@ -56,7 +56,7 @@ export function SocialFeed() {
                 Follow Along
               </span>
               <h2 className="mt-2 font-display text-2xl lg:text-4xl font-extrabold uppercase tracking-tight">
-                @measurejoy
+                @measurejoycamera
               </h2>
             </div>
             <div className="flex items-center gap-2.5">
