@@ -106,7 +106,8 @@ export const JOURNAL_POSTS: JournalPost[] = [
                     "Sony Cyber-shot P and W series: the P series (like the DSC-P200) has that classic silver-brick charm, while W-series models add sharper Carl Zeiss-branded lenses and, on many models, an optical viewfinder. Just budget for a Memory Stick.",
                     "Nikon Coolpix S series: slim, sleek, and often overlooked, which keeps prices reasonable. Nikon's colors run a touch more neutral than Canon's — nice if you like editing lightly.",
                     "Fujifilm FinePix Z series: the cute one. The Z5fd in pink is a perennial favorite, with Fujifilm's flattering skin tones. Uses xD cards, so factor that in.",
-                    "Kodak EasyShare: exactly what the name promises. Big buttons, simple menus, punchy consumer-friendly color. A great gift camera.",
+                    "Kodak EasyShare: exactly what the name promises. Big buttons, simple menus, punchy consumer-friendly color. A great gift camera, and most models run on AAs.",
+                    "Olympus compacts like the FE-280 round out the list — metallic colors, slim bodies, and honest image quality. Like Fujifilm, they use xD-Picture Cards, so grab a card and reader alongside the camera.",
                 ],
             },
             {
@@ -293,6 +294,7 @@ export const JOURNAL_POSTS: JournalPost[] = [
                 heading: "2005–2008: the W series sweet spot",
                 paragraphs: [
                     "For photographers rather than fashionistas, the W series — starting with cameras like the DSC-W1 and running through the W5, W7, and beyond — is arguably the best of Y2K-era Sony. These compacts paired 5-to-8-megapixel CCDs with bright Zeiss lenses, manual exposure options, and, on many models, a small optical viewfinder, a feature already vanishing from compacts by then. They're durable, plentiful, and produce lovely files.",
+                    "It's also the era when Sony's ergonomics matured: menus got faster, startup times dropped under two seconds, and the AA-powered entry models meant you could keep a W-series alive with corner-store batteries on a road trip. If someone asks us for 'the Cyber-shot to actually shoot with,' this is the series we point to.",
                 ],
             },
             {
