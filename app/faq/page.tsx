@@ -4,6 +4,7 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Breadcrumbs } from "@/components/breadcrumbs"
+import { faqJsonLd } from "@/lib/seo"
 import type { Metadata } from "next"
 
 export const metadata: Metadata = {
@@ -84,8 +85,14 @@ const faqs = [
 ]
 
 export default function FAQPage() {
+  const allQuestions = faqs.flatMap((section) => section.questions)
+
   return (
     <main className="min-h-screen bg-background">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd(allQuestions)) }}
+      />
       <Header />
 
       <div className="mx-auto max-w-4xl px-6 lg:px-8 py-8 lg:py-12">

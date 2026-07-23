@@ -96,7 +96,8 @@ export async function sendShippingUpdateEmail({
       <p style="margin: 0; font-size: 14px; color: #666;">Questions? Email us at <a href="mailto:christianvelasquez363@gmail.com" style="color: #14b8a6;">christianvelasquez363@gmail.com</a></p>
       <p style="margin: 15px 0 0 0; font-size: 14px; color: #666;">
         <a href="https://measurejoy.org/account/orders" style="color: #14b8a6; text-decoration: none;">View Order Status</a> ·
-        <a href="https://measurejoy.org/faq" style="color: #14b8a6; text-decoration: none;">FAQ</a>
+        <a href="https://measurejoy.org/faq" style="color: #14b8a6; text-decoration: none;">FAQ</a> ·
+        <a href="https://www.instagram.com/measurejoycamera" style="color: #14b8a6; text-decoration: none;">Instagram</a>
       </p>
     </div>
   </div>
@@ -157,7 +158,7 @@ export async function sendDeliveryConfirmationEmail({
 
     <div style="background: #fef3c7; border-left: 4px solid #f59e0b; padding: 15px; margin: 30px 0; border-radius: 4px;">
       <p style="margin: 0; font-size: 14px;"><strong>Love your camera?</strong></p>
-      <p style="margin: 10px 0 0 0; font-size: 14px;">Share your first shots with us! Tag @measurejoy on Instagram or leave a review on the product page.</p>
+      <p style="margin: 10px 0 0 0; font-size: 14px;">Share your first shots with us! Tag <a href="https://www.instagram.com/measurejoycamera" style="color: #ec4899; font-weight: bold;">@measurejoycamera</a> on Instagram or leave a review on the product page.</p>
     </div>
 
     <div style="text-align: center; margin: 24px 0;">
@@ -170,7 +171,8 @@ export async function sendDeliveryConfirmationEmail({
       <p style="margin: 0; font-size: 14px; color: #666;">Questions? Email us at <a href="mailto:christianvelasquez363@gmail.com" style="color: #14b8a6;">christianvelasquez363@gmail.com</a></p>
       <p style="margin: 15px 0 0 0; font-size: 14px; color: #666;">
         <a href="${shopUrl}/account/orders" style="color: #14b8a6; text-decoration: none;">View Order Status</a> ·
-        <a href="${shopUrl}/faq" style="color: #14b8a6; text-decoration: none;">FAQ</a>
+        <a href="${shopUrl}/faq" style="color: #14b8a6; text-decoration: none;">FAQ</a> ·
+        <a href="https://www.instagram.com/measurejoycamera" style="color: #14b8a6; text-decoration: none;">Instagram</a>
       </p>
     </div>
   </div>
@@ -285,7 +287,8 @@ function generateOrderConfirmationHTML({
       <p style="margin: 0; font-size: 14px; color: #666;">Questions? Email us at <a href="mailto:christianvelasquez363@gmail.com" style="color: #ec4899;">christianvelasquez363@gmail.com</a></p>
       <p style="margin: 15px 0 0 0; font-size: 14px; color: #666;">
         <a href="https://measurejoy.org/account/orders" style="color: #ec4899; text-decoration: none;">View Order Status</a> ·
-        <a href="https://measurejoy.org/faq" style="color: #ec4899; text-decoration: none;">FAQ</a>
+        <a href="https://measurejoy.org/faq" style="color: #ec4899; text-decoration: none;">FAQ</a> ·
+        <a href="https://www.instagram.com/measurejoycamera" style="color: #ec4899; text-decoration: none;">Instagram</a>
       </p>
     </div>
   </div>
