@@ -92,7 +92,7 @@ export function ExitIntentPopup() {
 
             {/* Popup */}
             <div className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-md mx-4 z-[101] animate-in zoom-in-95 fade-in duration-300">
-                <div className="bg-background border-4 border-foreground shadow-2xl relative overflow-hidden">
+                <div className="bg-background border border-foreground shadow-2xl relative overflow-hidden">
                     {/* Corner decorations */}
                     <div className="absolute top-0 left-0 w-8 h-8 bg-pop-yellow" />
                     <div className="absolute top-0 right-0 w-8 h-8 bg-pop-pink" />
@@ -114,10 +114,10 @@ export function ExitIntentPopup() {
                                 <div className="w-16 h-16 bg-pop-yellow rounded-full flex items-center justify-center mx-auto mb-4">
                                     <Sparkles className="h-8 w-8 text-foreground" />
                                 </div>
-                                <h3 className="text-2xl font-black uppercase mb-2">You're In!</h3>
+                                <h3 className="text-2xl font-display font-extrabold uppercase mb-2">You're In!</h3>
                                 <p className="text-muted-foreground mb-4">Check your inbox for your 10% off code.</p>
-                                <p className="text-sm font-mono bg-secondary inline-block px-4 py-2 rounded-lg">
-                                    Code: <span className="font-bold text-pop-pink">WELCOME10</span>
+                                <p className="inline-block border border-foreground bg-secondary px-4 py-2 font-display text-sm uppercase tracking-[0.08em]">
+                                    Code: <span className="font-bold text-brand">WELCOME10</span>
                                 </p>
                             </div>
                         ) : (
@@ -126,7 +126,7 @@ export function ExitIntentPopup() {
                                     <Gift className="h-8 w-8 text-white" />
                                 </div>
 
-                                <h3 className="text-2xl lg:text-3xl font-black uppercase tracking-tight mb-2">
+                                <h3 className="text-2xl lg:text-3xl font-display font-extrabold uppercase tracking-tight mb-2">
                                     Welcome! Get <span className="text-pop-pink">10% Off</span>
                                 </h3>
                                 <p className="text-muted-foreground mb-6">
@@ -146,7 +146,7 @@ export function ExitIntentPopup() {
                                     <Button
                                         type="submit"
                                         disabled={isLoading}
-                                        className="w-full h-12 gap-2 font-bold uppercase tracking-wide"
+                                        className="w-full h-12 gap-2 rounded-none bg-foreground hover:bg-foreground/90 font-display text-[13px] font-semibold uppercase tracking-[0.12em] cursor-pointer"
                                     >
                                         {isLoading ? (
                                             <>

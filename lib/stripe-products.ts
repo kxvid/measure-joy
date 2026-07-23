@@ -3,8 +3,20 @@ import Stripe from "stripe"
 import type { Product } from "./products"
 import { extractProductInfo } from "./product-fallback"
 
-// Initialize Stripe client
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!)
+// Lazily initialize the Stripe client. Returns null when STRIPE_SECRET_KEY is
+// missing (e.g. local/preview without env) so callers degrade gracefully to an
+// empty catalog instead of crashing at module-load time.
+let _stripe: Stripe | null = null
+function getStripe(): Stripe | null {
+    if (_stripe) return _stripe
+    const key = process.env.STRIPE_SECRET_KEY
+    if (!key) {
+        console.warn("[Stripe Products] STRIPE_SECRET_KEY is not set — returning empty data")
+        return null
+    }
+    _stripe = new Stripe(key)
+    return _stripe
+}
 
 /**
  * Transform Stripe product/price into our Product format
@@ -71,6 +83,8 @@ export async function getStripeProducts(options?: {
     featured?: boolean
 }): Promise<Product[]> {
     try {
+        const stripe = getStripe()
+        if (!stripe) return []
         // Fetch all active products
         const products = await stripe.products.list({
             active: true,
@@ -108,6 +122,8 @@ export async function getStripeProducts(options?: {
  */
 export async function getStripeProductById(productId: string): Promise<Product | null> {
     try {
+        const stripe = getStripe()
+        if (!stripe) return null
         const product = await stripe.products.retrieve(productId, {
             expand: ["default_price"],
         })
@@ -130,6 +146,8 @@ export async function getStripeProductById(productId: string): Promise<Product |
  */
 export async function getProductInventory(productId: string): Promise<number | null> {
     try {
+        const stripe = getStripe()
+        if (!stripe) return null
         const product = await stripe.products.retrieve(productId)
         const stockCount = product.metadata?.stockCount
         return stockCount ? parseInt(stockCount, 10) : null
@@ -144,6 +162,8 @@ export async function getProductInventory(productId: string): Promise<number | n
  */
 export async function searchStripeProducts(query: string): Promise<Product[]> {
     try {
+        const stripe = getStripe()
+        if (!stripe) return []
         const products = await stripe.products.search({
             query: `active:'true' AND (name~'${query}' OR description~'${query}')`,
             expand: ["data.default_price"],

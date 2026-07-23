@@ -4,7 +4,7 @@
 @custom-variant dark (&:is(.dark *));
 
 :root {
-  /* Retrospekt-inspired playful palette - cream base, bold accents */
+  /* Original production palette (cream + pops) styled the Retrospekt way. */
   --background: oklch(0.97 0.01 85);
   --foreground: oklch(0.15 0.02 45);
   --card: oklch(1 0 0);
@@ -20,25 +20,35 @@
   --accent: oklch(0.65 0.22 25);
   --accent-foreground: oklch(0.99 0 0);
   --destructive: oklch(0.577 0.245 27.325);
-  --destructive-foreground: oklch(0.577 0.245 27.325);
+  --destructive-foreground: oklch(0.99 0 0);
   --border: oklch(0.88 0.015 85);
   --input: oklch(0.94 0.01 85);
   --ring: oklch(0.65 0.22 25);
 
-  /* Brighter Retrospekt colors */
+  /* Brand signal = original orange-red accent */
+  --brand: oklch(0.65 0.22 25);
+  --brand-foreground: oklch(0.99 0 0);
+  --brand-soft: oklch(0.93 0.06 35);
+  --tile: oklch(0.94 0.015 85);
+  --success: oklch(0.55 0.16 165);
+
+  /* Legacy "pop" tokens retuned to the editorial palette so not-yet-rebuilt
+     sections harmonize. Pink/red -> brand signal; yellow -> soft sand panel;
+     others -> calm muted tones. Removed entirely once all sections are rebuilt. */
   --pop-yellow: oklch(0.92 0.2 95);
   --pop-pink: oklch(0.7 0.22 350);
   --pop-orange: oklch(0.72 0.19 45);
   --pop-blue: oklch(0.55 0.18 250);
   --pop-green: oklch(0.55 0.16 165);
   --pop-teal: oklch(0.45 0.12 185);
+  --pop-red: oklch(0.6 0.24 27);
 
   --chart-1: oklch(0.646 0.222 41.116);
   --chart-2: oklch(0.6 0.118 184.704);
   --chart-3: oklch(0.398 0.07 227.392);
   --chart-4: oklch(0.828 0.189 84.429);
   --chart-5: oklch(0.769 0.188 70.08);
-  --radius: 0.5rem;
+  --radius: 0.125rem;
   --sidebar: oklch(0.985 0 0);
   --sidebar-foreground: oklch(0.145 0 0);
   --sidebar-primary: oklch(0.205 0 0);
@@ -67,12 +77,19 @@
   --border: oklch(0.25 0.01 45);
   --input: oklch(0.2 0.01 45);
   --ring: oklch(0.68 0.2 25);
+
+  --brand: oklch(0.68 0.2 25);
+  --brand-foreground: oklch(0.99 0 0);
+  --brand-soft: oklch(0.30 0.08 35);
+  --tile: oklch(0.2 0.01 45);
+  --success: oklch(0.62 0.16 165);
   --pop-yellow: oklch(0.92 0.2 95);
   --pop-pink: oklch(0.7 0.22 350);
   --pop-orange: oklch(0.72 0.19 45);
   --pop-blue: oklch(0.55 0.18 250);
   --pop-green: oklch(0.55 0.16 165);
   --pop-teal: oklch(0.45 0.12 185);
+  --pop-red: oklch(0.65 0.24 27);
   --sidebar: oklch(0.205 0 0);
   --sidebar-foreground: oklch(0.985 0 0);
   --sidebar-primary: oklch(0.488 0.243 264.376);
@@ -84,8 +101,14 @@
 }
 
 @theme inline {
-  --font-sans: "DM Sans", "DM Sans Fallback";
-  --font-mono: "Space Mono", "Space Mono Fallback";
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  --font-display: var(--font-archivo), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-space-mono), ui-monospace, monospace;
+  --color-brand: var(--brand);
+  --color-brand-foreground: var(--brand-foreground);
+  --color-brand-soft: var(--brand-soft);
+  --color-tile: var(--tile);
+  --color-success: var(--success);
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-card: var(--card);
@@ -111,6 +134,7 @@
   --color-pop-green: var(--pop-green);
   --color-pop-yellow: var(--pop-yellow);
   --color-pop-teal: var(--pop-teal);
+  --color-pop-red: var(--pop-red);
   --color-chart-1: var(--chart-1);
   --color-chart-2: var(--chart-2);
   --color-chart-3: var(--chart-3);
@@ -264,16 +288,11 @@ html {
   animation: float 4s ease-in-out infinite;
 }
 
-/* Advanced tech-inspired dot and grid pattern */
+/* Subtle dot texture — faint dots only (no grid lines), never crosses text */
 .bg-dot-pattern {
-  background-image:
-    radial-gradient(var(--foreground) 1px, transparent 1px),
-    linear-gradient(to right, oklch(0.15 0.02 45 / 0.03) 1px, transparent 1px),
-    linear-gradient(to bottom, oklch(0.15 0.02 45 / 0.03) 1px, transparent 1px);
-  background-size: 24px 24px, 48px 48px, 48px 48px;
+  background-image: radial-gradient(oklch(0.15 0.02 45 / 0.07) 1.2px, transparent 1.2px);
+  background-size: 22px 22px;
   background-position: 0 0;
-  opacity: 0.8;
-  /* Higher opacity since patterns are subtle */
 }
 
 /* Diagonal stripes pattern */
@@ -291,4 +310,48 @@ html {
       oklch(0.7 0.22 350) 8px,
       oklch(0.15 0.02 45) 8px,
       oklch(0.15 0.02 45) 16px);
+}
+
+/* Radial spotlight glow behind hero product */
+.bg-spotlight {
+  background: radial-gradient(circle at center,
+      oklch(0.92 0.2 95 / 0.55) 0%,
+      oklch(0.7 0.22 350 / 0.18) 38%,
+      transparent 70%);
+}
+
+/* 3D scene helpers for pointer-tilt / camera-style motion */
+.perspective-1000 {
+  perspective: 1000px;
+}
+
+.preserve-3d {
+  transform-style: preserve-3d;
+}
+
+/* Respect user motion preferences: kill infinite/decorative animation
+   and scroll smoothing for anyone who asks for reduced motion. */
+@media (prefers-reduced-motion: reduce) {
+
+  html {
+    scroll-behavior: auto;
+  }
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+
+  .animate-marquee,
+  .animate-marquee-reverse,
+  .animate-bounce-subtle,
+  .animate-pulse-glow,
+  .animate-float,
+  .animate-shimmer::after {
+    animation: none !important;
+  }
 }

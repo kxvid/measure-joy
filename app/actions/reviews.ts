@@ -6,9 +6,8 @@ import { revalidatePath } from "next/cache"
 import { Review, ReviewStats, calculateReviewStats } from "@/lib/reviews"
 
 export async function getReviews(productId: string): Promise<Review[]> {
-    const supabase = createAdminClient()
-
     try {
+        const supabase = createAdminClient()
         const { data, error } = await supabase
             .from("reviews")
             .select("*")
@@ -53,6 +52,38 @@ export async function getReviews(productId: string): Promise<Review[]> {
 export async function getReviewsStats(productId: string): Promise<ReviewStats> {
     const reviews = await getReviews(productId)
     return calculateReviewStats(reviews)
+}
+
+/**
+ * Latest real reviews across all products (for the homepage showcase).
+ * Returns [] when the table is empty or unavailable — so the UI hides itself
+ * instead of showing fabricated content.
+ */
+export async function getLatestReviews(limit = 6): Promise<Review[]> {
+    try {
+        const supabase = createAdminClient()
+        const { data, error } = await supabase
+            .from("reviews")
+            .select("*")
+            .order("created_at", { ascending: false })
+            .limit(limit)
+
+        if (error || !data || data.length === 0) return []
+
+        const userIds = [...new Set(data.map((r) => r.user_id))]
+        const { data: profiles } = await supabase.from("profiles").select("id, full_name").in("id", userIds)
+        const profileMap = new Map(
+            (profiles || []).map((p: { id: string; full_name: string | null }) => [p.id, p.full_name]),
+        )
+
+        return data.map((review) => ({
+            ...review,
+            user_name: profileMap.get(review.user_id) || "Verified Customer",
+        }))
+    } catch (err) {
+        console.error("Latest reviews fetch failed:", err)
+        return []
+    }
 }
 
 export async function submitReviewAction(

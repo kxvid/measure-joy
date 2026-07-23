@@ -1,0 +1,71 @@
+name: Weekly Claude Code Review
+
+# Runs every Monday at 09:30 UTC — after the daily quality checks.
+# Uses the Claude Code GitHub Action (anthropics/claude-code-action) to perform
+# a semantic review of the codebase and open a focused improvement PR.
+#
+# Cost estimate: ~50-150k tokens per run at Claude Sonnet pricing ≈ $0.15–$0.45/run
+# → ~$0.60–$1.80/month.  Disable by removing the schedule cron below.
+
+on:
+  schedule:
+    - cron: '30 9 * * 1'   # 09:30 UTC every Monday
+  workflow_dispatch:         # allow manual trigger
+
+permissions:
+  contents: write
+  pull-requests: write
+  issues: read
+
+jobs:
+  claude-review:
+    name: Claude Code Review
+    runs-on: ubuntu-latest
+    # Skip if ANTHROPIC_API_KEY is not configured yet
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0   # full history so Claude can see context
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci --ignore-scripts
+
+      # ── Claude Code Action ───────────────────────────────────────────────
+      # anthropics/claude-code-action@beta runs Claude Code CLI with a direct
+      # prompt.  Claude can read files, edit them, commit changes, and open PRs.
+      - name: Run Claude Code review
+        uses: anthropics/claude-code-action@beta
+        with:
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          github_token:      ${{ secrets.GITHUB_TOKEN }}
+          direct_prompt: |
+            You are reviewing the Measure Joy Next.js codebase — a Y2K digital camera e-commerce shop.
+            Stack: Next.js 16, React 19, TypeScript, Clerk auth, Supabase, Stripe, Tailwind CSS 4, Radix UI.
+
+            YOUR TASK:
+            Find exactly ONE small, safe, concrete improvement from this priority list:
+              1. A page.tsx that is missing og:image or og:description openGraph metadata
+              2. A JSX <img> element without an alt attribute
+              3. A button or interactive element that lacks an aria-label
+              4. A console.log/console.warn left in production source code (not scripts/)
+              5. A component importing a full library when only one function is needed (e.g. lodash)
+              6. A TypeScript `any` cast that can be tightened to a real type
+
+            RULES — follow these exactly:
+            - Touch ONLY files in app/, components/, lib/, or hooks/
+            - Do NOT modify middleware.ts, any file in app/api/, or anything touching Clerk/Stripe/Supabase auth logic
+            - Do NOT change package.json, lock files, or config files
+            - Keep the change minimal — one improvement only
+            - Create a new branch named: claude/weekly-${{ github.run_number }}-<short-slug>
+            - Commit the change with a clear message following Conventional Commits
+            - Open a PR against main with:
+                - Title: "✨ [Claude weekly] <what was fixed>"
+                - Body: explain what was found, why it matters, and what was changed
+                - Label: automated, quality
+
+            If you cannot find a safe improvement that meets all the rules above, do nothing and leave a comment in the workflow summary explaining why.

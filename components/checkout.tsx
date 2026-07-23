@@ -53,9 +53,9 @@ export default function Checkout({ productId, quantity = 1 }: CheckoutProps) {
 
   if (error) {
     return (
-      <div className="text-center py-12">
-        <p className="text-red-600 mb-4">{error}</p>
-        <Button asChild variant="outline" className="rounded-xl bg-transparent">
+      <div className="text-center py-16">
+        <p className="mb-5 font-display text-sm uppercase tracking-[0.08em] text-destructive">{error}</p>
+        <Button asChild variant="outline" className="rounded-none border-border bg-transparent font-display text-xs font-semibold uppercase tracking-[0.12em] cursor-pointer">
           <Link href="/cart">Back to Cart</Link>
         </Button>
       </div>
@@ -63,9 +63,9 @@ export default function Checkout({ productId, quantity = 1 }: CheckoutProps) {
   }
 
   return (
-    <div className="text-center py-12">
-      <Loader2 className="h-8 w-8 mx-auto animate-spin text-muted-foreground" />
-      <p className="text-muted-foreground mt-4">Redirecting to secure checkout...</p>
+    <div className="text-center py-16">
+      <Loader2 className="h-7 w-7 mx-auto animate-spin text-muted-foreground" />
+      <p className="mt-5 font-display text-xs uppercase tracking-[0.14em] text-muted-foreground">Redirecting to secure checkout</p>
     </div>
   )
 }

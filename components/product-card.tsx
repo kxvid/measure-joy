@@ -3,8 +3,9 @@
 import type React from "react"
 import { useState } from "react"
 import Link from "next/link"
+import Image from "next/image"
 import { Button } from "@/components/ui/button"
-import { Check, Plus, Star, Flame, Eye } from "lucide-react"
+import { Check, Plus, Eye } from "lucide-react"
 import { type Product, formatPrice } from "@/lib/products"
 import { useCart } from "@/lib/cart-context"
 import { UpsellDrawer } from "@/components/upsell-drawer"
@@ -27,9 +28,7 @@ export function ProductCard({ product }: ProductCardProps) {
     e.stopPropagation()
     addItem(product)
     setJustAdded(true)
-    if (product.category === "camera") {
-      setShowUpsell(true)
-    }
+    if (product.category === "camera") setShowUpsell(true)
     setTimeout(() => setJustAdded(false), 1500)
   }
 
@@ -39,165 +38,119 @@ export function ProductCard({ product }: ProductCardProps) {
     setShowQuickView(true)
   }
 
-  const hoverImage = product.images[1] || product.images[0]
+  const baseImage = product.images[0] || "/placeholder.svg"
+  const hoverImage = product.images[1] || product.images[0] || "/placeholder.svg"
+  const hasHoverImage = Boolean(product.images[1])
 
   const savingsPercent = product.originalPriceInCents
     ? Math.round(((product.originalPriceInCents - product.priceInCents) / product.originalPriceInCents) * 100)
     : 0
-
   const isLowStock = product.stockCount !== undefined && product.stockCount <= 3
   const isVeryLowStock = product.stockCount === 1
 
+  // One badge only, color-coded by type.
+  const badge = product.isBestseller
+    ? { label: "Best Seller", className: "bg-pop-yellow text-foreground" }
+    : product.isTrending
+      ? { label: "Trending", className: "bg-pop-pink text-white" }
+      : isVeryLowStock
+        ? { label: "Last One", className: "bg-pop-red text-white" }
+        : savingsPercent >= 15
+          ? { label: `Save ${savingsPercent}%`, className: "bg-pop-red text-white" }
+          : product.badge
+            ? { label: product.badge, className: "bg-foreground text-background" }
+            : null
+
   return (
     <>
-      <Link
-        href={`/product/${product.id}`}
-        className="group block"
+      <div
+        className="group relative"
         onMouseEnter={() => setIsHovered(true)}
         onMouseLeave={() => setIsHovered(false)}
       >
-        {/* Image container */}
-        <div className="aspect-[4/5] overflow-hidden bg-secondary mb-3 relative rounded-lg">
-          {/* Base image */}
-          <img
-            src={product.images[0] || "/placeholder.svg"}
-            alt={product.name}
-            className={`absolute inset-0 w-full h-full object-cover transition-all duration-500 ${isHovered ? "opacity-0 scale-105" : "opacity-100 scale-100"
-              }`}
-          />
+        {/* Gray product tile — full camera shown with breathing room */}
+        <div className="relative aspect-square overflow-hidden bg-secondary">
+          <Link href={`/product/${product.id}`} aria-label={product.name} className="absolute inset-0 z-0 block">
+            <div className="absolute inset-[12%]">
+              <Image
+                src={baseImage}
+                alt={product.name}
+                fill
+                sizes="(max-width: 768px) 50vw, 25vw"
+                className={`object-contain transition-opacity duration-500 ${
+                  hasHoverImage && isHovered ? "opacity-0" : "opacity-100"
+                }`}
+              />
+              {hasHoverImage && (
+                <Image
+                  src={hoverImage}
+                  alt=""
+                  aria-hidden="true"
+                  fill
+                  sizes="(max-width: 768px) 50vw, 25vw"
+                  className={`object-contain transition-opacity duration-500 ${isHovered ? "opacity-100" : "opacity-0"}`}
+                />
+              )}
+            </div>
+          </Link>
 
-          {/* Hover image */}
-          <img
-            src={hoverImage || "/placeholder.svg"}
-            alt={`${product.name} alternate view`}
-            className={`absolute inset-0 w-full h-full object-cover transition-all duration-500 ${isHovered ? "opacity-100 scale-100" : "opacity-0 scale-110"
-              }`}
-          />
+          {/* Single color-coded tag */}
+          {badge && (
+            <span className={`pointer-events-none absolute left-0 top-0 z-10 px-2.5 py-1 font-display text-[10px] font-semibold uppercase tracking-[0.1em] ${badge.className}`}>
+              {badge.label}
+            </span>
+          )}
 
-          <div className="absolute top-2 left-2 flex flex-col gap-1.5 z-10">
-            {product.isBestseller && (
-              <span className="bg-gradient-to-r from-pop-yellow to-pop-orange text-foreground text-[10px] lg:text-xs font-black px-2.5 py-1 uppercase tracking-wide shadow-md flex items-center gap-1">
-                <Star className="h-3 w-3 fill-current" />
-                Bestseller
-              </span>
-            )}
-
-            {product.isTrending && (
-              <span className="bg-gradient-to-r from-pop-pink to-pop-red text-white text-[10px] lg:text-xs font-black px-2.5 py-1 uppercase tracking-wide shadow-md flex items-center gap-1 animate-pulse">
-                <Flame className="h-3 w-3" />
-                Trending
-              </span>
-            )}
-
-            {/* Original badges */}
-            {product.badge && !product.isBestseller && !product.isTrending && (
-              <span className="bg-pop-pink text-white text-[10px] lg:text-xs font-bold px-2.5 py-1 uppercase tracking-wide shadow-md">
-                {product.badge}
-              </span>
-            )}
-
-            {product.condition === "Excellent" && (
-              <span className="bg-pop-teal text-white text-[10px] lg:text-xs font-bold px-2.5 py-1 uppercase tracking-wide shadow-md">
-                {product.condition}
-              </span>
-            )}
-
-            {isLowStock && (
-              <span
-                className={`${isVeryLowStock ? "bg-pop-red animate-pulse" : "bg-pop-orange"} text-white text-[10px] lg:text-xs font-black px-2.5 py-1 uppercase tracking-wide shadow-md`}
-              >
-                Only {product.stockCount} left!
-              </span>
-            )}
-
-            {savingsPercent >= 15 && (
-              <span className="bg-gradient-to-r from-pop-red to-pop-pink text-white text-[10px] lg:text-xs font-black px-2.5 py-1 uppercase tracking-wide shadow-md">
-                Save {savingsPercent}%
-              </span>
-            )}
-          </div>
-
-          {/* Wishlist button */}
-          <div
-            className={`absolute bottom-2 left-2 transition-all duration-300 z-10 ${isHovered ? "opacity-100" : "opacity-0"}`}
-          >
+          {/* Minimal actions — revealed on hover (pointer), visible on touch */}
+          <div className="absolute bottom-3 right-3 z-20 flex gap-2 opacity-100 transition-opacity duration-300 lg:opacity-0 lg:group-hover:opacity-100">
             <WishlistButton
               productId={product.id}
               size="icon"
               variant="ghost"
-              className="h-9 w-9 bg-white/90 hover:bg-white shadow-md"
+              className="h-10 w-10 rounded-none border border-border bg-background hover:bg-secondary cursor-pointer"
             />
-          </div>
-
-          {/* Quick View button */}
-          <div
-            className={`absolute bottom-2 left-12 transition-all duration-300 z-10 ${isHovered ? "opacity-100" : "opacity-0"
-              }`}
-          >
             <Button
               size="icon"
               variant="ghost"
-              className="h-9 w-9 bg-white/90 hover:bg-white shadow-md"
+              className="h-10 w-10 rounded-none border border-border bg-background hover:bg-secondary cursor-pointer"
               onClick={handleQuickView}
+              aria-label={`Quick view ${product.name}`}
             >
-              <Eye className="h-4 w-4" />
+              <Eye className="h-4 w-4" strokeWidth={1.5} />
             </Button>
-          </div>
-
-          {/* Quick add button */}
-          <div
-            className={`absolute bottom-2 right-2 transition-all duration-300 z-10 ${isHovered ? "opacity-100 translate-y-0" : "opacity-0 translate-y-2"
-              }`}
-          >
             <Button
               size="icon"
-              className={`h-10 w-10 shadow-lg transition-all ${justAdded ? "bg-pop-green hover:bg-pop-green" : "bg-foreground hover:bg-foreground/90"
-                }`}
+              className={`h-10 w-10 rounded-none cursor-pointer ${justAdded ? "bg-success hover:bg-success" : "bg-foreground hover:bg-foreground/90"}`}
               onClick={handleAddToCart}
+              aria-label={justAdded ? "Added to cart" : `Add ${product.name} to cart`}
             >
               {justAdded ? <Check className="h-4 w-4 text-white" /> : <Plus className="h-4 w-4 text-background" />}
             </Button>
           </div>
         </div>
 
-        {/* Product info */}
-        <div className="space-y-1.5">
-          <div className="flex items-center justify-between">
-            <span className="font-mono text-[10px] lg:text-xs text-muted-foreground uppercase tracking-wide">
-              {[product.brand, product.year].filter(Boolean).join(" · ")}
-            </span>
-            {product.rating && product.reviewCount && product.reviewCount > 0 && (
-              <div className="flex items-center gap-1">
-                <Star className="h-3 w-3 fill-pop-yellow text-pop-yellow" />
-                <span className="text-xs font-bold">{product.rating.toFixed(1)}</span>
-                <span className="text-xs text-muted-foreground">({product.reviewCount})</span>
-              </div>
-            )}
-          </div>
-
-          <h3 className="font-bold text-sm lg:text-base text-foreground group-hover:text-pop-pink transition-colors line-clamp-2 leading-tight">
+        {/* Info — uppercase tracked title + gray price */}
+        <Link href={`/product/${product.id}`} className="mt-4 block">
+          <h3 className="font-display text-[13px] font-medium uppercase leading-snug tracking-[0.06em] text-foreground line-clamp-2">
             {product.name}
           </h3>
-
-          <div className="flex items-baseline gap-2">
-            <span className="text-base lg:text-lg font-black">{formatPrice(product.priceInCents)}</span>
+          <div className="mt-1.5 flex items-center gap-2">
+            <span className="font-display text-[13px] uppercase tracking-[0.04em] text-muted-foreground">
+              {formatPrice(product.priceInCents)}
+            </span>
             {product.originalPriceInCents && (
-              <span className="text-xs lg:text-sm text-muted-foreground line-through">
+              <span className="font-display text-[12px] uppercase tracking-[0.04em] text-muted-foreground/60 line-through">
                 {formatPrice(product.originalPriceInCents)}
               </span>
             )}
-            {savingsPercent >= 10 && (
-              <span className="text-xs lg:text-sm font-bold text-pop-red">-{savingsPercent}%</span>
-            )}
           </div>
-
           {isLowStock && (
-            <p className="text-xs text-pop-red font-medium">
-              {isVeryLowStock ? "Last one available" : `Only ${product.stockCount} in stock`}
+            <p className="mt-1 font-display text-[11px] uppercase tracking-[0.08em] text-muted-foreground">
+              {isVeryLowStock ? "Last one available" : `Only ${product.stockCount} left`}
             </p>
           )}
-        </div>
-      </Link>
+        </Link>
+      </div>
 
       <UpsellDrawer open={showUpsell} onClose={() => setShowUpsell(false)} addedProduct={product} />
       <QuickViewModal product={product} open={showQuickView} onClose={() => setShowQuickView(false)} />

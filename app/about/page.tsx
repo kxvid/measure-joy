@@ -1,3 +1,4 @@
+import Image from "next/image"
 import { Header } from "@/components/header"
 import { Footer } from "@/components/footer"
 import { Newsletter } from "@/components/newsletter"
@@ -18,10 +19,14 @@ const VALUE_ICONS = [Camera, Heart, Sparkles, Users]
 
 const DEFAULTS = {
   hero_heading: "Preserving the magic of Y2K photography",
-  hero_subtitle: "Measure Joy started from a simple love for the unique aesthetic of early digital cameras. We believe these devices capture something special—a warmth and authenticity that modern smartphones just can't replicate.",
-  story_p1: "It all began in 2019 when our founder discovered their grandmother's old Sony Cybershot in a dusty drawer. The photos it produced—slightly soft, beautifully saturated—sparked a deep appreciation for the era.",
-  story_p2: "What started as a personal collection quickly grew into a mission: to rescue these forgotten gems and share them with a new generation who crave authenticity in an age of AI filters and computational photography.",
-  story_p3: "Today, Measure Joy is home to hundreds of carefully tested and refurbished cameras from the golden era of digital photography (2003-2010). Each camera tells a story, and we're here to help you write yours.",
+  hero_subtitle:
+    "Measure Joy started from a simple love for the unique aesthetic of early digital cameras. We believe these devices capture something special—a warmth and authenticity that modern smartphones just can't replicate.",
+  story_p1:
+    "It all began in 2019 when our founder discovered their grandmother's old Sony Cybershot in a dusty drawer. The photos it produced—slightly soft, beautifully saturated—sparked a deep appreciation for the era.",
+  story_p2:
+    "What started as a personal collection quickly grew into a mission: to rescue these forgotten gems and share them with a new generation who crave authenticity in an age of AI filters and computational photography.",
+  story_p3:
+    "Today, Measure Joy is home to hundreds of carefully tested and refurbished cameras from the golden era of digital photography (2003-2010). Each camera tells a story, and we're here to help you write yours.",
   values: [
     { title: "Quality First", description: "Every camera is thoroughly tested and comes with a 90-day warranty." },
     { title: "Passion Driven", description: "We're collectors ourselves—we only sell cameras we'd proudly own." },
@@ -46,53 +51,64 @@ export default async function AboutPage() {
     <main className="min-h-screen bg-background">
       <Header />
 
-      <div className="mx-auto max-w-7xl px-6 lg:px-8 py-8 lg:py-12">
+      <div className="mx-auto max-w-[1400px] px-5 lg:px-8 py-8 lg:py-12">
         <Breadcrumbs items={[{ label: "About" }]} />
 
         {/* Hero */}
-        <section className="py-8 lg:py-16">
-          <div className="max-w-3xl">
-            <h1 className="text-4xl lg:text-6xl font-bold leading-tight">{c.hero_heading}</h1>
-            <p className="text-lg text-muted-foreground mt-6 leading-relaxed">
-              {c.hero_subtitle}
-            </p>
-          </div>
+        <section className="border-b border-border py-10 lg:py-20">
+          <span className="font-display text-[11px] font-medium uppercase tracking-[0.2em] text-muted-foreground">
+            Our Mission
+          </span>
+          <h1 className="mt-3 max-w-4xl font-display text-4xl lg:text-6xl font-extrabold uppercase leading-[0.98] tracking-tight">
+            {c.hero_heading}
+          </h1>
+          <p className="mt-6 max-w-2xl text-base lg:text-lg leading-relaxed text-muted-foreground">{c.hero_subtitle}</p>
         </section>
 
-        {/* Story section */}
-        <section className="py-8 lg:py-16">
-          <div className="grid lg:grid-cols-2 gap-12 items-center bg-secondary rounded-2xl p-8 lg:p-12">
-            <div>
-              <h2 className="text-3xl font-bold">Our Story</h2>
-              <div className="mt-6 space-y-4 text-muted-foreground leading-relaxed">
-                <p>{c.story_p1}</p>
-                <p>{c.story_p2}</p>
-                <p>{c.story_p3}</p>
-              </div>
+        {/* Story */}
+        <section className="grid items-center gap-10 border-b border-border py-12 lg:grid-cols-2 lg:gap-16 lg:py-20">
+          <div>
+            <span className="font-display text-[11px] font-medium uppercase tracking-[0.2em] text-muted-foreground">
+              Est. 2019
+            </span>
+            <h2 className="mt-3 font-display text-2xl lg:text-4xl font-extrabold uppercase tracking-tight">Our Story</h2>
+            <div className="mt-6 space-y-4 leading-relaxed text-muted-foreground">
+              <p>{c.story_p1}</p>
+              <p>{c.story_p2}</p>
+              <p>{c.story_p3}</p>
             </div>
-            <div className="aspect-square rounded-xl overflow-hidden bg-background">
-              <img
-                src="/vintage-camera-collection-aesthetic.jpg"
-                alt="Our camera collection"
-                className="w-full h-full object-cover"
-              />
-            </div>
+          </div>
+          <div className="relative aspect-[4/3] overflow-hidden bg-secondary">
+            <Image
+              src="/vintage-camera-collection-aesthetic.jpg"
+              alt="Our camera collection"
+              fill
+              sizes="(max-width: 1024px) 100vw, 50vw"
+              className="object-cover"
+            />
           </div>
         </section>
 
         {/* Values */}
-        <section className="py-8 lg:py-16">
-          <h2 className="text-3xl font-bold text-center mb-12">What We Stand For</h2>
-          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
+        <section className="border-b border-border py-12 lg:py-20">
+          <div className="mb-10 text-center">
+            <span className="font-display text-[11px] font-medium uppercase tracking-[0.2em] text-muted-foreground">
+              Values
+            </span>
+            <h2 className="mt-2 font-display text-2xl lg:text-4xl font-extrabold uppercase tracking-tight">
+              What We Stand For
+            </h2>
+          </div>
+          <div className="grid gap-px bg-border sm:grid-cols-2 lg:grid-cols-4">
             {values.map((value: any, i: number) => {
               const Icon = VALUE_ICONS[i % VALUE_ICONS.length]
               return (
-                <div key={value.title} className="text-center p-6 bg-card border border-border rounded-xl">
-                  <div className="w-12 h-12 rounded-full bg-accent/10 flex items-center justify-center mx-auto">
-                    <Icon className="h-6 w-6 text-accent" />
+                <div key={value.title} className="bg-background p-7 text-center">
+                  <div className="mx-auto flex h-12 w-12 items-center justify-center border border-border">
+                    <Icon className="h-5 w-5 text-foreground" strokeWidth={1.5} />
                   </div>
-                  <h3 className="font-bold mt-4">{value.title}</h3>
-                  <p className="text-sm text-muted-foreground mt-2">{value.description}</p>
+                  <h3 className="mt-4 font-display text-sm font-semibold uppercase tracking-[0.08em]">{value.title}</h3>
+                  <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{value.description}</p>
                 </div>
               )
             })}
@@ -100,12 +116,12 @@ export default async function AboutPage() {
         </section>
 
         {/* Stats */}
-        <section className="py-8 lg:py-16">
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-8 text-center bg-secondary rounded-2xl p-8 lg:p-12">
+        <section className="py-12 lg:py-20">
+          <div className="grid grid-cols-2 gap-px bg-border lg:grid-cols-4">
             {stats.map((stat: any) => (
-              <div key={stat.label}>
-                <span className="font-mono text-4xl lg:text-5xl font-bold">{stat.value}</span>
-                <p className="text-muted-foreground mt-2">{stat.label}</p>
+              <div key={stat.label} className="bg-foreground px-6 py-10 text-center text-background">
+                <span className="font-display text-4xl lg:text-5xl font-extrabold tabular-nums">{stat.value}</span>
+                <p className="mt-2 font-display text-[11px] uppercase tracking-[0.14em] text-background/60">{stat.label}</p>
               </div>
             ))}
           </div>
