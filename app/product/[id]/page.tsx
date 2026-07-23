@@ -2,8 +2,48 @@ import { Header } from "@/components/header"
 import { Footer } from "@/components/footer"
 import { Button } from "@/components/ui/button"
 import Link from "next/link"
+import type { Metadata } from "next"
 import { ProductDetailClient } from "./product-detail-client"
 import { getStripeProductById } from "@/lib/stripe-products"
+import { productJsonLd, SITE_URL } from "@/lib/seo"
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ id: string }>
+}): Promise<Metadata> {
+  const { id } = await params
+  const product = await getStripeProductById(id)
+
+  if (!product) {
+    return { title: "Product Not Found" }
+  }
+
+  const title = product.brand ? `${product.name} — ${product.brand}` : product.name
+  const description =
+    product.description ||
+    `${product.name} — tested Y2K digital camera from Measure Joy. Ships with battery and 90-day warranty.`
+  const image = product.images?.[0]
+
+  return {
+    title,
+    description,
+    alternates: { canonical: `/product/${product.id}` },
+    openGraph: {
+      type: "website",
+      title,
+      description,
+      url: `${SITE_URL}/product/${product.id}`,
+      images: image ? [{ url: image, alt: product.name }] : undefined,
+    },
+    twitter: {
+      card: "summary_large_image",
+      title,
+      description,
+      images: image ? [image] : undefined,
+    },
+  }
+}
 
 export default async function ProductPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
@@ -30,5 +70,13 @@ export default async function ProductPage({ params }: { params: Promise<{ id: st
   // Related products will be empty for now since we can't easily query by category
   const relatedProducts: any[] = []
 
-  return <ProductDetailClient product={product} relatedProducts={relatedProducts} />
+  return (
+    <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(productJsonLd(product)) }}
+      />
+      <ProductDetailClient product={product} relatedProducts={relatedProducts} />
+    </>
+  )
 }

@@ -264,6 +264,8 @@ ${rendered}
               <a href="https://measurejoy.org/about" style="color:${C.pink};text-decoration:none;margin:0 8px;">About</a>
               <span style="color:${C.gray600};">·</span>
               <a href="https://measurejoy.org/faq" style="color:${C.pink};text-decoration:none;margin:0 8px;">FAQ</a>
+              <span style="color:${C.gray600};">·</span>
+              <a href="https://www.instagram.com/measurejoycamera" style="color:${C.pink};text-decoration:none;margin:0 8px;">Instagram</a>
             </p>
             <p style="font-family:${FONT};color:${C.gray600};font-size:11px;margin:16px 0 0 0;">
               &copy; ${year} Measure Joy. All rights reserved.<br>

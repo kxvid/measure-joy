@@ -1,4 +1,6 @@
 import Link from "next/link"
+import { Instagram } from "lucide-react"
+import { INSTAGRAM_URL } from "@/lib/seo"
 
 interface FooterProps {
   cms?: Record<string, any>
@@ -44,6 +46,19 @@ export function Footer({ cms = {} }: FooterProps) {
             <p className="text-sm text-background/60 mt-4 max-w-xs leading-relaxed">
               {tagline}
             </p>
+            <div className="flex items-center gap-3 mt-5">
+              <a
+                href={INSTAGRAM_URL}
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label="Follow Measure Joy on Instagram"
+                title="@measurejoycamera on Instagram"
+                className="inline-flex items-center gap-2 text-sm text-background/60 hover:text-pop-pink transition-colors"
+              >
+                <Instagram className="h-4 w-4" />
+                <span className="font-mono text-xs">@measurejoycamera</span>
+              </a>
+            </div>
           </div>
 
           <div>

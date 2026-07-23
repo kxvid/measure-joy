@@ -1,0 +1,36 @@
+# Measure Joy
+
+> Measure Joy (measurejoy.org) is an e-commerce store specializing in curated, tested Y2K-era digital cameras (roughly 1998–2008) and accessories. Every camera is professionally inspected with a 15-point test and ships with a compatible battery and a 90-day functionality warranty. The brand serves creators, photographers, and nostalgia lovers who want the authentic digital grain and aesthetic of early digital photography.
+
+Measure Joy sells vintage compact digital cameras from brands like Canon (PowerShot), Sony (Cyber-shot), Nikon (Coolpix), Fujifilm (FinePix), Olympus, Kodak (EasyShare), Casio (Exilim), Panasonic (Lumix), Pentax (Optio), Samsung, and HP — plus accessories such as SD/xD/Memory Stick cards, camera cases, straps, tripods, batteries, screen protectors, and cleaning kits.
+
+## Key Pages
+
+- [Shop All Products](https://www.measurejoy.org/shop): Full catalog of Y2K digital cameras and accessories
+- [Collections](https://www.measurejoy.org/collections): Curated camera collections by style and category
+- [About](https://www.measurejoy.org/about): The Measure Joy story and mission
+- [Journal](https://www.measurejoy.org/journal): Articles on Y2K cameras, digicam culture, and photography tips
+- [FAQ](https://www.measurejoy.org/faq): Answers on shipping, returns, warranty, camera condition, and payment
+
+## Policies
+
+- [Shipping](https://www.measurejoy.org/shipping): US standard 3–5 business days ($9.99, free over $75); express 1–2 days ($19.99); ships to US, Canada, UK, and Australia
+- [Returns & Warranty](https://www.measurejoy.org/returns): 14-day return window; 90-day functionality warranty on all cameras
+- [Camera Repair](https://www.measurejoy.org/repair): Repair services for vintage digital cameras
+- [Contact](https://www.measurejoy.org/contact): Customer support
+
+## Facts
+
+- Every camera passes a 15-point inspection (lens clarity, LCD, buttons, flash, image quality)
+- A compatible battery is included with every camera
+- Payments are processed securely via Stripe (Visa, Mastercard, Amex, Apple Pay, Google Pay)
+- Condition grades: Excellent (minimal wear, fully functional), Good, Fair — described per listing
+
+## Social
+
+- Instagram: https://www.instagram.com/measurejoycamera
+
+## Optional
+
+- [Terms of Service](https://www.measurejoy.org/terms)
+- [Privacy Policy](https://www.measurejoy.org/privacy)
