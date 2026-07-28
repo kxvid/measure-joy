@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server"
+import { checkAdminAccess } from "@/app/actions/auth-admin"
 import { stripe } from "@/lib/stripe"
 import {
     generateProductCopy,
@@ -19,6 +20,10 @@ import {
  * Returns current copy for a product
  */
 export async function POST(request: Request) {
+    if (!await checkAdminAccess()) {
+        return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+    }
+
     try {
         const body = await request.json()
         const { productId, generateAll, variant = "A", allVariants = false } = body
@@ -166,6 +171,10 @@ export async function POST(request: Request) {
  * Apply generated copy to a product
  */
 export async function PUT(request: Request) {
+    if (!await checkAdminAccess()) {
+        return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+    }
+
     try {
         const body = await request.json()
         const { productId, copy, variant } = body
@@ -205,6 +214,10 @@ export async function PUT(request: Request) {
 }
 
 export async function GET(request: Request) {
+    if (!await checkAdminAccess()) {
+        return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+    }
+
     const { searchParams } = new URL(request.url)
     const productId = searchParams.get("productId")
 
@@ -276,4 +289,3 @@ export async function GET(request: Request) {
         },
     })
 }
-

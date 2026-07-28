@@ -64,21 +64,21 @@ export function ProductCard({ product }: ProductCardProps) {
 
   return (
     <>
-      <div
-        className="group relative"
+      <article
+        className="group relative h-full"
         onMouseEnter={() => setIsHovered(true)}
         onMouseLeave={() => setIsHovered(false)}
       >
-        {/* Gray product tile — full camera shown with breathing room */}
-        <div className="relative aspect-square overflow-hidden bg-secondary">
+        {/* Neutral product stage keeps mixed Stripe image dimensions consistent. */}
+        <div className="relative aspect-square overflow-hidden border border-border/70 bg-white shadow-[0_1px_0_rgba(0,0,0,0.04)] transition-all duration-300 group-hover:-translate-y-1 group-hover:border-foreground/20 group-hover:shadow-[0_18px_45px_-28px_rgba(0,0,0,0.45)]">
           <Link href={productPath(product)} aria-label={product.name} className="absolute inset-0 z-0 block">
-            <div className="absolute inset-[12%]">
+            <div className="absolute inset-[7%] sm:inset-[8%]">
               <Image
                 src={baseImage}
                 alt={product.name}
                 fill
                 sizes="(max-width: 768px) 50vw, 25vw"
-                className={`object-contain transition-opacity duration-500 ${
+                className={`object-contain drop-shadow-[0_10px_12px_rgba(0,0,0,0.10)] transition-[opacity,transform] duration-500 group-hover:scale-[1.025] ${
                   hasHoverImage && isHovered ? "opacity-0" : "opacity-100"
                 }`}
               />
@@ -89,7 +89,7 @@ export function ProductCard({ product }: ProductCardProps) {
                   aria-hidden="true"
                   fill
                   sizes="(max-width: 768px) 50vw, 25vw"
-                  className={`object-contain transition-opacity duration-500 ${isHovered ? "opacity-100" : "opacity-0"}`}
+                  className={`object-contain drop-shadow-[0_10px_12px_rgba(0,0,0,0.10)] transition-[opacity,transform] duration-500 group-hover:scale-[1.025] ${isHovered ? "opacity-100" : "opacity-0"}`}
                 />
               )}
             </div>
@@ -131,7 +131,7 @@ export function ProductCard({ product }: ProductCardProps) {
         </div>
 
         {/* Info — uppercase tracked title + gray price */}
-        <Link href={productPath(product)} className="mt-4 block">
+        <Link href={productPath(product)} className="mt-4 block min-h-[4.75rem]">
           <h3 className="font-display text-[13px] font-medium uppercase leading-snug tracking-[0.06em] text-foreground line-clamp-2">
             {product.name}
           </h3>
@@ -151,7 +151,7 @@ export function ProductCard({ product }: ProductCardProps) {
             </p>
           )}
         </Link>
-      </div>
+      </article>
 
       <UpsellDrawer open={showUpsell} onClose={() => setShowUpsell(false)} addedProduct={product} />
       <QuickViewModal product={product} open={showQuickView} onClose={() => setShowQuickView(false)} />

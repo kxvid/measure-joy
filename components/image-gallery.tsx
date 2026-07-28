@@ -19,7 +19,7 @@ export function ImageGallery({ images, productName }: ImageGalleryProps) {
 
   if (images.length === 0) {
     return (
-      <div className="aspect-square bg-secondary flex items-center justify-center">
+      <div className="aspect-square border border-border/70 bg-white flex items-center justify-center">
         <span className="font-display text-xs uppercase tracking-[0.1em] text-muted-foreground">No image available</span>
       </div>
     )
@@ -28,15 +28,15 @@ export function ImageGallery({ images, productName }: ImageGalleryProps) {
   return (
     <div className="space-y-3">
       {/* Main image */}
-      <div className="relative aspect-square overflow-hidden bg-secondary group">
-        <div className="absolute inset-[8%]">
+      <div className="relative aspect-square overflow-hidden border border-border/70 bg-white group shadow-[0_20px_60px_-48px_rgba(0,0,0,0.55)]">
+        <div className="absolute inset-[5%] sm:inset-[7%]">
           <Image
             src={images[selectedIndex] || "/placeholder.svg"}
             alt={`${productName} - Image ${selectedIndex + 1}`}
             fill
             sizes="(max-width: 1024px) 100vw, 50vw"
             priority
-            className={cn("object-contain transition-transform duration-500", isZoomed ? "scale-150 cursor-zoom-out" : "cursor-zoom-in")}
+            className={cn("object-contain drop-shadow-[0_14px_16px_rgba(0,0,0,0.10)] transition-transform duration-500", isZoomed ? "scale-150 cursor-zoom-out" : "cursor-zoom-in")}
             onClick={() => setIsZoomed(!isZoomed)}
           />
         </div>
@@ -75,7 +75,7 @@ export function ImageGallery({ images, productName }: ImageGalleryProps) {
               onClick={() => setSelectedIndex(index)}
               aria-label={`View image ${index + 1}`}
               className={cn(
-                "relative w-20 h-20 shrink-0 overflow-hidden bg-secondary transition-all cursor-pointer border",
+                "relative w-20 h-20 shrink-0 overflow-hidden bg-white transition-all cursor-pointer border",
                 selectedIndex === index ? "border-foreground" : "border-transparent opacity-60 hover:opacity-100",
               )}
             >

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server"
 import { GoogleGenerativeAI } from "@google/generative-ai"
 import Stripe from "stripe"
+import { checkAdminAccess } from "@/app/actions/auth-admin"
 
 // Initialize Gemini
 const genAI = new GoogleGenerativeAI(process.env.GOOGLE_AI_API_KEY!)
@@ -193,6 +194,10 @@ async function updateStripeProductCategory(
  * POST: Categorize a single product
  */
 export async function POST(request: Request) {
+    if (!await checkAdminAccess()) {
+        return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+    }
+
     try {
         const body: CategorizeRequest = await request.json()
 
@@ -231,6 +236,10 @@ export async function POST(request: Request) {
  *   - force=true: Re-categorize all products regardless of existing category
  */
 export async function GET(request: Request) {
+    if (!await checkAdminAccess()) {
+        return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+    }
+
     try {
         const url = new URL(request.url)
         const forceRecategorize = url.searchParams.get("force") === "true"

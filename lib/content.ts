@@ -127,7 +127,7 @@ export async function getSectionContent(
         }
     }
 
-    let dbContent: Record<string, any> = {}
+    const dbContent: Record<string, any> = {}
     try {
         const supabase = createAdminClient()
         const { data, error } = await supabase

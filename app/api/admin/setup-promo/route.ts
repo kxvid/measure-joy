@@ -1,14 +1,11 @@
 import { NextResponse } from "next/server"
 import { stripe } from "@/lib/stripe"
+import { checkAdminAccess } from "@/app/actions/auth-admin"
 
 // This endpoint creates the WELCOME10 promo code in Stripe
-// Run once: GET /api/admin/setup-promo
-export async function GET(request: Request) {
-    // Basic security check - require admin secret
-    const { searchParams } = new URL(request.url)
-    const secret = searchParams.get("secret")
-
-    if (secret !== process.env.ADMIN_SECRET && secret !== "setup-promo-2026") {
+// Run once from the authenticated admin interface.
+export async function POST() {
+    if (!await checkAdminAccess()) {
         return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
@@ -36,7 +33,10 @@ export async function GET(request: Request) {
 
         // Create a promotion code that customers can enter
         const promoCode = await stripe.promotionCodes.create({
-            coupon: coupon.id,
+            promotion: {
+                type: "coupon",
+                coupon: coupon.id,
+            },
             code: "WELCOME10",
             restrictions: {
                 first_time_transaction: true,

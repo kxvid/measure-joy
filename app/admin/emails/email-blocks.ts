@@ -222,7 +222,13 @@ export interface EmailTemplate {
     blocks: EmailBlock[]
 }
 
-function mkBlocks(items: Array<Omit<EmailBlock, "id"> & { _k?: string }>): EmailBlock[] {
+type EmailBlockWithoutId = EmailBlock extends infer Block
+    ? Block extends EmailBlock
+        ? Omit<Block, "id">
+        : never
+    : never
+
+function mkBlocks(items: EmailBlockWithoutId[]): EmailBlock[] {
     return items.map((item) => ({ ...item, id: newId() }) as EmailBlock)
 }
 

@@ -60,9 +60,6 @@ const cspHeader = Object.entries(cspDirectives)
   .join("; ")
 
 const nextConfig = {
-  typescript: {
-    ignoreBuildErrors: true,
-  },
   images: {
     // Optimize images (WebP/AVIF, srcset, lazy). Product photos are served
     // from Stripe; local /public images need no remote pattern.
