@@ -1,7 +1,7 @@
 export function ProductSkeleton() {
   return (
     <div className="group relative bg-card border border-border rounded-2xl overflow-hidden animate-pulse">
-      <div className="aspect-square bg-secondary" />
+      <div className="aspect-square border border-border/60 bg-white" />
       <div className="p-4 space-y-3">
         <div className="h-4 bg-secondary rounded w-3/4" />
         <div className="h-3 bg-secondary rounded w-1/2" />

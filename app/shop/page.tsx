@@ -209,12 +209,12 @@ function ShopContent() {
       <div className="mx-auto max-w-[1400px] px-5 lg:px-8 py-8 lg:py-10">
         <Breadcrumbs items={breadcrumbItems} />
 
-        <div className="mt-4 mb-8 flex items-end justify-between gap-4 border-b border-border pb-6">
+        <div className="mt-4 mb-8 flex flex-col gap-5 border-b border-border pb-6 sm:flex-row sm:items-end sm:justify-between">
           <div>
             <span className="font-display text-[11px] font-medium uppercase tracking-[0.2em] text-muted-foreground">Collection</span>
             <h1 className="mt-1 font-display text-3xl lg:text-5xl font-extrabold uppercase tracking-tight">Shop</h1>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto sm:flex-nowrap sm:gap-3">
             <div className="hidden lg:flex items-center gap-1">
               <button onClick={() => setGridCols(3)} aria-label="3 columns" className={`flex h-9 w-9 items-center justify-center border border-border cursor-pointer ${gridCols === 3 ? "bg-foreground text-background" : "hover:bg-secondary"}`}>
                 <Grid2X2 className="h-4 w-4" strokeWidth={1.5} />
@@ -224,7 +224,7 @@ function ShopContent() {
               </button>
             </div>
             <Select value={sortBy} onValueChange={setSortBy}>
-              <SelectTrigger className="h-9 w-[185px] rounded-none border-border font-display text-xs uppercase tracking-[0.1em]">
+              <SelectTrigger className="h-9 min-w-0 flex-1 rounded-none border-border font-display text-xs uppercase tracking-[0.08em] sm:w-[185px] sm:flex-none sm:tracking-[0.1em]">
                 <span className="text-muted-foreground mr-1.5">Sort</span>
                 <SelectValue />
               </SelectTrigger>
