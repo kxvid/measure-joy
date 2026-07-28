@@ -34,23 +34,23 @@ export function ProductSlider({ eyebrow, title, viewAllHref = "/shop", products 
   if (products.length === 0) return null
 
   return (
-    <section className="py-12 lg:py-16 border-b border-border">
+    <section className="border-b border-border bg-background py-14 lg:py-20">
       <div className="mx-auto w-full max-w-[1400px] px-5 lg:px-8">
         {/* Header row */}
-        <div className="mb-7 flex items-end justify-between gap-4">
+        <div className="mb-8 flex items-end justify-between gap-4 lg:mb-10">
           <div>
             {eyebrow && (
-              <span className="mb-2 block font-display text-[11px] font-medium uppercase tracking-[0.2em] text-muted-foreground">
+              <span className="mb-2 block font-mono text-[10px] font-bold uppercase tracking-[0.18em] text-brand">
                 {eyebrow}
               </span>
             )}
-            <h2 className="font-display text-2xl lg:text-4xl font-extrabold uppercase tracking-tight">{title}</h2>
+            <h2 className="font-display text-3xl font-extrabold uppercase tracking-[-0.04em] lg:text-5xl">{title}</h2>
           </div>
 
           <div className="flex items-center gap-2">
             <Link
               href={viewAllHref}
-              className="hidden sm:inline-block font-display text-[12px] font-semibold uppercase tracking-[0.12em] text-foreground/70 hover:text-foreground transition-colors underline-offset-4 hover:underline"
+              className="hidden border-b border-foreground pb-1 font-mono text-[10px] font-bold uppercase tracking-[0.12em] text-foreground/70 transition-colors hover:text-brand sm:inline-block"
             >
               View all
             </Link>

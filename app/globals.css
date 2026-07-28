@@ -4,31 +4,31 @@
 @custom-variant dark (&:is(.dark *));
 
 :root {
-  /* Original production palette (cream + pops) styled the Retrospekt way. */
-  --background: oklch(0.97 0.01 85);
-  --foreground: oklch(0.15 0.02 45);
+  /* Warm paper, ink, and one vivid signal color: retro without the clutter. */
+  --background: oklch(0.975 0.008 82);
+  --foreground: oklch(0.145 0.018 45);
   --card: oklch(1 0 0);
   --card-foreground: oklch(0.15 0.02 45);
   --popover: oklch(1 0 0);
   --popover-foreground: oklch(0.15 0.02 45);
   --primary: oklch(0.15 0.02 45);
   --primary-foreground: oklch(0.97 0.01 85);
-  --secondary: oklch(0.94 0.015 85);
+  --secondary: oklch(0.945 0.012 82);
   --secondary-foreground: oklch(0.15 0.02 45);
   --muted: oklch(0.92 0.01 85);
   --muted-foreground: oklch(0.45 0.02 45);
-  --accent: oklch(0.65 0.22 25);
+  --accent: oklch(0.63 0.23 32);
   --accent-foreground: oklch(0.99 0 0);
   --destructive: oklch(0.577 0.245 27.325);
   --destructive-foreground: oklch(0.99 0 0);
-  --border: oklch(0.88 0.015 85);
+  --border: oklch(0.865 0.014 82);
   --input: oklch(0.94 0.01 85);
   --ring: oklch(0.65 0.22 25);
 
   /* Brand signal = original orange-red accent */
-  --brand: oklch(0.65 0.22 25);
+  --brand: oklch(0.63 0.23 32);
   --brand-foreground: oklch(0.99 0 0);
-  --brand-soft: oklch(0.93 0.06 35);
+  --brand-soft: oklch(0.925 0.055 44);
   --tile: oklch(0.94 0.015 85);
   --success: oklch(0.55 0.16 165);
 
@@ -161,6 +161,7 @@
 
   body {
     @apply bg-background text-foreground antialiased;
+    background-image: radial-gradient(circle at 50% 0%, oklch(1 0 0 / 0.7), transparent 42rem);
   }
 }
 
@@ -171,6 +172,23 @@ html {
 
 ::selection {
   background-color: oklch(0.65 0.22 25 / 0.25);
+}
+
+.retro-grid {
+  background-image:
+    linear-gradient(to right, oklch(0.15 0.02 45 / 0.055) 1px, transparent 1px),
+    linear-gradient(to bottom, oklch(0.15 0.02 45 / 0.055) 1px, transparent 1px);
+  background-size: 28px 28px;
+}
+
+.image-scanlines::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0.12;
+  background: repeating-linear-gradient(to bottom, transparent 0 3px, rgb(0 0 0 / 0.18) 4px);
+  mix-blend-mode: multiply;
 }
 
 /* Retrospekt-style marquee animations */
