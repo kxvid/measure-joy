@@ -31,7 +31,7 @@ jobs:
       - name: Run tsc
         run: npx tsc --noEmit 2>&1 | tee tsc-output.txt || true
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: always()
         with:
           name: tsc-output-${{ github.run_id }}
@@ -113,7 +113,7 @@ jobs:
           echo "::warning::Found ${{ steps.scan.outputs.count }} debug statement(s) in source. See debug-scan.txt artifact."
           cat debug-scan.txt
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: always()
         with:
           name: debug-scan-${{ github.run_id }}
