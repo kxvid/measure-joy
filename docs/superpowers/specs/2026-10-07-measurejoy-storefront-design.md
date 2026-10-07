@@ -54,6 +54,8 @@ Avoid rendering the entire catalog as the homepage's new-arrivals section. Merch
 
 Keep `/shop`, existing category/filter query behavior, search, sorting, and product links. Present a spacious grid with actual photographs, Stripe titles/prices, concise condition/spec information, clear availability, and actionable filters on mobile. Distinguish loading, no matches, empty catalog, and service failure where the existing data contract permits. Never fill a catalog outage with invented merchandise.
 
+Derive available brands and years from the returned Stripe products; synchronize filter state with navigation and URL changes. Honor category/subcategory links and sort new arrivals by `createdAt`, not manufacture year. Product actions must remain discoverable with keyboard focus and touch, not only hover.
+
 ### Product details
 
 Retain product slugs and legacy Stripe-ID URLs. Redesign gallery, condition/specs, price, quantity selection, cart/buy actions, genuine reviews, and related products. Display stock conservatively: `stockCount === 0` or `inStock === false` prevents purchase controls, and known stock limits quantity. Preserve server-side price and availability checks as authoritative. Archived one-of-one products retain their URLs and show sold-out state.
@@ -67,6 +69,8 @@ Keep the existing server-created, Stripe-hosted Checkout journey. “Native inte
 ### Supporting pages
 
 Carry typography, spacing, colors, image treatment, and navigation across collections, About, journal, contact/repair/help, and policy pages. Preserve working URLs, contact/subscription submissions, policy meaning, and existing CMS fields. Reuse shared styling in account and order views without replacing the order/account backend. Admin functionality remains available and unchanged.
+
+Saved CMS content overrides component defaults. Preserve CMS keys and draft-preview behavior, and inspect the rendered result with saved content so a new layout does not silently show stale assumptions or lose owner-editable fields.
 
 ## Backend preservation map
 
@@ -91,6 +95,8 @@ No schema migration or production Stripe mutation is part of the visual rebuild.
 
 Validate catalog and detail screens against live/read-only Stripe-derived public data and the existing Product contract. Cover sold-out and missing-image states, absent optional metadata, and prices in cents. Verify cart quantity changes/removal and persistence; verify request payloads pass original product IDs and never client prices.
 
+Read-only public catalog snapshot on October 7, 2026: `/api/products` returned 63 Stripe-ID records, including 24 with `inStock === true` and a stock count other than zero. No record in that snapshot combined `inStock: true` with `stockCount: 0`. This is an audit snapshot, not a catalog to embed in the application.
+
 Run the project's type checking, lint, and build checks after implementation. Exercise representative mobile and desktop sizes, keyboard navigation, dialogs and focus return, reduced motion, and contrast. Check all preserved public routes and an archived product URL. Compare backend files with the audited base to make preservation reviewable.
 
 Payment, webhook, fulfillment, and account integration tests require the existing secure preview/test environment. Use Stripe test mode for transactional validation; do not create a live charge or send customer communications during testing. If that environment is unavailable, record the exact untested flow and leave production rollout pending.
@@ -103,6 +109,8 @@ These are pre-existing observations, not changes made by this redesign. Investig
 - Customer order listing invokes a sessions `search` method through an `any` cast; verify the runtime path against the installed Stripe API client.
 - `/api/products/category` writes product metadata without an explicit handler-level auth check; examine its actual exposure before any production release.
 - The current adapter can expose `inStock: true` together with a zero stock count. The new UI must not present zero stock as purchasable, and server behavior needs verification.
+- Product cards, quick view, and link-based Buy Now controls need consistent disabled states for unavailable products. Mobile navigation and cart/quick-view overlays need keyboard focus and dialog behavior verified.
+- Existing UI copy advertises a $75 free-shipping threshold, while the checkout actions currently configure unconditional free shipping. Reconcile customer-facing copy with the preserved commerce configuration without inventing a new policy.
 - Older documentation and SQL files describe a different auth/order model. Runtime code uses Clerk identity and Stripe sessions; do not rebuild from outdated README assumptions.
 
 ## Review and release boundary
