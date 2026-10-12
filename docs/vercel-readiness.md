@@ -2,6 +2,12 @@
 
 Audited 12 October 2026 with the authenticated Vercel plugin, Vercel CLI 63.1.0 and the repository source. This audit's external inspection was read-only. Environment variable **names, scopes and metadata** were inspected with `decrypt=false`; this audit did not retrieve, copy or commit credential values. Later service checks and local catalog checks by the integration team are recorded below. The rebuild deployment evidence below confirms a hosted preview; external services have not passed end-to-end tests where launch blockers remain.
 
+## Follow-up: contact and repair email (12 October 2026)
+
+Contact and repair requests now use server-side FormSubmit with the fixed recipient `christianvelasquez363@gmail.com`. These two routes require **no additional Vercel variables or DNS records**. They share the canonical form identity `https://www.measurejoy.org/`, including from preview deployments; use mocked tests to avoid sending live inquiries from previews. Christian must click **Activate Form** in FormSubmit's email. A single authorized setup request returned the provider's activation-required response, confirming it requested that email. Final inbox delivery remains pending activation.
+
+The form UI distinguishes accepted submissions from requests awaiting activation. Newsletter, review and transactional email still use Resend; their sender-verification requirements remain. Stripe catalog, pricing, checkout, webhook and existing Vercel configuration are unchanged by this form-delivery update. See [public form delivery](./forms.md) for the current contract. The audit below records the earlier pre-launch snapshot, not the subsequent production deployment state.
+
 ## Verified deployment target
 
 | Item | Verified value |

@@ -232,7 +232,7 @@ async function readJson(request: Request): Promise<unknown> {
   }
 }
 
-// Best-effort per-process abuse control. Provider idempotency also works across instances.
+// Best-effort per-process abuse control, shared by all public form types.
 // A deployment firewall is still needed for distributed bot attacks; this is not a global quota.
 export function limitFormAttempts(identity: string, maximum = 5) {
   const now = Date.now();
@@ -302,7 +302,7 @@ function escapeHtml(value: string) {
 }
 
 type Notification = {
-  kind: "contact" | "repair" | "subscription" | "review";
+  kind: "subscription" | "review";
   token: string;
   replyTo: string;
   subject: string;
@@ -353,8 +353,9 @@ export async function sendInquiryNotification({
 }
 
 export async function sendContact(data: z.infer<typeof contactSchema>) {
-  await sendInquiryNotification({
-    kind: "contact",
+  return sendFormSubmission({
+    kind: "Contact inquiry",
+    sourcePage: "https://www.measurejoy.org/contact",
     token: data.requestToken,
     replyTo: data.email,
     subject: `Measure Joy contact: ${data.topic}`,
@@ -368,8 +369,9 @@ export async function sendContact(data: z.infer<typeof contactSchema>) {
 }
 
 export async function sendRepair(data: z.infer<typeof repairSchema>) {
-  await sendInquiryNotification({
-    kind: "repair",
+  return sendFormSubmission({
+    kind: "Service inquiry",
+    sourcePage: "https://www.measurejoy.org/repair",
     token: data.requestToken,
     replyTo: data.email,
     subject: `Measure Joy ${data.service}: ${data.brand} ${data.model}`,
@@ -386,6 +388,80 @@ export async function sendRepair(data: z.infer<typeof repairSchema>) {
       ["Permission to contact", "Yes"],
     ],
   });
+}
+
+const FORM_CANONICAL_URL = "https://www.measurejoy.org/";
+// FormSubmit returns this explicit setup state as success:"false", even after
+// requesting activation. Other negative responses must remain failures.
+const FORM_ACTIVATION_MESSAGE =
+  "This form needs Activation. We've sent you an email containing an 'Activate Form' link. Just click it and your form will be actived!";
+
+async function sendFormSubmission({
+  kind,
+  sourcePage,
+  token,
+  replyTo,
+  subject,
+  fields,
+}: Omit<Notification, "kind"> & { kind: string; sourcePage: string }): Promise<{
+  status: "accepted" | "activation_pending";
+}> {
+  try {
+    const response = await fetch(
+      `https://formsubmit.co/ajax/${INQUIRY_RECIPIENT}`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Accept: "application/json",
+          Referer: FORM_CANONICAL_URL,
+        },
+        // These are plain form fields, never a caller-supplied HTML template.
+        // Both forms share one activation URL; their page is only message content.
+        body: JSON.stringify({
+          ...Object.fromEntries(fields),
+          "Request kind": kind,
+          "Source page": sourcePage,
+          // FormSubmit documents no idempotency guarantee. This is a reference
+          // for recognizing retries, not a promise of duplicate suppression.
+          "Request reference": token,
+          email: replyTo,
+          _replyto: replyTo,
+          _subject: subject,
+          _template: "table",
+          _url: FORM_CANONICAL_URL,
+          // Public routes already enforce origin, validation, honeypot and limits.
+          _captcha: "false",
+        }),
+        signal: AbortSignal.timeout(12_000),
+        redirect: "error",
+        cache: "no-store",
+      },
+    );
+    if (!response.ok) throw new Error("Submission rejected");
+    // Its AJAX endpoint can return valid JSON with a text/html content type.
+    const result: unknown = await response.json();
+    if (!result || typeof result !== "object" || Array.isArray(result))
+      throw new Error("Invalid submission response");
+    const { success, message } = result as Record<string, unknown>;
+    if (typeof message !== "string" || !message.trim())
+      throw new Error("Invalid submission response");
+    if (
+      (success === "false" || success === false) &&
+      message.trim() === FORM_ACTIVATION_MESSAGE
+    ) {
+      return { status: "activation_pending" };
+    }
+    if (success !== "true" && success !== true)
+      throw new Error("Submission rejected");
+    return { status: "accepted" };
+  } catch {
+    // Do not expose provider responses, connection errors or customer content.
+    throw new FormError(
+      502,
+      "We couldn't confirm your request was accepted. Please try again later.",
+    );
+  }
 }
 
 export function subscriptionToken(data: z.infer<typeof subscriptionSchema>) {

@@ -7,7 +7,7 @@ import { POST as subscribe } from '../app/api/subscribe/route.ts'
 
 const originalFetch = globalThis.fetch
 const savedEnv = { ...process.env }
-let sent, writes, deliveryError, databaseError
+let sent, writes, deliveryError, databaseError, formSubmitResult
 let identity = 0
 beforeEach(() => {
   process.env.RESEND_API_KEY = 're_mock_only'
@@ -16,8 +16,17 @@ beforeEach(() => {
   process.env.VERCEL = '1'
   delete process.env.RESEND_FROM_EMAIL
   sent = []; writes = []; deliveryError = null; databaseError = false
+  formSubmitResult = { success: "true", message: "The form was submitted successfully." }
   globalThis.fetch = async (input, init) => {
     const url = String(input instanceof Request ? input.url : input)
+    if (url === 'https://formsubmit.co/ajax/christianvelasquez363@gmail.com') {
+      sent.push({ url, body: JSON.parse(init.body), headers: new Headers(init.headers), init })
+      if (deliveryError === 'network') throw new TypeError('private connection details')
+      if (deliveryError === 'malformed') return Response.json({})
+      if (deliveryError === 'invalid-json') return new Response('private provider HTML', { status: 200 })
+      if (typeof deliveryError === 'number') return Response.json({ success: false, message: 'private provider details' }, { status: deliveryError })
+      return new Response(JSON.stringify(formSubmitResult), { headers: { 'content-type': 'text/html; charset=UTF-8' } })
+    }
     if (url === 'https://api.resend.com/emails') {
       const request = { body: JSON.parse(init.body), headers: new Headers(init.headers) }
       sent.push(request)
@@ -45,24 +54,65 @@ function request(path, body, headers = {}) {
   return new Request(`https://measurejoy.org/api/${path}`, { method: 'POST', headers: { 'content-type': 'application/json', origin: 'https://measurejoy.org', 'x-vercel-forwarded-for': `203.0.${Math.floor(identity / 200)}.${identity % 200 + 1}`, ...headers }, body: typeof body === 'string' ? body : JSON.stringify(body) })
 }
 
-test('contact success means the provider accepted a message to Christian with visitor reply-to', async () => {
+test('contact acceptance sends fixed FormSubmit settings and visitor content without claiming delivery', async () => {
   const payload = contactData({ name: ' <img src=x onerror=alert(1)> ', message: 'Hello <script>alert(1)</script> & goodbye.' })
   const response = await contact(request('contact', payload))
   assert.equal(response.status, 200)
-  assert.equal((await response.json()).success, true)
+  const result = await response.json()
+  assert.equal(result.success, true)
+  assert.equal(result.status, 'accepted')
+  assert.doesNotMatch(result.message, /sent|delivered/i)
   assert.equal(sent.length, 1)
-  assert.deepEqual(sent[0].body.to, ['christianvelasquez363@gmail.com'])
-  assert.equal(sent[0].body.reply_to, payload.email)
-  assert.match(sent[0].body.html, /&lt;script&gt;/)
-  assert.doesNotMatch(sent[0].body.html, /<script>|<img/)
-  assert.match(sent[0].body.text, /Hello <script>/)
+  const submission = sent[0]
+  assert.equal(submission.url, 'https://formsubmit.co/ajax/christianvelasquez363@gmail.com')
+  assert.equal(submission.body.email, payload.email)
+  assert.equal(submission.body._replyto, payload.email)
+  assert.equal(submission.body.Name, payload.name.trim())
+  assert.equal(submission.body.Message, payload.message)
+  assert.equal(submission.body['Request kind'], 'Contact inquiry')
+  assert.equal(submission.body['Source page'], 'https://www.measurejoy.org/contact')
+  assert.equal(submission.body._url, 'https://www.measurejoy.org/')
+  assert.equal(submission.headers.get('referer'), 'https://www.measurejoy.org/')
+  assert.equal(submission.headers.get('content-type'), 'application/json')
+  assert.equal(submission.headers.get('accept'), 'application/json')
+  assert.equal(submission.body._template, 'table')
+  assert.equal(submission.body._captcha, 'false')
+  assert.equal(submission.init.redirect, 'error')
+  assert.ok(submission.init.signal instanceof AbortSignal)
+  assert.equal(writes.length, 0)
 })
 
-test('a browser cannot override the fixed recipient or sender', async () => {
-  const response = await contact(request('contact', contactData({ to: 'attacker@example.com', from: 'attacker@example.com' })))
+test('a browser cannot override delivery settings or forward a sender or recipient', async () => {
+  const response = await contact(request('contact', contactData({ to: 'attacker@example.com', from: 'attacker@example.com', _url: 'https://evil.example', _replyto: 'attacker@example.com', _template: 'box', _captcha: 'true', _next: 'https://evil.example', 'Source page': 'https://evil.example' })))
   assert.equal(response.status, 200)
-  assert.deepEqual(sent[0].body.to, ['christianvelasquez363@gmail.com'])
-  assert.equal(sent[0].body.from, 'Measure Joy <orders@measurejoy.org>')
+  const { body, headers, url } = sent[0]
+  assert.equal(url, 'https://formsubmit.co/ajax/christianvelasquez363@gmail.com')
+  assert.equal(body.to, undefined)
+  assert.equal(body.from, undefined)
+  assert.equal(body._next, undefined)
+  assert.equal(body._replyto, body.email)
+  assert.equal(body._url, 'https://www.measurejoy.org/')
+  assert.equal(headers.get('referer'), body._url)
+  assert.equal(body._template, 'table')
+  assert.equal(body._captcha, 'false')
+  assert.equal(body['Source page'], 'https://www.measurejoy.org/contact')
+})
+
+test('a positive boolean provider response is accepted', async () => {
+  formSubmitResult = { success: true, message: 'The form was submitted successfully.' }
+  const response = await contact(request('contact', contactData()))
+  assert.equal(response.status, 200)
+  assert.equal((await response.json()).status, 'accepted')
+})
+
+test('activation pending is represented separately and never claims sent or delivered', async () => {
+  formSubmitResult = { success: 'false', message: "This form needs Activation. We've sent you an email containing an 'Activate Form' link. Just click it and your form will be actived!" }
+  const response = await contact(request('contact', contactData()))
+  assert.equal(response.status, 202)
+  const body = await response.json()
+  assert.equal(body.success, true)
+  assert.equal(body.status, 'activation_pending')
+  assert.doesNotMatch(body.message, /sent|delivered|check your email/i)
 })
 
 test('contact input validation rejects invalid email, missing fields, header injection and missing retry token', async () => {
@@ -97,15 +147,25 @@ test('a populated honeypot never sends or reports a delivered message', async ()
   assert.equal(sent.length, 0)
 })
 
-test('missing credentials cause a clear unavailable response without outbound delivery', async () => {
+test('contact no longer requires Resend credentials or calls Resend', async () => {
   delete process.env.RESEND_API_KEY
   const response = await contact(request('contact', contactData()))
+  assert.equal(response.status, 200)
+  assert.equal((await response.json()).success, true)
+  assert.equal(sent.length, 1)
+  assert.ok(sent[0].url.startsWith('https://formsubmit.co/ajax/'))
+})
+
+test('newsletter still requires Resend credentials before storing or sending', async () => {
+  delete process.env.RESEND_API_KEY
+  const response = await subscribe(request('subscribe', { email: `news${++identity}@example.com`, requestToken: randomUUID() }))
   assert.equal(response.status, 503)
   assert.equal((await response.json()).success, false)
   assert.equal(sent.length, 0)
+  assert.equal(writes.length, 0)
 })
 
-for (const failure of [422, 429, 'network', 'malformed']) {
+for (const failure of [409, 422, 429, 500, 'network', 'malformed', 'invalid-json']) {
   test(`provider failure ${failure} cannot produce contact success or disclose provider details`, async () => {
     deliveryError = failure
     const response = await contact(request('contact', contactData()))
@@ -116,21 +176,34 @@ for (const failure of [422, 429, 'network', 'malformed']) {
   })
 }
 
-test('retries carry a stable provider idempotency key and identical content', async () => {
+for (const result of [
+  { success: false, message: 'private provider details' },
+  { success: 'false', message: 'private provider details' },
+  { success: 'false', message: 'Please activate your private provider account.' },
+  { success: true },
+  { success: 'true', message: '' },
+  { success: 1, message: 'private provider details' },
+  null,
+  ['true', 'private provider details'],
+]) {
+  test(`invalid provider result ${JSON.stringify(result)} cannot produce success`, async () => {
+    formSubmitResult = result
+    const response = await contact(request('contact', contactData()))
+    assert.equal(response.status, 502)
+    const body = await response.json()
+    assert.equal(body.success, false)
+    assert.doesNotMatch(body.error, /private provider details/)
+  })
+}
+
+test('request references remain stable without claiming unsupported provider idempotency', async () => {
   const payload = contactData()
   await contact(request('contact', payload))
   await contact(request('contact', payload))
   assert.equal(sent.length, 2)
-  assert.ok(sent[0].headers.get('idempotency-key'))
-  assert.equal(sent[0].headers.get('idempotency-key'), sent[1].headers.get('idempotency-key'))
+  assert.equal(sent[0].body['Request reference'], payload.requestToken)
+  assert.equal(sent[0].headers.get('idempotency-key'), null)
   assert.deepEqual(sent[0].body, sent[1].body)
-})
-
-test('reusing a retry token for a different payload returns a conflict when the provider rejects it', async () => {
-  deliveryError = 409
-  const response = await contact(request('contact', contactData()))
-  assert.equal(response.status, 409)
-  assert.equal((await response.json()).success, false)
 })
 
 test('repeated requests from one trusted IP are rate limited across form types', async () => {
@@ -141,13 +214,28 @@ test('repeated requests from one trusted IP are rate limited across form types',
   assert.ok(sent.length <= 5)
 })
 
-test('repair delivery includes every service detail and contact preference', async () => {
-  const response = await repair(request('repairs', repairData({ phone: '+1 (555) 123-4567', preferredContact: 'phone' })))
+test('repair delivery includes every service detail and shares the canonical activation URL', async () => {
+  const payload = repairData({ phone: '+1 (555) 123-4567', preferredContact: 'phone' })
+  const response = await repair(request('repairs', payload))
   assert.equal(response.status, 200)
-  assert.equal((await response.json()).success, true)
-  const email = sent[0].body
-  for (const detail of ['PowerShot SD1000', 'Lens stuck/jammed', 'will not retract', '+1 (555) 123-4567', 'phone']) assert.ok(email.text.includes(detail))
-  assert.deepEqual(email.to, ['christianvelasquez363@gmail.com'])
+  const result = await response.json()
+  assert.equal(result.success, true)
+  assert.equal(result.status, 'accepted')
+  assert.doesNotMatch(result.message, /sent|delivered/i)
+  const { body, headers, url } = sent[0]
+  assert.equal(url, 'https://formsubmit.co/ajax/christianvelasquez363@gmail.com')
+  assert.equal(body['Camera model'], 'PowerShot SD1000')
+  assert.equal(body.Issues, 'Lens stuck/jammed')
+  assert.equal(body.Description, payload.description)
+  assert.equal(body.Phone, payload.phone)
+  assert.equal(body['Preferred contact'], 'phone')
+  assert.equal(body['Permission to contact'], 'Yes')
+  assert.equal(body['Request kind'], 'Service inquiry')
+  assert.equal(body['Source page'], 'https://www.measurejoy.org/repair')
+  assert.equal(body.email, payload.email)
+  assert.equal(body._replyto, payload.email)
+  assert.equal(body._url, 'https://www.measurejoy.org/')
+  assert.equal(headers.get('referer'), body._url)
 })
 
 test('repair requires consent, a valid service and a phone when phone contact is selected', async () => {

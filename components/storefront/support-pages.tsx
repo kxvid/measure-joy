@@ -312,6 +312,7 @@ export function ContactPage() {
   const [copied, setCopied] = useState(false);
   const [sending, setSending] = useState(false);
   const [sent, setSent] = useState(false);
+  const [activationPending, setActivationPending] = useState(false);
   const [error, setError] = useState("");
   const token = useRef<string | null>(null);
   const feedback = useRef<HTMLDivElement>(null);
@@ -353,14 +354,15 @@ export function ContactPage() {
       if (!response.ok || body.success !== true)
         throw new Error(
           body.error ||
-            "We couldn’t confirm delivery. Your message is still here; please retry.",
+            "We couldn’t confirm your submission. Your message is still here; please retry.",
         );
+      setActivationPending(body.status === "activation_pending");
       setSent(true);
     } catch (problem) {
       setError(
         problem instanceof Error && problem.name !== "AbortError"
           ? problem.message
-          : "The connection took too long. Your message is still here; retry to confirm delivery.",
+          : "The connection took too long. Your message is still here; please retry or email Christian directly.",
       );
     } finally {
       clearTimeout(timeout);
@@ -427,20 +429,34 @@ export function ContactPage() {
               role="status"
             >
               <Check size={34} />
-              <p className="eyebrow">STRAIGHT TO THE WORKSHOP</p>
+              <p className="eyebrow">THANKS FOR REACHING OUT</p>
               <h2>
                 Your note
                 <br />
-                is <em>on its way.</em>
+                is <em>{activationPending ? "queued." : "on its way."}</em>
               </h2>
               <p>
-                Your message has been sent to Christian. Keep an eye on the
-                email address you shared for a reply.
+                {activationPending ? (
+                  <>
+                    Your note is queued while the workshop finishes email setup.
+                    For time-sensitive help, {" "}
+                    <a href={`mailto:${email}`} className="underline">
+                      email Christian directly
+                    </a>
+                    .
+                  </>
+                ) : (
+                  <>
+                    Your note has been submitted to the workshop. Keep an eye on
+                    the email address you shared for a reply.
+                  </>
+                )}
               </p>
               <button
                 className="button button-dark"
                 onClick={() => {
                   setSent(false);
+                  setActivationPending(false);
                   token.current = null;
                 }}
               >

@@ -11,7 +11,7 @@ export default function PrivacyPage() {
     <PolicyPage
       title="Privacy Policy"
       path="/privacy"
-      updated="December 15, 2025"
+      updated="October 12, 2026"
     >
       <div className="prose prose-neutral dark:prose-invert max-w-none space-y-8">
         <section>
@@ -43,7 +43,14 @@ export default function PrivacyPage() {
           <p className="text-muted-foreground mt-2">
             We do not sell your personal information. We share your information
             only with service providers who assist us in operating our business
-            (payment processors, shipping carriers) and as required by law.
+            (payment processors, shipping carriers, and form delivery services)
+            and as required by law.
+          </p>
+          <p className="text-muted-foreground mt-2">
+            Contact and camera service requests are processed by FormSubmit to
+            email your details to our workshop. This includes the contact
+            information and message or camera details you submit. FormSubmit
+            retains form submissions for 30 days.
           </p>
         </section>
 
@@ -70,7 +77,7 @@ export default function PrivacyPage() {
           <p className="text-muted-foreground mt-2">
             You have the right to access, correct, or delete your personal
             information. To exercise these rights, please contact us at
-            hello@measurejoy.com.
+            christianvelasquez363@gmail.com.
           </p>
         </section>
 
@@ -78,7 +85,7 @@ export default function PrivacyPage() {
           <h2 className="text-xl font-bold">Contact Us</h2>
           <p className="text-muted-foreground mt-2">
             If you have questions about this Privacy Policy, please contact us
-            at hello@measurejoy.com.
+            at christianvelasquez363@gmail.com.
           </p>
         </section>
       </div>

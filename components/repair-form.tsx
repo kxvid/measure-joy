@@ -19,6 +19,7 @@ import {
 
 export function RepairForm() {
   const [saved, setSaved] = useState<RepairInput | null>(null);
+  const [activationPending, setActivationPending] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
   const [fields, setFields] = useState<Record<string, string[] | undefined>>(
@@ -83,22 +84,24 @@ export function RepairForm() {
       });
       const body = (await response.json()) as {
         success?: boolean;
+        status?: "accepted" | "activation_pending";
         error?: string;
         fieldErrors?: Record<string, string[] | undefined>;
       };
       if (!response.ok || body.success !== true) {
         setFields(body.fieldErrors || {});
         throw new Error(
-          body.error || "We couldn’t confirm delivery. Please try again.",
+          body.error || "We couldn’t confirm your submission. Please try again.",
         );
       }
+      setActivationPending(body.status === "activation_pending");
       setSaved(result.data);
       focusFeedback();
     } catch (problem) {
       setError(
         problem instanceof Error && problem.name !== "AbortError"
           ? problem.message
-          : "The connection took too long. Your details are still here. Retry this same request to confirm delivery.",
+          : "The connection took too long. Your details are still here. Please retry or email Christian directly.",
       );
       focusFeedback();
     } finally {
@@ -121,7 +124,7 @@ export function RepairForm() {
         <h2>
           Your request
           <br />
-          is <em>on its way.</em>
+          is <em>{activationPending ? "queued." : "on its way."}</em>
         </h2>
         <dl className="repair-receipt">
           <div>
@@ -146,9 +149,22 @@ export function RepairForm() {
           <div>
             <h3>The next chapter starts with a conversation.</h3>
             <p>
-              Your request has been sent to Christian. The workshop will review
-              your camera details and get in touch. Please wait for agreed
-              instructions before shipping your camera.
+              {activationPending ? (
+                <>
+                  Your request is queued while the workshop finishes email setup.
+                  For time-sensitive help, {" "}
+                  <a href="mailto:christianvelasquez363@gmail.com" className="underline">
+                    email Christian directly
+                  </a>
+                  .{" "}
+                </>
+              ) : (
+                <>
+                  Your request has been submitted to the workshop for review.
+                  Christian will get in touch about your camera. {" "}
+                </>
+              )}
+              Please wait for agreed instructions before shipping your camera.
             </p>
           </div>
         </div>
@@ -160,6 +176,7 @@ export function RepairForm() {
             type="button"
             onClick={() => {
               setSaved(null);
+              setActivationPending(false);
               setError("");
               setFields({});
               setDescription("");
