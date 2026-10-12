@@ -1,115 +1,163 @@
-"use client"
+"use client";
 
-import { createContext, useContext, useState, useEffect, type ReactNode } from "react"
-import type { Product } from "./products"
-
-export interface CartItem {
-  product: Product
-  quantity: number
-}
+import {
+  createContext,
+  useContext,
+  useState,
+  useEffect,
+  useCallback,
+  useMemo,
+  useRef,
+  type ReactNode,
+} from "react";
+import type { Product } from "./products";
+import { parseCatalog } from "./storefront-catalog";
+import {
+  boundedQuantity,
+  parseStoredCart,
+  reconcileCart,
+  type CartItem,
+  type CartRefresh,
+} from "./cart-state";
+export type { CartItem } from "./cart-state";
 
 interface CartContextType {
-  items: CartItem[]
-  addItem: (product: Product, quantity?: number) => void
-  removeItem: (productId: string) => void
-  updateQuantity: (productId: string, quantity: number) => void
-  clearCart: () => void
-  totalItems: number
-  totalPrice: number
+  items: CartItem[];
+  addItem: (product: Product, quantity?: number) => void;
+  removeItem: (productId: string) => void;
+  updateQuantity: (productId: string, quantity: number) => void;
+  clearCart: () => void;
+  refreshCart: () => Promise<CartRefresh>;
+  isHydrated: boolean;
+  isRefreshing: boolean;
+  totalItems: number;
+  totalPrice: number;
 }
-
-const CartContext = createContext<CartContextType | undefined>(undefined)
-
-// Clamp quantity to available stock. If stockCount is undefined, no limit applied.
-function clampToStock(product: Product, quantity: number): number {
-  const max = typeof product.stockCount === "number" ? product.stockCount : Infinity
-  if (quantity > max) return max
-  if (quantity < 1) return 1
-  return quantity
-}
+const CartContext = createContext<CartContextType | undefined>(undefined);
 
 export function CartProvider({ children }: { children: ReactNode }) {
-  const [items, setItems] = useState<CartItem[]>([])
-  const [isHydrated, setIsHydrated] = useState(false)
-
-  // Load cart from localStorage on mount
+  const [items, setItems] = useState<CartItem[]>([]);
+  const [isHydrated, setIsHydrated] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const itemsRef = useRef(items);
+  const refreshRef = useRef<Promise<CartRefresh> | null>(null);
   useEffect(() => {
-    const savedCart = localStorage.getItem("measurejoy-cart")
-    if (savedCart) {
-      try {
-        setItems(JSON.parse(savedCart))
-      } catch (e) {
-        console.error("Failed to parse cart", e)
-      }
-    }
-    setIsHydrated(true)
-  }, [])
+    itemsRef.current = items;
+  }, [items]);
 
-  // Save cart to localStorage whenever it changes
+  useEffect(() => {
+    try {
+      setItems(parseStoredCart(localStorage.getItem("measurejoy-cart")));
+    } catch {
+      /* Private browsing may block storage. */
+    }
+    setIsHydrated(true);
+  }, []);
   useEffect(() => {
     if (isHydrated) {
-      localStorage.setItem("measurejoy-cart", JSON.stringify(items))
-    }
-  }, [items, isHydrated])
-
-  const addItem = (product: Product, quantity: number = 1) => {
-    setItems((prev) => {
-      const existing = prev.find((item) => item.product.id === product.id)
-      if (existing) {
-        const newQty = clampToStock(product, existing.quantity + quantity)
-        return prev.map((item) =>
-          item.product.id === product.id ? { ...item, quantity: newQty } : item
-        )
+      try {
+        localStorage.setItem("measurejoy-cart", JSON.stringify(items));
+      } catch {
+        /* The bag still works for this visit. */
       }
-      const clampedQty = clampToStock(product, quantity)
-      return [...prev, { product, quantity: clampedQty }]
-    })
-  }
-
-  const removeItem = (productId: string) => {
-    setItems((prev) => prev.filter((item) => item.product.id !== productId))
-  }
-
-  const updateQuantity = (productId: string, quantity: number) => {
-    if (quantity < 1) {
-      removeItem(productId)
-      return
     }
-    setItems((prev) =>
-      prev.map((item) =>
-        item.product.id === productId
-          ? { ...item, quantity: clampToStock(item.product, quantity) }
-          : item
-      )
-    )
-  }
+  }, [items, isHydrated]);
 
-  const clearCart = () => setItems([])
-
-  const totalItems = items.reduce((sum, item) => sum + item.quantity, 0)
-  const totalPrice = items.reduce((sum, item) => sum + item.product.priceInCents * item.quantity, 0)
-
-  return (
-    <CartContext.Provider
-      value={{
-        items,
-        addItem,
-        removeItem,
-        updateQuantity,
-        clearCart,
-        totalItems,
-        totalPrice,
-      }}
-    >
-      {children}
-    </CartContext.Provider>
-  )
+  const addItem = useCallback((product: Product, quantity = 1) => {
+    if (!Number.isSafeInteger(quantity) || quantity < 1) return;
+    setItems((previous) => {
+      const existing = previous.find((item) => item.product.id === product.id);
+      const nextQuantity = boundedQuantity(
+        product,
+        (existing?.quantity || 0) + quantity,
+      );
+      if (nextQuantity === 0) return previous;
+      return existing
+        ? previous.map((item) =>
+            item.product.id === product.id
+              ? { product, quantity: nextQuantity }
+              : item,
+          )
+        : [...previous, { product, quantity: nextQuantity }];
+    });
+  }, []);
+  const removeItem = useCallback(
+    (productId: string) =>
+      setItems((previous) =>
+        previous.filter((item) => item.product.id !== productId),
+      ),
+    [],
+  );
+  const updateQuantity = useCallback((productId: string, quantity: number) => {
+    if (!Number.isSafeInteger(quantity)) return;
+    setItems((previous) =>
+      quantity < 1
+        ? previous.filter((item) => item.product.id !== productId)
+        : previous.map((item) => {
+            if (item.product.id !== productId) return item;
+            const next = boundedQuantity(item.product, quantity);
+            return next > 0 ? { ...item, quantity: next } : item;
+          }),
+    );
+  }, []);
+  const clearCart = useCallback(
+    () => setItems((previous) => (previous.length ? [] : previous)),
+    [],
+  );
+  const refreshCart = useCallback(() => {
+    if (refreshRef.current) return refreshRef.current;
+    setIsRefreshing(true);
+    const request = (async () => {
+      const response = await fetch("/api/products?fresh=true", {
+        cache: "no-store",
+      });
+      if (!response.ok)
+        throw new Error(
+          "We couldn’t check the latest prices and availability. Please try again.",
+        );
+      const catalog = parseCatalog(await response.json());
+      const refreshed = reconcileCart(itemsRef.current, catalog);
+      setItems(refreshed.items);
+      return refreshed;
+    })().finally(() => {
+      refreshRef.current = null;
+      setIsRefreshing(false);
+    });
+    refreshRef.current = request;
+    return request;
+  }, []);
+  const value = useMemo(
+    () => ({
+      items,
+      addItem,
+      removeItem,
+      updateQuantity,
+      clearCart,
+      refreshCart,
+      isHydrated,
+      isRefreshing,
+      totalItems: items.reduce((sum, item) => sum + item.quantity, 0),
+      totalPrice: items.reduce(
+        (sum, item) => sum + item.product.priceInCents * item.quantity,
+        0,
+      ),
+    }),
+    [
+      items,
+      addItem,
+      removeItem,
+      updateQuantity,
+      clearCart,
+      refreshCart,
+      isHydrated,
+      isRefreshing,
+    ],
+  );
+  return <CartContext.Provider value={value}>{children}</CartContext.Provider>;
 }
 
 export function useCart() {
-  const context = useContext(CartContext)
-  if (!context) {
-    throw new Error("useCart must be used within a CartProvider")
-  }
-  return context
+  const context = useContext(CartContext);
+  if (!context) throw new Error("useCart must be used within a CartProvider");
+  return context;
 }

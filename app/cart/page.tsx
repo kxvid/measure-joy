@@ -1,139 +1,279 @@
-"use client"
+"use client";
 
-import { productPath } from "@/lib/seo"
-import Link from "next/link"
-import Image from "next/image"
-import { Header } from "@/components/header"
-import { Footer } from "@/components/footer"
-import { Button } from "@/components/ui/button"
-import { useCart } from "@/lib/cart-context"
-import { formatPrice } from "@/lib/products"
-import { Minus, Plus, Trash2, ShoppingBag, ArrowRight, Lock } from "lucide-react"
+import { useCallback, useEffect, useRef, useState } from "react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import {
+  ArrowLeft,
+  ArrowUpRight,
+  Camera,
+  Loader2,
+  LockKeyhole,
+  Minus,
+  Plus,
+  Trash2,
+} from "lucide-react";
+import { CommerceShell } from "@/components/storefront/commerce-shell";
+import { useCart } from "@/lib/cart-context";
+import { cartIssues } from "@/lib/cart-state";
+import {
+  formatPrice,
+  productPath,
+  safeImageUrl,
+} from "@/lib/storefront-catalog";
 
 export default function CartPage() {
-  const { items, removeItem, updateQuantity, totalPrice } = useCart()
-
-  const shippingCost = totalPrice >= 7500 ? 0 : 999
-  const finalTotal = totalPrice + shippingCost
-
-  if (items.length === 0) {
-    return (
-      <main className="min-h-screen bg-background">
-        <Header />
-        <div className="mx-auto max-w-[1400px] px-5 lg:px-8 py-24 text-center">
-          <div className="mx-auto flex h-16 w-16 items-center justify-center bg-secondary">
-            <ShoppingBag className="h-7 w-7 text-muted-foreground" strokeWidth={1.5} />
-          </div>
-          <h1 className="mt-6 font-display text-2xl font-extrabold uppercase tracking-tight">Your cart is empty</h1>
-          <p className="mt-2 text-sm text-muted-foreground">Looks like you haven't added any cameras yet.</p>
-          <Button asChild className="mt-6 rounded-none font-display text-xs font-semibold uppercase tracking-[0.12em] cursor-pointer">
-            <Link href="/shop">Browse Cameras</Link>
-          </Button>
-        </div>
-        <Footer />
-      </main>
-    )
-  }
+  const {
+    items,
+    totalItems,
+    totalPrice,
+    updateQuantity,
+    removeItem,
+    isHydrated,
+    isRefreshing,
+    refreshCart,
+  } = useCart();
+  const [error, setError] = useState("");
+  const [pricesChanged, setPricesChanged] = useState(false);
+  const [checked, setChecked] = useState(false);
+  const requested = useRef(false);
+  const router = useRouter();
+  const verifyBag = useCallback(async () => {
+    setError("");
+    try {
+      const result = await refreshCart();
+      setPricesChanged(result.changedPrices);
+      setChecked(true);
+    } catch (cause) {
+      setError(
+        cause instanceof Error
+          ? cause.message
+          : "We couldn’t refresh your bag. Please try again.",
+      );
+    }
+  }, [refreshCart]);
+  useEffect(() => {
+    if (isHydrated && items.length > 0 && !requested.current) {
+      requested.current = true;
+      void verifyBag();
+    }
+  }, [isHydrated, items.length, verifyBag]);
+  const issues = cartIssues(items);
 
   return (
-    <main className="min-h-screen bg-background">
-      <Header />
-
-      <div className="mx-auto max-w-[1400px] px-5 lg:px-8 py-8 lg:py-12">
-        <h1 className="mb-8 font-display text-3xl lg:text-5xl font-extrabold uppercase tracking-tight">Shopping Cart</h1>
-
-        <div className="grid gap-10 lg:grid-cols-3 lg:gap-12">
-          {/* Cart items */}
-          <div className="lg:col-span-2">
-            <div className="border-t border-border">
-              {items.map((item) => {
-                const maxStock = typeof item.product.stockCount === "number" ? item.product.stockCount : undefined
-                const atMaxStock = maxStock !== undefined && item.quantity >= maxStock
-                return (
-                  <div key={item.product.id} className="flex gap-5 border-b border-border py-6">
-                    <Link href={productPath(item.product)} className="relative shrink-0 w-24 h-24 overflow-hidden bg-secondary">
-                      <Image src={item.product.images[0] || "/placeholder.svg"} alt={item.product.name} fill sizes="96px" className="object-contain p-2" />
-                    </Link>
-
-                    <div className="flex-1 min-w-0">
-                      <Link href={productPath(item.product)}>
-                        <h3 className="font-display text-sm font-medium uppercase tracking-[0.04em] leading-snug hover:opacity-70 transition-opacity">
-                          {item.product.name}
-                        </h3>
-                      </Link>
-                      <p className="mt-1 font-display text-xs uppercase tracking-[0.06em] text-muted-foreground">
-                        {[item.product.brand, item.product.year].filter(Boolean).join(" · ")}
-                      </p>
-                      <p className="mt-2 font-display text-sm font-semibold">{formatPrice(item.product.priceInCents)}</p>
-                      {atMaxStock && <p className="mt-1 font-display text-[10px] uppercase tracking-[0.08em] text-brand">Only {maxStock} in stock</p>}
-
-                      <div className="mt-3 flex items-center gap-4">
-                        <div className="flex items-center border border-border">
-                          <button className="flex h-8 w-8 items-center justify-center hover:bg-secondary cursor-pointer" onClick={() => updateQuantity(item.product.id, item.quantity - 1)} aria-label="Decrease quantity">
-                            <Minus className="h-3 w-3" />
-                          </button>
-                          <span className="w-9 text-center font-display text-xs tabular-nums">{item.quantity}</span>
-                          <button className="flex h-8 w-8 items-center justify-center hover:bg-secondary disabled:opacity-40 cursor-pointer" onClick={() => updateQuantity(item.product.id, item.quantity + 1)} disabled={atMaxStock} aria-label="Increase quantity">
-                            <Plus className="h-3 w-3" />
-                          </button>
-                        </div>
-                        <button className="flex items-center gap-1.5 font-display text-[11px] uppercase tracking-[0.08em] text-muted-foreground hover:text-destructive transition-colors cursor-pointer" onClick={() => removeItem(item.product.id)}>
-                          <Trash2 className="h-3.5 w-3.5" strokeWidth={1.5} /> Remove
-                        </button>
-                      </div>
-                    </div>
-
-                    <div className="text-right">
-                      <p className="font-display text-sm font-semibold">{formatPrice(item.product.priceInCents * item.quantity)}</p>
-                    </div>
-                  </div>
-                )
-              })}
-            </div>
+    <CommerceShell>
+      <div className="commerce-shell">
+        <Link className="commerce-back" href="/shop">
+          <ArrowLeft size={14} /> Back to the good finds
+        </Link>
+        {!isHydrated ? (
+          <div className="commerce-loading" role="status">
+            <Loader2 className="commerce-spinner" size={24} /> Opening your bag…
           </div>
-
-          {/* Order summary */}
-          <div className="lg:col-span-1">
-            <div className="border border-border p-6 lg:sticky lg:top-24">
-              <h2 className="mb-6 font-display text-sm font-semibold uppercase tracking-[0.14em]">Order Summary</h2>
-
-              <div className="space-y-3 font-display text-[13px] uppercase tracking-[0.04em]">
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Subtotal</span>
-                  <span className="font-medium">{formatPrice(totalPrice)}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Shipping</span>
-                  <span className="font-medium">{shippingCost === 0 ? "Free" : formatPrice(shippingCost)}</span>
-                </div>
-                {totalPrice < 7500 && (
-                  <p className="border border-border p-3 text-[11px] normal-case tracking-normal text-muted-foreground">
-                    Add <span className="font-semibold text-foreground">{formatPrice(7500 - totalPrice)}</span> more for free shipping
-                  </p>
-                )}
+        ) : items.length === 0 ? (
+          <div className="commerce-empty">
+            <div className="commerce-mark">
+              <img src="/brand/logos/measure-joy-icon-ink.svg" alt="" />
+            </div>
+            <p className="eyebrow">A LITTLE ROOM FOR JOY</p>
+            <h1>
+              Your next story
+              <br />
+              starts <em>here.</em>
+            </h1>
+            <p>
+              Your bag is waiting for a camera with a past and a little room for
+              your future.
+            </p>
+            <Link className="commerce-button" href="/shop">
+              Find your camera <ArrowUpRight size={18} />
+            </Link>
+          </div>
+        ) : (
+          <>
+            <div className="commerce-heading">
+              <div>
+                <p className="eyebrow">
+                  01 / YOUR FINDS · {totalItems}{" "}
+                  {totalItems === 1 ? "ITEM" : "ITEMS"}
+                </p>
+                <h1>
+                  A bag full
+                  <br />
+                  of <em>possibility.</em>
+                </h1>
               </div>
-
-              <div className="mt-6 flex items-baseline justify-between border-t border-border pt-5">
-                <span className="font-display text-sm font-semibold uppercase tracking-[0.1em]">Total</span>
-                <span className="font-display text-xl font-extrabold">{formatPrice(finalTotal)}</span>
-              </div>
-
-              <Button asChild className="mt-6 w-full h-12 gap-2 rounded-none bg-foreground hover:bg-foreground/90 font-display text-[13px] font-semibold uppercase tracking-[0.12em] cursor-pointer">
-                <Link href="/checkout">
-                  Checkout
-                  <ArrowRight className="h-4 w-4" strokeWidth={1.5} />
-                </Link>
-              </Button>
-
-              <p className="mt-4 flex items-center justify-center gap-2 font-display text-[10px] uppercase tracking-[0.1em] text-muted-foreground">
-                <Lock className="h-3 w-3" strokeWidth={1.5} /> Secure checkout via Stripe
+              <p>
+                A few good finds.
+                <br />A whole lot of memories ahead.
               </p>
             </div>
-          </div>
-        </div>
+            {error && (
+              <div className="commerce-alert" role="alert">
+                <p>{error}</p>
+                <button onClick={verifyBag} disabled={isRefreshing}>
+                  Try checking again
+                </button>
+              </div>
+            )}
+            {pricesChanged && (
+              <p className="commerce-notice" role="status">
+                A price has changed since your last visit. Your bag now shows
+                the latest catalog prices.
+              </p>
+            )}
+            <div className="commerce-grid">
+              <div>
+                <div aria-label="Items in your bag">
+                  {items.map(({ product, quantity }) => {
+                    const unavailable =
+                      !product.inStock || product.stockCount === 0;
+                    const overStock =
+                      product.stockCount !== undefined &&
+                      quantity > product.stockCount;
+                    const image = safeImageUrl(product.images[0]);
+                    return (
+                      <article className="bag-row" key={product.id}>
+                        <Link
+                          href={productPath(product)}
+                          className="bag-image"
+                          aria-label={`View ${product.name}`}
+                        >
+                          {image ? (
+                            <img src={image} alt={product.name} />
+                          ) : (
+                            <Camera size={35} strokeWidth={1} />
+                          )}
+                        </Link>
+                        <div>
+                          <p className="bag-brand">
+                            {product.brand || "Measure Joy collection"}
+                          </p>
+                          <Link
+                            className="bag-name"
+                            href={productPath(product)}
+                          >
+                            {product.name}
+                          </Link>
+                          <p className="bag-condition">
+                            {product.condition}
+                            {product.year ? ` · ${product.year}` : ""}
+                          </p>
+                          <p className="bag-unit">
+                            {formatPrice(product.priceInCents)} each
+                          </p>
+                          <div className="bag-controls">
+                            <div className="bag-quantity">
+                              <button
+                                aria-label={`Decrease quantity of ${product.name}`}
+                                onClick={() =>
+                                  updateQuantity(product.id, quantity - 1)
+                                }
+                                disabled={isRefreshing}
+                              >
+                                <Minus size={13} />
+                              </button>
+                              <span aria-live="polite">{quantity}</span>
+                              <button
+                                aria-label={`Increase quantity of ${product.name}`}
+                                onClick={() =>
+                                  updateQuantity(product.id, quantity + 1)
+                                }
+                                disabled={
+                                  isRefreshing ||
+                                  unavailable ||
+                                  (product.stockCount !== undefined &&
+                                    quantity >= product.stockCount)
+                                }
+                              >
+                                <Plus size={13} />
+                              </button>
+                            </div>
+                            <button
+                              className="bag-remove"
+                              onClick={() => removeItem(product.id)}
+                              disabled={isRefreshing}
+                            >
+                              <Trash2 size={12} /> Remove
+                            </button>
+                          </div>
+                          {unavailable ? (
+                            <p className="bag-unavailable">
+                              This find is no longer available. Remove it to
+                              continue.
+                            </p>
+                          ) : overStock ? (
+                            <p className="bag-unavailable">
+                              Only {product.stockCount} available. Adjust your
+                              quantity to continue.
+                            </p>
+                          ) : product.stockCount === 1 ? (
+                            <p className="bag-condition">
+                              One of a kind. Not reserved until purchased.
+                            </p>
+                          ) : null}
+                        </div>
+                        <span className="bag-row-total">
+                          {formatPrice(product.priceInCents * quantity)}
+                        </span>
+                      </article>
+                    );
+                  })}
+                </div>
+                <p className="bag-help">
+                  <Camera size={22} strokeWidth={1.2} />
+                  <span>
+                    A little advice before your next adventure?
+                    <br />
+                    <Link href="/contact">Ask the workshop.</Link>
+                  </span>
+                </p>
+              </div>
+              <aside className="order-summary" aria-label="Order summary">
+                <p className="eyebrow">GOOD THINGS, ALL TOGETHER</p>
+                <h2>Your little collection.</h2>
+                <div className="summary-total">
+                  <span>Item subtotal</span>
+                  <strong>{formatPrice(totalPrice)}</strong>
+                </div>
+                <p className="summary-note">
+                  Shipping, taxes, and any discounts are confirmed in secure
+                  checkout before you pay.
+                </p>
+                {isRefreshing ? (
+                  <p className="checkout-progress" role="status">
+                    <Loader2 size={15} className="commerce-spinner" /> Checking
+                    the latest prices & availability…
+                  </p>
+                ) : checked && !error ? (
+                  <p className="summary-note">
+                    Prices refreshed for this visit. Availability is checked
+                    again at checkout.
+                  </p>
+                ) : null}
+                {issues.length > 0 && (
+                  <p className="bag-unavailable" role="alert">
+                    Update the unavailable items or quantities in your bag to
+                    continue.
+                  </p>
+                )}
+                <button
+                  className="commerce-button"
+                  disabled={
+                    !checked || isRefreshing || !!error || issues.length > 0
+                  }
+                  onClick={() => router.push("/checkout")}
+                >
+                  Continue to checkout <ArrowUpRight size={18} />
+                </button>
+                <p className="commerce-secure">
+                  <LockKeyhole size={12} /> Secure payment with Stripe
+                </p>
+              </aside>
+            </div>
+          </>
+        )}
       </div>
-
-      <Footer />
-    </main>
-  )
+    </CommerceShell>
+  );
 }

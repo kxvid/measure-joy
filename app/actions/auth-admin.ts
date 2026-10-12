@@ -1,6 +1,6 @@
-"use server"
+"use server";
 
-import { currentUser } from "@clerk/nextjs/server"
+import { currentUser } from "@clerk/nextjs/server";
 
 /**
  * Admin auth via Clerk + email allowlist.
@@ -15,47 +15,54 @@ import { currentUser } from "@clerk/nextjs/server"
  */
 
 function getAdminEmails(): Set<string> {
-    const raw = process.env.ADMIN_EMAILS || ""
-    return new Set(
-        raw
-            .split(",")
-            .map((e) => e.trim().toLowerCase())
-            .filter(Boolean)
-    )
+  const raw = process.env.ADMIN_EMAILS || "";
+  return new Set(
+    raw
+      .split(",")
+      .map((e) => e.trim().toLowerCase())
+      .filter(Boolean),
+  );
 }
 
 // Get the signed-in user's admin status + their primary email (for UI display).
 // Used by the admin layout to decide what to show.
 export async function getAdminStatus(): Promise<{
-    isAdmin: boolean
-    isSignedIn: boolean
-    email: string | null
+  isAdmin: boolean;
+  isSignedIn: boolean;
+  email: string | null;
 }> {
-    try {
-        const user = await currentUser()
-        if (!user) return { isAdmin: false, isSignedIn: false, email: null }
+  try {
+    const user = await currentUser();
+    if (!user) return { isAdmin: false, isSignedIn: false, email: null };
 
-        const primaryEmail = user.emailAddresses.find(
-            (e) => e.id === user.primaryEmailAddressId
-        )?.emailAddress
-        const email = (primaryEmail || user.emailAddresses[0]?.emailAddress || "").toLowerCase()
-
-        const allowlist = getAdminEmails()
-        if (allowlist.size === 0) {
-            console.error("[Admin Auth] ADMIN_EMAILS env var is unset. Admin access disabled.")
-            return { isAdmin: false, isSignedIn: true, email }
-        }
-
-        return { isAdmin: allowlist.has(email), isSignedIn: true, email }
-    } catch (error) {
-        console.error("[Admin Auth] Error checking admin status:", error)
-        return { isAdmin: false, isSignedIn: false, email: null }
+    const primaryAddress =
+      user.emailAddresses.find(
+        (entry) => entry.id === user.primaryEmailAddressId,
+      ) || user.emailAddresses[0];
+    const email = (primaryAddress?.emailAddress || "").trim().toLowerCase();
+    // User-added, unverified email text must never grant owner privileges.
+    if (primaryAddress?.verification?.status !== "verified") {
+      return { isAdmin: false, isSignedIn: true, email };
     }
+
+    const allowlist = getAdminEmails();
+    if (allowlist.size === 0) {
+      console.error(
+        "[Admin Auth] ADMIN_EMAILS env var is unset. Admin access disabled.",
+      );
+      return { isAdmin: false, isSignedIn: true, email };
+    }
+
+    return { isAdmin: allowlist.has(email), isSignedIn: true, email };
+  } catch (error) {
+    console.error("[Admin Auth] Error checking admin status:", error);
+    return { isAdmin: false, isSignedIn: false, email: null };
+  }
 }
 
 // Server-action-safe boolean check. All existing admin actions call this —
 // same signature as before, so no callers need to change.
 export async function checkAdminAccess(): Promise<boolean> {
-    const { isAdmin } = await getAdminStatus()
-    return isAdmin
+  const { isAdmin } = await getAdminStatus();
+  return isAdmin;
 }

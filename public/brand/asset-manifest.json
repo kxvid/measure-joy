@@ -1,0 +1,321 @@
+{
+  "brand": "Measure Joy",
+  "version": "1.0",
+  "assets": [
+    {
+      "path": "brand-guidelines.md",
+      "bytes": 4027,
+      "sha256": "fad5d4c26732697cd08822004d86315158795c93a79df3a5821062873b724bdb"
+    },
+    {
+      "path": "fonts/InstrumentSerif-Italic.ttf",
+      "bytes": 71592,
+      "sha256": "08939b8bdf534afec24ae0ef5e03f948940cd9a8fe08e7fecbad040e62327385"
+    },
+    {
+      "path": "fonts/InstrumentSerif-OFL.txt",
+      "bytes": 4405,
+      "sha256": "129ed7618959716959f2941fdd5b49e0ad6e6c1d78726761786a00253d865521"
+    },
+    {
+      "path": "fonts/SpaceGrotesk-Bold.ttf",
+      "bytes": 116056,
+      "sha256": "7209bbb75fc0f5c546a5f5773b0db74ffc6abf04c2148c1105cace5765a96bdb"
+    },
+    {
+      "path": "fonts/SpaceGrotesk-Medium.ttf",
+      "bytes": 116664,
+      "sha256": "3183b7eb0b4241476360e2cd8e527868616cc16d3ce332c4376505989b772b44"
+    },
+    {
+      "path": "fonts/SpaceGrotesk-OFL.txt",
+      "bytes": 4495,
+      "sha256": "564ce565c371c5e5bbf286006565a7c9aa55a9f56e7ca58d56e05d649dd61a72"
+    },
+    {
+      "path": "fonts/SpaceGrotesk-Variable.ttf",
+      "bytes": 136676,
+      "sha256": "acad6de1fc93436f5c0f1f4137751ef04f1aea3063e7036535970ffcfbd79f72"
+    },
+    {
+      "path": "icons/app-icon-192.png",
+      "bytes": 3917,
+      "sha256": "39273a807d32f71ca6284ebef87ce7a5bae5b09e60f33d146b7b1104eb45df54",
+      "width": 192,
+      "height": 192
+    },
+    {
+      "path": "icons/app-icon-512.png",
+      "bytes": 14597,
+      "sha256": "29553171307c17701f4e522677fd82d1c77cfdd8c5bcc2120f6c7b2ebe103c54",
+      "width": 512,
+      "height": 512
+    },
+    {
+      "path": "icons/apple-touch-icon.png",
+      "bytes": 3360,
+      "sha256": "ad31902fee436a066c6055145b010fd1ceeaa7a5f50b00da9ad00461acd9ff4b",
+      "width": 180,
+      "height": 180
+    },
+    {
+      "path": "icons/favicon-16.png",
+      "bytes": 381,
+      "sha256": "2f26200dd9f56da91fb5b08e5f4ffd5633b755a718a5dd438f77626db6a43866",
+      "width": 16,
+      "height": 16
+    },
+    {
+      "path": "icons/favicon-32.png",
+      "bytes": 615,
+      "sha256": "8214540a4bd1fe31129b71ed8eb098148139379799caaacb2a257beda6dd01ac",
+      "width": 32,
+      "height": 32
+    },
+    {
+      "path": "icons/favicon-48.png",
+      "bytes": 882,
+      "sha256": "266227bd80760ccea903b8d39da2972f733607cda20da5221ab577737977aab2",
+      "width": 48,
+      "height": 48
+    },
+    {
+      "path": "icons/favicon.ico",
+      "bytes": 1932,
+      "sha256": "a97d59d529b932b747a8231d6862b107ccffd9f0287c11e95ab4c3cffaec2429"
+    },
+    {
+      "path": "icons/favicon.svg",
+      "bytes": 487,
+      "sha256": "3d0aec07f573ab441636357dca323c24e533a2f4236419b991fc4b259a8e566f"
+    },
+    {
+      "path": "icons/site.webmanifest",
+      "bytes": 433,
+      "sha256": "8339a1bcd58dfb5e199bd0b8d26ee5e8798d349567c2d9435a6922dd3256bf24"
+    },
+    {
+      "path": "logos/measure-joy-horizontal-coral-editable.svg",
+      "bytes": 611,
+      "sha256": "d1c491177f9f7fc18e3e5cd7ac0f3b74ee4b07e3f6480feb8503466c4ac3805a"
+    },
+    {
+      "path": "logos/measure-joy-horizontal-coral.png",
+      "bytes": 20023,
+      "sha256": "59327ff5a6e00e0f9b9d698f632a818d58f0177e54b93add3af5c0e3d5c00f4b",
+      "width": 1280,
+      "height": 280
+    },
+    {
+      "path": "logos/measure-joy-horizontal-coral.svg",
+      "bytes": 6924,
+      "sha256": "1fe0216bdc78c683e3209634ecef6d92966a58cb0441b2348d5a06ddd803120d"
+    },
+    {
+      "path": "logos/measure-joy-horizontal-ink-editable.svg",
+      "bytes": 611,
+      "sha256": "ae96afa17652e602c557595f27601423f55332406d53a1cef7523ba54e8dee2b"
+    },
+    {
+      "path": "logos/measure-joy-horizontal-ink.png",
+      "bytes": 18795,
+      "sha256": "4fd82cfbd9c6cee716401fa95fd8c99c54ef856fdf19e0616361dfe7c0803f08",
+      "width": 1280,
+      "height": 280
+    },
+    {
+      "path": "logos/measure-joy-horizontal-ink.svg",
+      "bytes": 6924,
+      "sha256": "83757c817f5542685f6e8314dd677ac7c36ab357dba94464915a854f52524d2e"
+    },
+    {
+      "path": "logos/measure-joy-horizontal-ivory-editable.svg",
+      "bytes": 611,
+      "sha256": "281eda3e3f66c676b0c9076be430b3bade928df751c194ad364a790f36a73605"
+    },
+    {
+      "path": "logos/measure-joy-horizontal-ivory.png",
+      "bytes": 20248,
+      "sha256": "88209968cfe0386d239a597bacbe1f6dd6922766489b5f571d89df4d4194b1cf",
+      "width": 1280,
+      "height": 280
+    },
+    {
+      "path": "logos/measure-joy-horizontal-ivory.svg",
+      "bytes": 6924,
+      "sha256": "359b831b73d056d47b6f34ab50305f7be0093b284fc3c1e7679587bbe65e8332"
+    },
+    {
+      "path": "logos/measure-joy-icon-coral.png",
+      "bytes": 6462,
+      "sha256": "ccc6f2580c9b9c7379f5bc2af9472ee70585c3ca7facb14e2e8d031ab14e3152",
+      "width": 512,
+      "height": 512
+    },
+    {
+      "path": "logos/measure-joy-icon-coral.svg",
+      "bytes": 465,
+      "sha256": "d227e1b873db93770a2b4d61da209114e755d9e18b966f91288c6f74174877e1"
+    },
+    {
+      "path": "logos/measure-joy-icon-ink.png",
+      "bytes": 6164,
+      "sha256": "96325e2fca1a9333ac047e5cac574482877af0ea319958e408dc3145c9ca4215",
+      "width": 512,
+      "height": 512
+    },
+    {
+      "path": "logos/measure-joy-icon-ink.svg",
+      "bytes": 465,
+      "sha256": "9bf70905a00bd2ba885be36c080aabb83c34bed5b5449fdda961a4d3fd1f81ff"
+    },
+    {
+      "path": "logos/measure-joy-icon-ivory.png",
+      "bytes": 6473,
+      "sha256": "9a9677e3df8b962ad5f035cba5647a7dcbd423d490ba09e06fd50729ced2b5e4",
+      "width": 512,
+      "height": 512
+    },
+    {
+      "path": "logos/measure-joy-icon-ivory.svg",
+      "bytes": 465,
+      "sha256": "6bb88213d356512689bde29378d1c984f168444784e062ea8076f1e13f80bf9e"
+    },
+    {
+      "path": "logos/measure-joy-stacked-coral-editable.svg",
+      "bytes": 614,
+      "sha256": "07424f3b127a43069ac2746e3dcc4c8d522c84765fe0413630cd2ab5030fddaa"
+    },
+    {
+      "path": "logos/measure-joy-stacked-coral.png",
+      "bytes": 23335,
+      "sha256": "b6f3019733c5bd28edf414980fdcb4baa9dc3829490819c31e42a00423818ff5",
+      "width": 1120,
+      "height": 600
+    },
+    {
+      "path": "logos/measure-joy-stacked-coral.svg",
+      "bytes": 7353,
+      "sha256": "28b606b6a7a194eacfd5dc416de191527b4f87b618171f13080d7e179aab5125"
+    },
+    {
+      "path": "logos/measure-joy-stacked-ink-editable.svg",
+      "bytes": 614,
+      "sha256": "6c55fcc62741d72df2b237bc2f0703a53f762f56ffc67dfd645b329bab10b55e"
+    },
+    {
+      "path": "logos/measure-joy-stacked-ink.png",
+      "bytes": 22063,
+      "sha256": "1a2931c2dc4bb38c892a7338d8c1b5cb9854893818c8b4fe3a3fb002a7a04e49",
+      "width": 1120,
+      "height": 600
+    },
+    {
+      "path": "logos/measure-joy-stacked-ink.svg",
+      "bytes": 7353,
+      "sha256": "6110d76181bb38bc0b15603bea6523d13aefede4f8c3ba24ef71848d5efac463"
+    },
+    {
+      "path": "logos/measure-joy-stacked-ivory-editable.svg",
+      "bytes": 614,
+      "sha256": "8fe483b26480c2e130587a145920c94ce161878eaa181b63af8912c1ba4589c8"
+    },
+    {
+      "path": "logos/measure-joy-stacked-ivory.png",
+      "bytes": 23581,
+      "sha256": "45d683ebf04237dd52ee8515273b64d11a07160b9582f13a620d9d93ac890956",
+      "width": 1120,
+      "height": 600
+    },
+    {
+      "path": "logos/measure-joy-stacked-ivory.svg",
+      "bytes": 7353,
+      "sha256": "c89b9f4e8be50f4c25f29a8269a7cd2f716eeb4522fc06e23fe9fd5e231e4928"
+    },
+    {
+      "path": "README.txt",
+      "bytes": 216,
+      "sha256": "2cd8df1d6ef43a19049d997ce6c1b809bef06509a5305d0c961ef89c15763454"
+    },
+    {
+      "path": "social/avatar-acid.png",
+      "bytes": 47658,
+      "sha256": "db2d672ba0dab08242770ee261d380591f13086547a94f3fe01c924a182789dc",
+      "width": 1080,
+      "height": 1080
+    },
+    {
+      "path": "social/avatar-acid.svg",
+      "bytes": 7481,
+      "sha256": "ce6dcefe9ac3d47d0fdbfdfe8e05e7a839d8cbd29bb28d63fd63dbddc1045bcd"
+    },
+    {
+      "path": "social/avatar-coral.png",
+      "bytes": 46878,
+      "sha256": "0557ff5dd6f244c8f25a36784dbfa089efb096300e0ef9b108648126ba108e54",
+      "width": 1080,
+      "height": 1080
+    },
+    {
+      "path": "social/avatar-coral.svg",
+      "bytes": 7483,
+      "sha256": "0cf5be6e38df22653bcb24df7c95c9a25c10935ad9671c50080eb8ecc52e880d"
+    },
+    {
+      "path": "social/og-image.png",
+      "bytes": 61807,
+      "sha256": "3786a7f65ae0fa20ac3a64cf4827c7d6d4ee53b083de72b6bf366cf05979fdb2",
+      "width": 1200,
+      "height": 630
+    },
+    {
+      "path": "social/og-image.svg",
+      "bytes": 35729,
+      "sha256": "3057132b937bd7e559414d9d916c3ebb9d8b3cb66379b3ce1c28daf60e40c959"
+    },
+    {
+      "path": "templates/social-square-outlined.svg",
+      "bytes": 48953,
+      "sha256": "c51c7bf9da137d541fbfa81da9603b80b07e1da6054b0239ee883ec230d9497b"
+    },
+    {
+      "path": "templates/social-square.png",
+      "bytes": 70228,
+      "sha256": "89f754b0d3dfd580ab2eb7f272f1610a1d199b5bd06736c6114b1c23e2140db5",
+      "width": 1080,
+      "height": 1080
+    },
+    {
+      "path": "templates/social-square.svg",
+      "bytes": 1931,
+      "sha256": "2a56484261db8b8679727378dcee5697b129093f5051bbcf60f1b2e8c2d5ddfe"
+    },
+    {
+      "path": "templates/social-story-outlined.svg",
+      "bytes": 50400,
+      "sha256": "d9eedc7d0ff004e181b6a56cee51d64eb43d3b2990e08043bb0aca4758c5e09e"
+    },
+    {
+      "path": "templates/social-story.png",
+      "bytes": 95061,
+      "sha256": "53dfd1376d6d811fb28831d0a692b1eb39151abda1eceac6178baa0711a34f5a",
+      "width": 1080,
+      "height": 1920
+    },
+    {
+      "path": "templates/social-story.svg",
+      "bytes": 1931,
+      "sha256": "5e5efca187e05d5286d36770f87d240f579c449d1e2b574e9b33f5b6c5e5326b"
+    },
+    {
+      "path": "tokens.css",
+      "bytes": 264,
+      "sha256": "7a89c4b76fe0d335076131ad62699a668296fd1dc0900ae525a46967268479cf"
+    },
+    {
+      "path": "tokens.json",
+      "bytes": 502,
+      "sha256": "68f501406ddc7b7342edf41d9e4d1cef5f4a8e9453245328bdebe5dc0d2133dc"
+    }
+  ]
+}

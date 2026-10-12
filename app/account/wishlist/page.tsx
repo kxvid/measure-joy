@@ -1,162 +1,219 @@
-"use client"
+"use client";
 
-import { productPath } from "@/lib/seo"
-import { useState, useEffect } from "react"
-// import { createClient } from "@/lib/supabase/client" 
-import { useAuth } from "@clerk/nextjs"
-import { useRouter } from "next/navigation"
-import { getWishlist, removeFromWishlist } from "@/app/actions/wishlist"
-import { formatPrice, type Product } from "@/lib/products"
-import { Header } from "@/components/header"
-import { Footer } from "@/components/footer"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent } from "@/components/ui/card"
-import { ChevronLeft, Heart, Trash2, ShoppingCart } from "lucide-react"
-import Link from "next/link"
-import { useCart } from "@/lib/cart-context"
+import { useEffect, useState } from "react";
+import { useAuth } from "@clerk/nextjs";
+import { useRouter } from "next/navigation";
+import Link from "next/link";
+import Image from "next/image";
+import {
+  EditorialPage,
+  EditorialHeading,
+  EditorialBackLink,
+} from "@/components/editorial-page";
+import { useSavedFinds } from "@/components/storefront/use-saved-finds";
+import {
+  formatPrice,
+  isAvailable,
+  productPath,
+  type Product,
+} from "@/lib/storefront-catalog";
+import { useCart } from "@/lib/cart-context";
+import { ArrowUpRight, Heart, Loader2, Trash2 } from "lucide-react";
 
 export default function WishlistPage() {
-  const [wishlistProducts, setWishlistProducts] = useState<Product[]>([])
-  const [loading, setLoading] = useState(true)
-  const { isLoaded, userId } = useAuth()
-  const { addItem } = useCart()
-  const router = useRouter()
+  const { isLoaded, userId } = useAuth();
+  const router = useRouter();
+  const { addItem } = useCart();
+  const { savedIds, loading, ready, error, toggle, pendingIds, refresh } =
+    useSavedFinds();
+  const [products, setProducts] = useState<Product[]>([]);
+  const [catalogLoading, setCatalogLoading] = useState(true);
+  const [catalogError, setCatalogError] = useState("");
+  const [notice, setNotice] = useState("");
+  const [retry, setRetry] = useState(0);
 
   useEffect(() => {
-    if (!isLoaded) return
+    if (isLoaded && !userId)
+      router.replace("/sign-in?redirect_url=/account/wishlist");
+  }, [isLoaded, userId, router]);
 
-    if (!userId) {
-      router.push("/sign-in")
-      return
-    }
+  useEffect(() => {
+    if (!isLoaded || !userId) return;
+    const abort = new AbortController();
+    setCatalogLoading(true);
+    setCatalogError("");
+    fetch("/api/products", { cache: "no-store", signal: abort.signal })
+      .then(async (response) => {
+        if (!response.ok) throw new Error("Catalog unavailable");
+        return (await response.json()) as Product[];
+      })
+      .then(setProducts)
+      .catch((failure) => {
+        if (failure.name !== "AbortError")
+          setCatalogError("We couldn't load the cameras in your saved list.");
+      })
+      .finally(() => {
+        if (!abort.signal.aborted) setCatalogLoading(false);
+      });
+    return () => abort.abort();
+  }, [isLoaded, userId, retry]);
 
-    const fetchWishlist = async () => {
-      // Get wishlist IDs via Server Action
-      const ids = await getWishlist()
-
-      if (ids.length > 0) {
-        try {
-          const res = await fetch("/api/products")
-          if (res.ok) {
-            const allProducts: Product[] = await res.json()
-            const products = ids
-              .map((id) => allProducts.find((p) => p.id === id))
-              .filter(Boolean) as Product[]
-            setWishlistProducts(products)
-          }
-        } catch (error) {
-          console.error("Failed to fetch wishlist products:", error)
-        }
-      }
-      setLoading(false)
-    }
-
-    fetchWishlist()
-  }, [isLoaded, userId, router])
-
-  const handleRemove = async (productId: string) => {
-    // Optimistic update
-    setWishlistProducts((prev) => prev.filter((p) => p.id !== productId))
-    await removeFromWishlist(productId)
+  async function remove(id: string) {
+    const result = await toggle(id);
+    setNotice(
+      result.success
+        ? "Removed from your saved finds."
+        : result.error || "This find could not be removed.",
+    );
   }
-
-  const handleAddToCart = (product: Product) => {
-    addItem(product)
+  function add(product: Product) {
+    if (!isAvailable(product)) return;
+    addItem(product);
+    setNotice(`${product.name} added to your bag.`);
   }
-
-  if ((!isLoaded || !userId) || loading) {
-    return (
-      <main className="min-h-screen bg-background">
-        <Header />
-        <div className="mx-auto max-w-4xl px-6 lg:px-8 py-16 text-center">
-          <div className="animate-pulse">
-            <div className="h-8 bg-secondary rounded w-48 mx-auto mb-4" />
-            <div className="h-4 bg-secondary rounded w-64 mx-auto" />
-          </div>
-        </div>
-      </main>
-    )
-  }
+  const busy = !isLoaded || !userId || loading || catalogLoading;
+  const savedProducts = savedIds.map((id) => ({
+    id,
+    product: products.find((product) => product.id === id),
+  }));
 
   return (
-    <main className="min-h-screen bg-background">
-      <Header />
-
-      <div className="mx-auto max-w-4xl px-6 lg:px-8 py-8 lg:py-12">
-        <Link
-          href="/account"
-          className="inline-flex items-center text-sm text-muted-foreground hover:text-foreground mb-6"
-        >
-          <ChevronLeft className="h-4 w-4 mr-1" />
-          Back to Account
-        </Link>
-
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold tracking-tight">Wishlist</h1>
-          <p className="text-muted-foreground mt-2">Items you've saved for later</p>
-        </div>
-
-        {wishlistProducts.length > 0 ? (
-          <div className="grid sm:grid-cols-2 gap-4">
-            {wishlistProducts.map((product) => (
-              <Card key={product!.id} className="border-2 overflow-hidden group">
-                <CardContent className="p-0">
-                  <div className="flex">
-                    <Link href={productPath(product!)} className="w-32 h-32 bg-secondary shrink-0">
-                      <img
-                        src={product!.images[0] || "/placeholder.svg"}
-                        alt={product!.name}
-                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+    <EditorialPage>
+      <EditorialHeading
+        label="A little later"
+        title="Your saved finds."
+        description="The cameras that caught your eye, saved to your account. A saved find isn't reserved until checkout."
+      >
+        <EditorialBackLink href="/account">Your account</EditorialBackLink>
+      </EditorialHeading>
+      <div className="ed-account-content">
+        {(error || catalogError) && (
+          <div
+            role="alert"
+            className="mt-8 rounded-xl border border-border p-5 text-sm"
+          >
+            {error || catalogError}
+            <button
+              type="button"
+              className="ml-3 underline"
+              onClick={() => {
+                void refresh();
+                setRetry((value) => value + 1);
+              }}
+            >
+              Try again
+            </button>
+          </div>
+        )}
+        {notice && (
+          <p role="status" className="mt-6 text-sm">
+            {notice}
+          </p>
+        )}
+        {busy ? (
+          <p role="status" className="mt-12 flex items-center gap-3 text-sm">
+            <Loader2 size={18} className="animate-spin" />
+            Loading your saved finds…
+          </p>
+        ) : ready && !catalogError && savedProducts.length ? (
+          <div className="ed-wishlist-grid mt-12 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+            {savedProducts.map(({ id, product }) => (
+              <article
+                key={id}
+                className="ed-wishlist-item overflow-hidden rounded-xl border border-border bg-card"
+              >
+                {product ? (
+                  <>
+                    <Link
+                      href={productPath(product)}
+                      className="block aspect-square bg-secondary/60 p-6"
+                    >
+                      <Image
+                        src={product.images[0] || "/placeholder.svg"}
+                        alt={product.name}
+                        width={400}
+                        height={400}
+                        unoptimized
+                        className="h-full w-full object-contain mix-blend-multiply"
                       />
                     </Link>
-                    <div className="flex-1 p-4 flex flex-col">
+                    <div className="p-5">
+                      <p className="text-xs text-muted-foreground">
+                        {product.brand}
+                      </p>
                       <Link
-                        href={productPath(product!)}
-                        className="font-medium hover:text-accent transition-colors"
+                        href={productPath(product)}
+                        className="mt-2 block text-lg font-semibold"
                       >
-                        {product!.name}
+                        {product.name}
                       </Link>
-                      <p className="text-xs text-muted-foreground mt-1">{product!.brand}</p>
-                      <p className="font-bold mt-auto">{formatPrice(product!.priceInCents)}</p>
-                      <div className="flex gap-2 mt-3">
-                        <Button
-                          size="sm"
-                          className="flex-1 rounded-xl text-xs h-8"
-                          onClick={() => handleAddToCart(product!)}
+                      <p className="mt-3 text-sm">
+                        {formatPrice(product.priceInCents)}{" "}
+                        <span className="ml-2 text-xs text-muted-foreground">
+                          {isAvailable(product) ? "Available" : "Found a home"}
+                        </span>
+                      </p>
+                      <div className="mt-5 flex items-center justify-between gap-3">
+                        <button
+                          className="button button-dark"
+                          type="button"
+                          onClick={() => add(product)}
+                          disabled={!isAvailable(product)}
                         >
-                          <ShoppingCart className="h-3 w-3 mr-1" />
-                          Add to Cart
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          className="rounded-xl h-8 w-8 p-0 bg-transparent"
-                          onClick={() => handleRemove(product!.id)}
+                          Add to bag <ArrowUpRight size={15} />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => void remove(id)}
+                          disabled={pendingIds.length > 0}
+                          aria-label={`Remove ${product.name} from saved finds`}
+                          className="p-3"
                         >
-                          <Trash2 className="h-3 w-3" />
-                        </Button>
+                          <Trash2 size={18} />
+                        </button>
                       </div>
                     </div>
+                  </>
+                ) : (
+                  <div className="p-6">
+                    <Heart size={28} className="mb-5" />
+                    <h2 className="text-lg font-semibold">
+                      A find from an earlier chapter.
+                    </h2>
+                    <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
+                      This saved item is no longer in the current collection.
+                    </p>
+                    <button
+                      className="button button-outline mt-6"
+                      type="button"
+                      disabled={pendingIds.length > 0}
+                      onClick={() => void remove(id)}
+                    >
+                      Remove from saved
+                    </button>
                   </div>
-                </CardContent>
-              </Card>
+                )}
+              </article>
             ))}
           </div>
         ) : (
-          <Card className="border-2">
-            <CardContent className="py-16 text-center">
-              <Heart className="h-12 w-12 mx-auto text-muted-foreground/30 mb-4" />
-              <h2 className="text-xl font-bold mb-2">Your wishlist is empty</h2>
-              <p className="text-muted-foreground mb-6">Save items you love by clicking the heart icon.</p>
-              <Button asChild className="rounded-xl">
-                <Link href="/shop">Browse Cameras</Link>
-              </Button>
-            </CardContent>
-          </Card>
+          ready &&
+          !catalogError && (
+            <div className="mt-12 rounded-2xl border border-border p-10 text-center">
+              <Heart className="mx-auto mb-5 h-9 w-9" />
+              <h2 className="text-2xl font-semibold">
+                Make room for a favorite.
+              </h2>
+              <p className="mt-3 text-sm text-muted-foreground">
+                Tap a heart in the shop to save a camera here.
+              </p>
+              <Link className="button button-dark mt-7" href="/shop">
+                Explore the collection <ArrowUpRight size={17} />
+              </Link>
+            </div>
+          )
         )}
       </div>
-
-      <Footer />
-    </main>
-  )
+    </EditorialPage>
+  );
 }

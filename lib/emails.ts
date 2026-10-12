@@ -1,8 +1,10 @@
-import "server-only"
+import "server-only";
 
-import { Resend } from "resend"
+import { Resend } from "resend";
 
-const resend = process.env.RESEND_API_KEY ? new Resend(process.env.RESEND_API_KEY) : null
+const resend = process.env.RESEND_API_KEY
+  ? new Resend(process.env.RESEND_API_KEY)
+  : null;
 
 export async function sendOrderConfirmationEmail({
   email,
@@ -11,29 +13,34 @@ export async function sendOrderConfirmationEmail({
   totalInCents,
   shippingAddress,
 }: {
-  email: string
-  orderId: string
-  items: Array<{ name: string; quantity: number; priceInCents: number }>
-  totalInCents: number
-  shippingAddress: any
+  email: string;
+  orderId: string;
+  items: Array<{ name: string; quantity: number; priceInCents: number }>;
+  totalInCents: number;
+  shippingAddress: any;
 }) {
   const emailHtml = generateOrderConfirmationHTML({
     orderId,
     items,
     totalInCents,
     shippingAddress,
-  })
+  });
 
-  if (resend) {
-    await resend.emails.send({
-      from: "Measure Joy <orders@measurejoy.org>",
+  if (!resend) throw new Error("Order confirmation email is not configured.");
+  const { data, error } = await resend.emails.send(
+    {
+      from:
+        process.env.RESEND_FROM_EMAIL || "Measure Joy <orders@measurejoy.org>",
       to: email,
       subject: `Order Confirmation - #${orderId.slice(0, 8).toUpperCase()}`,
       html: emailHtml,
-    })
-  } else {
-    console.log("[Email] Resend not configured. Order confirmation would be sent to:", email)
-  }
+    },
+    { idempotencyKey: `order-confirmation/${orderId}` },
+  );
+  if (error || !data?.id)
+    throw new Error(
+      "The email provider did not accept the order confirmation.",
+    );
 }
 
 export async function sendShippingUpdateEmail({
@@ -43,13 +50,13 @@ export async function sendShippingUpdateEmail({
   carrier,
   items,
 }: {
-  email: string
-  orderId: string
-  trackingNumber: string
-  carrier: string
-  items: Array<{ name: string; quantity: number }>
+  email: string;
+  orderId: string;
+  trackingNumber: string;
+  carrier: string;
+  items: Array<{ name: string; quantity: number }>;
 }) {
-  const trackingUrl = getCarrierTrackingUrl(carrier, trackingNumber)
+  const trackingUrl = getCarrierTrackingUrl(carrier, trackingNumber);
 
   const emailHtml = `
 <!DOCTYPE html>
@@ -103,7 +110,7 @@ export async function sendShippingUpdateEmail({
   </div>
 </body>
 </html>
-  `
+  `;
 
   if (resend) {
     await resend.emails.send({
@@ -111,9 +118,12 @@ export async function sendShippingUpdateEmail({
       to: email,
       subject: `Your Order Has Shipped! - #${orderId.slice(0, 8).toUpperCase()}`,
       html: emailHtml,
-    })
+    });
   } else {
-    console.log("[Email] Resend not configured. Shipping email would be sent to:", email)
+    console.log(
+      "[Email] Resend not configured. Shipping email would be sent to:",
+      email,
+    );
   }
 }
 
@@ -122,11 +132,11 @@ export async function sendDeliveryConfirmationEmail({
   orderId,
   items,
 }: {
-  email: string
-  orderId: string
-  items: Array<{ name: string; quantity: number; productId?: string }>
+  email: string;
+  orderId: string;
+  items: Array<{ name: string; quantity: number; productId?: string }>;
 }) {
-  const shopUrl = process.env.NEXT_PUBLIC_APP_URL || "https://measurejoy.org"
+  const shopUrl = process.env.NEXT_PUBLIC_APP_URL || "https://measurejoy.org";
 
   const emailHtml = `
 <!DOCTYPE html>
@@ -178,7 +188,7 @@ export async function sendDeliveryConfirmationEmail({
   </div>
 </body>
 </html>
-  `
+  `;
 
   if (resend) {
     await resend.emails.send({
@@ -186,19 +196,29 @@ export async function sendDeliveryConfirmationEmail({
       to: email,
       subject: `Your Order Has Been Delivered! - #${orderId.slice(0, 8).toUpperCase()}`,
       html: emailHtml,
-    })
+    });
   } else {
-    console.log("[Email] Resend not configured. Delivery email would be sent to:", email)
+    console.log(
+      "[Email] Resend not configured. Delivery email would be sent to:",
+      email,
+    );
   }
 }
 
-function getCarrierTrackingUrl(carrier: string, trackingNumber: string): string {
-  const carrierLower = carrier.toLowerCase()
-  if (carrierLower === "usps") return `https://tools.usps.com/go/TrackConfirmAction?tLabels=${trackingNumber}`
-  if (carrierLower === "ups") return `https://www.ups.com/track?tracknum=${trackingNumber}`
-  if (carrierLower === "fedex") return `https://www.fedex.com/fedextrack/?trknbr=${trackingNumber}`
-  if (carrierLower === "dhl") return `https://www.dhl.com/us-en/home/tracking.html?tracking-id=${trackingNumber}`
-  return `https://measurejoy.org/account/orders`
+function getCarrierTrackingUrl(
+  carrier: string,
+  trackingNumber: string,
+): string {
+  const carrierLower = carrier.toLowerCase();
+  if (carrierLower === "usps")
+    return `https://tools.usps.com/go/TrackConfirmAction?tLabels=${trackingNumber}`;
+  if (carrierLower === "ups")
+    return `https://www.ups.com/track?tracknum=${trackingNumber}`;
+  if (carrierLower === "fedex")
+    return `https://www.fedex.com/fedextrack/?trknbr=${trackingNumber}`;
+  if (carrierLower === "dhl")
+    return `https://www.dhl.com/us-en/home/tracking.html?tracking-id=${trackingNumber}`;
+  return `https://measurejoy.org/account/orders`;
 }
 
 function generateOrderConfirmationHTML({
@@ -207,10 +227,10 @@ function generateOrderConfirmationHTML({
   totalInCents,
   shippingAddress,
 }: {
-  orderId: string
-  items: Array<{ name: string; quantity: number; priceInCents: number }>
-  totalInCents: number
-  shippingAddress: any
+  orderId: string;
+  items: Array<{ name: string; quantity: number; priceInCents: number }>;
+  totalInCents: number;
+  shippingAddress: any;
 }) {
   const itemsHTML = items
     .map(
@@ -222,7 +242,7 @@ function generateOrderConfirmationHTML({
     </tr>
   `,
     )
-    .join("")
+    .join("");
 
   return `
 <!DOCTYPE html>
@@ -265,8 +285,9 @@ function generateOrderConfirmationHTML({
       </tbody>
     </table>
 
-    ${shippingAddress
-      ? `
+    ${
+      shippingAddress
+        ? `
     <h3 style="color: #333; margin-top: 30px;">Shipping Address</h3>
     <div style="background: white; padding: 15px; border-radius: 8px;">
       <p style="margin: 5px 0;">${shippingAddress.line1}</p>
@@ -275,7 +296,7 @@ function generateOrderConfirmationHTML({
       <p style="margin: 5px 0;">${shippingAddress.country}</p>
     </div>
     `
-      : ""
+        : ""
     }
 
     <div style="background: #fef3c7; border-left: 4px solid #f59e0b; padding: 15px; margin: 30px 0; border-radius: 4px;">
@@ -294,5 +315,5 @@ function generateOrderConfirmationHTML({
   </div>
 </body>
 </html>
-  `
+  `;
 }

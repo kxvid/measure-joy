@@ -1,64 +1,62 @@
-"use server"
+"use server";
 
-import { stripe } from "@/lib/stripe"
-import { getStripeProductById } from "@/lib/stripe-products"
+import { auth } from "@clerk/nextjs/server";
+import { headers } from "next/headers";
+import { stripe } from "@/lib/stripe";
+import {
+  checkoutOrigin,
+  isPaidSession,
+  normalizeCheckoutItems,
+  stockCountFromMetadata,
+  usablePrice,
+  type CheckoutItem,
+} from "@/lib/commerce";
 
-const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://measurejoy.org"
-
-interface CheckoutItem {
-  productId: string
-  quantity: number
-}
-
-export async function startCheckoutSession(items: CheckoutItem[], userId?: string) {
-  // Fetch products from Stripe and build line items (filter out products not found)
-  // Also validates live stock availability to prevent overselling
-  const lineItemsPromises = items.map(async (item) => {
-    const product = await getStripeProductById(item.productId)
-    if (!product) {
-      console.warn(`[Checkout] Product ${item.productId} not found in Stripe, skipping`)
-      return null
-    }
-    // Stock validation: block checkout if out of stock or requested qty exceeds stockCount
-    if (!product.inStock) {
-      throw new Error(`"${product.name}" is out of stock. Please remove it from your cart.`)
-    }
-    if (typeof product.stockCount === "number" && item.quantity > product.stockCount) {
-      throw new Error(
-        `Only ${product.stockCount} of "${product.name}" available. Please reduce the quantity in your cart.`
-      )
-    }
-    return {
-      price_data: {
-        currency: "usd",
-        product_data: {
-          name: product.name,
-          description: product.description,
-          images: product.images?.slice(0, 1) || [],
-        },
-        unit_amount: product.priceInCents,
-      },
-      quantity: item.quantity,
-      productId: item.productId,
-    }
-  })
-
-  const lineItemsWithNull = await Promise.all(lineItemsPromises)
-  const validItems = lineItemsWithNull.filter((item): item is NonNullable<typeof item> => item !== null)
-
-  if (validItems.length === 0) {
-    throw new Error("No valid items in cart. Your cart may contain outdated products - please clear your cart and add items again.")
-  }
-
-  const compactItems = validItems.map((item) => `${item.productId}:${item.quantity}`).join(",")
-
-  // Remove productId from line items before sending to Stripe
-  const stripeLineItems = validItems.map(({ productId, ...rest }) => rest)
-
+async function createCheckout(items: CheckoutItem[], cancelPath: string) {
+  const normalized = normalizeCheckoutItems(items);
+  const lineItems = await Promise.all(
+    normalized.map(async ({ productId, quantity }) => {
+      const product = await stripe.products.retrieve(productId, {
+        expand: ["default_price"],
+      });
+      const stockCount = stockCountFromMetadata(product.metadata);
+      if (
+        !product.active ||
+        product.metadata.inStock === "false" ||
+        stockCount === 0
+      ) {
+        throw new Error(
+          `"${product.name}" is out of stock. Please remove it from your cart.`,
+        );
+      }
+      if (stockCount !== undefined && quantity > stockCount) {
+        throw new Error(
+          `Only ${stockCount} of "${product.name}" available. Please reduce the quantity in your cart.`,
+        );
+      }
+      const price =
+        typeof product.default_price === "string"
+          ? await stripe.prices.retrieve(product.default_price)
+          : product.default_price;
+      if (!usablePrice(price)) {
+        throw new Error(
+          `"${product.name}" is currently unavailable for checkout. Please contact us for help.`,
+        );
+      }
+      return { price: price.id, quantity };
+    }),
+  );
+  const metadataItems = normalized
+    .map(({ productId, quantity }) => `${productId}:${quantity}`)
+    .join(",");
+  if (metadataItems.length > 500)
+    throw new Error("Please check out with fewer different items at a time.");
+  const { userId } = await auth();
+  const baseUrl = checkoutOrigin(await headers());
   const session = await stripe.checkout.sessions.create({
     success_url: `${baseUrl}/checkout/return?session_id={CHECKOUT_SESSION_ID}`,
-    cancel_url: `${baseUrl}/cart`,
-    line_items: stripeLineItems,
+    cancel_url: `${baseUrl}${cancelPath}`,
+    line_items: lineItems,
     mode: "payment",
     allow_promotion_codes: true,
     shipping_address_collection: {
@@ -68,119 +66,49 @@ export async function startCheckoutSession(items: CheckoutItem[], userId?: strin
       {
         shipping_rate_data: {
           type: "fixed_amount",
-          fixed_amount: {
-            amount: 0,
-            currency: "usd",
-          },
+          fixed_amount: { amount: 0, currency: "usd" },
           display_name: "Free Shipping",
           delivery_estimate: {
-            minimum: {
-              unit: "business_day",
-              value: 3,
-            },
-            maximum: {
-              unit: "business_day",
-              value: 5,
-            },
+            minimum: { unit: "business_day", value: 3 },
+            maximum: { unit: "business_day", value: 5 },
           },
         },
       },
     ],
-    phone_number_collection: {
-      enabled: true,
-    },
-    metadata: {
-      user_id: userId || "",
-      // Store compact format: "product-id:qty,product-id:qty"
-      items: compactItems,
-    },
-  })
+    phone_number_collection: { enabled: true },
+    metadata: { user_id: userId || "", items: metadataItems },
+  });
+  return session.url;
+}
 
-  return session.url
+// Retain the existing client signatures; identity is always resolved on the server.
+export async function startCheckoutSession(
+  items: CheckoutItem[],
+  _userId?: string,
+) {
+  void _userId;
+  return createCheckout(items, "/cart");
 }
 
 export async function startSingleProductCheckout(
   productId: string,
-  userId?: string,
-  quantity: number = 1
+  _userId?: string,
+  quantity = 1,
 ) {
-  const product = await getStripeProductById(productId)
-  if (!product) {
-    throw new Error(`Product with id "${productId}" not found`)
-  }
-
-  // Stock validation
-  if (!product.inStock) {
-    throw new Error(`"${product.name}" is out of stock.`)
-  }
-  const safeQuantity = Math.max(1, Math.floor(quantity))
-  if (typeof product.stockCount === "number" && safeQuantity > product.stockCount) {
-    throw new Error(
-      `Only ${product.stockCount} of "${product.name}" available. Please reduce the quantity.`
-    )
-  }
-
-  const session = await stripe.checkout.sessions.create({
-    success_url: `${baseUrl}/checkout/return?session_id={CHECKOUT_SESSION_ID}`,
-    cancel_url: `${baseUrl}/product/${productId}`,
-    line_items: [
-      {
-        price_data: {
-          currency: "usd",
-          product_data: {
-            name: product.name,
-            description: product.description,
-            images: product.images?.slice(0, 1) || [],
-          },
-          unit_amount: product.priceInCents,
-        },
-        quantity: safeQuantity,
-      },
-    ],
-    mode: "payment",
-    allow_promotion_codes: true,
-    shipping_address_collection: {
-      allowed_countries: ["US", "CA", "GB", "AU"],
-    },
-    shipping_options: [
-      {
-        shipping_rate_data: {
-          type: "fixed_amount",
-          fixed_amount: {
-            amount: 0,
-            currency: "usd",
-          },
-          display_name: "Free Shipping",
-          delivery_estimate: {
-            minimum: {
-              unit: "business_day",
-              value: 3,
-            },
-            maximum: {
-              unit: "business_day",
-              value: 5,
-            },
-          },
-        },
-      },
-    ],
-    phone_number_collection: {
-      enabled: true,
-    },
-    metadata: {
-      user_id: userId || "",
-      items: `${productId}:${safeQuantity}`,
-    },
-  })
-
-  return session.url
+  void _userId;
+  normalizeCheckoutItems([{ productId, quantity }]);
+  return createCheckout([{ productId, quantity }], `/product/${productId}`);
 }
 
 export async function getCheckoutSessionStatus(sessionId: string) {
-  const session = await stripe.checkout.sessions.retrieve(sessionId)
+  if (!/^cs_(test_|live_)?[A-Za-z0-9_]+$/.test(sessionId))
+    throw new Error("Invalid checkout session.");
+  const session = await stripe.checkout.sessions.retrieve(sessionId);
   return {
-    status: session.status,
+    status:
+      session.status === "complete" && !isPaidSession(session)
+        ? "pending"
+        : session.status,
     customerEmail: session.customer_details?.email ?? null,
-  }
+  };
 }
-

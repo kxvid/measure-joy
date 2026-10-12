@@ -1,175 +1,208 @@
-"use client"
+"use client";
 
-import { Suspense, useState, useEffect } from "react"
-import { useSearchParams } from "next/navigation"
-import Link from "next/link"
-import { Header } from "@/components/header"
-import { TrustBadges } from "@/components/trust-badges"
-import Checkout from "@/components/checkout"
-import { useCart } from "@/lib/cart-context"
-import { formatPrice, type Product } from "@/lib/products"
-import { ChevronLeft, ShoppingBag, Lock, Loader2 } from "lucide-react"
-import { Button } from "@/components/ui/button"
+import { Suspense, useEffect, useState } from "react";
+import { useSearchParams } from "next/navigation";
+import Link from "next/link";
+import { ArrowLeft, ArrowUpRight, Loader2, LockKeyhole } from "lucide-react";
+import { CommerceShell } from "@/components/storefront/commerce-shell";
+import Checkout from "@/components/checkout";
+import { useCart } from "@/lib/cart-context";
+import {
+  formatPrice,
+  parseCatalog,
+  productPath,
+  safeImageUrl,
+  type Product,
+} from "@/lib/storefront-catalog";
 
 function CheckoutContent() {
-  const searchParams = useSearchParams()
-  const productId = searchParams.get("product")
-  const qtyParam = searchParams.get("qty")
-  const singleQuantity = Math.max(1, parseInt(qtyParam || "1", 10) || 1)
-  const { items, totalPrice } = useCart()
-
-  // Fetch single product from API if productId is provided
-  const [singleProduct, setSingleProduct] = useState<Product | null>(null)
-  const [isLoading, setIsLoading] = useState(!!productId)
-
+  const params = useSearchParams();
+  const productId = params.get("product");
+  const quantity = Number(params.get("qty") || "1");
+  const { items, isHydrated } = useCart();
+  const [product, setProduct] = useState<Product | null>(null);
+  const [loading, setLoading] = useState(!!productId);
+  const [error, setError] = useState("");
   useEffect(() => {
-    if (productId) {
-      setIsLoading(true)
-      fetch(`/api/products?id=${productId}`)
-        .then(res => res.json())
-        .then(data => {
-          if (data && !data.error) {
-            setSingleProduct(data)
-          }
-        })
-        .catch(console.error)
-        .finally(() => setIsLoading(false))
+    if (!productId) return;
+    const controller = new AbortController();
+    setLoading(true);
+    setError("");
+    setProduct(null);
+    if (
+      !/^prod_[A-Za-z0-9]+$/.test(productId) ||
+      !Number.isSafeInteger(quantity) ||
+      quantity < 1
+    ) {
+      setError(
+        "This checkout link has an invalid product or quantity. Please choose your find again.",
+      );
+      setLoading(false);
+      return;
     }
-  }, [productId])
-
-  // Check if we have items to checkout
-  const hasItems = singleProduct || items.length > 0
-
-  if (isLoading) {
-    return (
-      <main className="min-h-screen bg-background">
-        <Header />
-        <div className="mx-auto max-w-7xl px-6 lg:px-8 py-16 text-center">
-          <Loader2 className="h-8 w-8 mx-auto animate-spin text-muted-foreground" />
-          <p className="text-muted-foreground mt-4">Loading checkout...</p>
-        </div>
-      </main>
-    )
-  }
-
-  if (!hasItems) {
-    return (
-      <main className="min-h-screen bg-background">
-        <Header />
-        <div className="mx-auto max-w-7xl px-6 lg:px-8 py-16 text-center">
-          <ShoppingBag className="h-16 w-16 mx-auto text-muted-foreground" />
-          <h1 className="text-2xl font-bold mt-6">Nothing to checkout</h1>
-          <p className="text-muted-foreground mt-2">Add some cameras to your cart first.</p>
-          <Button asChild className="mt-6">
-            <Link href="/shop">Browse cameras</Link>
-          </Button>
-        </div>
-      </main>
-    )
-  }
-
+    fetch(`/api/products?id=${encodeURIComponent(productId)}&fresh=true`, {
+      cache: "no-store",
+      signal: controller.signal,
+    })
+      .then(async (response) => {
+        if (!response.ok)
+          throw new Error(
+            response.status === 404
+              ? "We couldn’t find this camera. Explore the collection for another good find."
+              : "We couldn’t check this find right now. Please try again shortly.",
+          );
+        const current = parseCatalog([await response.json()])[0];
+        if (!current.inStock || current.stockCount === 0)
+          throw new Error(
+            "This find has already found a home. Explore the collection for something new.",
+          );
+        if (current.stockCount !== undefined && quantity > current.stockCount)
+          throw new Error(
+            `Only ${current.stockCount} of this find available. Please update your quantity.`,
+          );
+        return current;
+      })
+      .then(setProduct)
+      .catch((cause) => {
+        if (!controller.signal.aborted)
+          setError(
+            cause instanceof Error
+              ? cause.message
+              : "We couldn’t load this find.",
+          );
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) setLoading(false);
+      });
+    return () => controller.abort();
+  }, [productId, quantity]);
+  const summary = productId
+    ? product?.id === productId
+      ? [{ product, quantity }]
+      : []
+    : items;
+  const subtotal = summary.reduce(
+    (sum, item) => sum + item.product.priceInCents * item.quantity,
+    0,
+  );
   return (
-    <main className="min-h-screen bg-background">
-      <Header />
-
-      <div className="mx-auto max-w-6xl px-6 lg:px-8 py-8">
-        {/* Back link */}
+    <CommerceShell>
+      <div className="commerce-shell">
         <Link
-          href={singleProduct ? `/product/${singleProduct.id}` : "/cart"}
-          className="inline-flex items-center text-sm text-muted-foreground hover:text-foreground mb-8"
+          className="commerce-back"
+          href={productId ? `/product/${productId}` : "/cart"}
         >
-          <ChevronLeft className="h-4 w-4 mr-1" />
-          {singleProduct ? "Back to product" : "Back to cart"}
+          <ArrowLeft size={14} />{" "}
+          {productId ? "Back to your find" : "Back to your bag"}
         </Link>
-
-        <div className="mb-8">
-          <TrustBadges />
-        </div>
-
-        <div className="grid lg:grid-cols-5 gap-8">
-          {/* Order summary sidebar */}
-          <div className="lg:col-span-2 order-2 lg:order-1">
-            <div className="bg-card rounded-lg border border-border p-6 lg:sticky lg:top-24">
-              <h2 className="font-bold mb-4">Order Summary</h2>
-
-              {singleProduct ? (
-                <div className="flex gap-3">
-                  <div className="w-16 h-16 rounded-md overflow-hidden bg-secondary shrink-0">
-                    <img
-                      src={singleProduct.images[0] || "/placeholder.svg"}
-                      alt={singleProduct.name}
-                      className="w-full h-full object-cover"
-                    />
-                  </div>
-                  <div className="flex-1">
-                    <p className="font-medium text-sm">{singleProduct.name}</p>
-                    <p className="text-sm text-muted-foreground">{singleProduct.year}</p>
-                    <p className="text-xs text-muted-foreground mt-1">Qty: {singleQuantity}</p>
-                    <p className="font-bold mt-1">{formatPrice(singleProduct.priceInCents * singleQuantity)}</p>
-                  </div>
-                </div>
-              ) : (
-                <div className="space-y-3">
-                  {items.map((item) => (
-                    <div key={item.product.id} className="flex gap-3">
-                      <div className="w-12 h-12 rounded-md overflow-hidden bg-secondary shrink-0">
-                        <img
-                          src={item.product.images[0] || "/placeholder.svg"}
-                          alt={item.product.name}
-                          className="w-full h-full object-cover"
-                        />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="font-medium text-sm truncate">{item.product.name}</p>
-                        <p className="text-xs text-muted-foreground">Qty: {item.quantity}</p>
-                      </div>
-                      <p className="font-medium text-sm">{formatPrice(item.product.priceInCents * item.quantity)}</p>
-                    </div>
-                  ))}
-                </div>
-              )}
-
-              <div className="border-t border-border mt-4 pt-4">
-                <div className="flex justify-between font-bold">
-                  <span>Total</span>
-                  <span>{formatPrice(singleProduct ? singleProduct.priceInCents * singleQuantity : totalPrice)}</span>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-2 mt-4 text-xs text-muted-foreground">
-                <Lock className="h-3 w-3" />
-                <span>Secure checkout powered by Stripe</span>
-              </div>
+        {!isHydrated || loading ? (
+          <div className="commerce-loading" role="status">
+            <Loader2 size={24} className="commerce-spinner" /> Getting
+            everything ready…
+          </div>
+        ) : error ? (
+          <div className="commerce-empty">
+            <p className="eyebrow">A LITTLE PAUSE</p>
+            <h1>
+              Let’s find
+              <br />
+              your <em>next step.</em>
+            </h1>
+            <p role="alert">{error}</p>
+            <Link
+              className="commerce-button"
+              href={productId ? `/product/${productId}` : "/cart"}
+            >
+              Review your find <ArrowUpRight size={18} />
+            </Link>
+            <Link className="commerce-button secondary" href="/shop">
+              Explore the collection
+            </Link>
+          </div>
+        ) : summary.length === 0 ? (
+          <div className="commerce-empty">
+            <div className="commerce-mark">
+              <img src="/brand/logos/measure-joy-icon-ink.svg" alt="" />
             </div>
+            <h1>
+              A little room
+              <br />
+              for <em>joy.</em>
+            </h1>
+            <p>Your bag is empty. Pick a camera and start a new story.</p>
+            <Link href="/shop" className="commerce-button">
+              Explore the collection <ArrowUpRight size={18} />
+            </Link>
           </div>
-
-          {/* Checkout form */}
-          <div className="lg:col-span-3 order-1 lg:order-2">
-            <h1 className="text-2xl font-bold mb-6">Checkout</h1>
-            <Checkout productId={singleProduct?.id} quantity={singleQuantity} />
-          </div>
-        </div>
+        ) : (
+          <>
+            <div className="commerce-heading">
+              <div>
+                <p className="eyebrow">02 / THE NEXT CHAPTER</p>
+                <h1>
+                  Almost <em>yours.</em>
+                </h1>
+              </div>
+              <p>
+                Good memories start
+                <br />
+                with one small step.
+              </p>
+            </div>
+            <div className="commerce-grid">
+              <Checkout productId={product?.id} quantity={quantity} />
+              <aside className="order-summary">
+                <p className="eyebrow">YOUR GOOD FINDS</p>
+                <h2>Coming along for the ride.</h2>
+                {summary.map((item) => {
+                  const image = safeImageUrl(item.product.images[0]);
+                  return (
+                    <div className="summary-item" key={item.product.id}>
+                      {image && <img src={image} alt={item.product.name} />}
+                      <div>
+                        <Link href={productPath(item.product)}>
+                          {item.product.name}
+                        </Link>
+                        <p>Quantity {item.quantity}</p>
+                      </div>
+                      <span>
+                        {formatPrice(item.product.priceInCents * item.quantity)}
+                      </span>
+                    </div>
+                  );
+                })}
+                <div className="summary-total">
+                  <span>Item subtotal</span>
+                  <strong>{formatPrice(subtotal)}</strong>
+                </div>
+                <p className="summary-note">
+                  Prices and availability are checked again before checkout.
+                  Stripe confirms your final total, shipping, taxes, and
+                  discounts before payment.
+                </p>
+                <p className="commerce-secure">
+                  <LockKeyhole size={12} /> Secure payment with Stripe
+                </p>
+              </aside>
+            </div>
+          </>
+        )}
       </div>
-    </main>
-  )
+    </CommerceShell>
+  );
 }
-
 export default function CheckoutPage() {
   return (
     <Suspense
       fallback={
-        <main className="min-h-screen bg-background">
-          <Header />
-          <div className="mx-auto max-w-4xl px-6 lg:px-8 py-16 text-center">
-            <div className="animate-pulse">
-              <div className="h-8 bg-secondary rounded w-48 mx-auto mb-4" />
-              <div className="h-4 bg-secondary rounded w-64 mx-auto" />
-            </div>
+        <CommerceShell>
+          <div className="commerce-loading" role="status">
+            <Loader2 className="commerce-spinner" size={24} /> Opening checkout…
           </div>
-        </main>
+        </CommerceShell>
       }
     >
       <CheckoutContent />
     </Suspense>
-  )
+  );
 }

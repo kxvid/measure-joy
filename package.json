@@ -1,12 +1,13 @@
 {
-  "name": "my-v0-project",
+  "name": "measurejoy-storefront",
   "version": "0.1.0",
   "private": true,
   "scripts": {
     "build": "next build",
     "dev": "next dev",
     "lint": "eslint .",
-    "start": "next start"
+    "start": "next start",
+    "test": "node --import ./tests/register-ts.mjs --test ./tests/*.test.mjs ./tests/*.test.cjs"
   },
   "dependencies": {
     "@clerk/nextjs": "^6.36.7",
@@ -81,5 +82,6 @@
     "tailwindcss": "^4.1.9",
     "tw-animate-css": "1.3.3",
     "typescript": "^5"
-  }
+  },
+  "packageManager": "pnpm@11.25.0"
 }

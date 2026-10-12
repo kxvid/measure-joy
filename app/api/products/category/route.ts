@@ -1,52 +1,68 @@
-import { NextResponse } from "next/server"
-import Stripe from "stripe"
+import Stripe from "stripe";
+import { z } from "zod";
+import {
+  AdminRequestError,
+  adminErrorResponse,
+  readAdminJson,
+  requireAdminRequest,
+} from "@/lib/admin-auth";
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!)
+const categorySchema = z.object({
+  productId: z
+    .string()
+    .regex(/^prod_[a-zA-Z0-9]+$/)
+    .max(255),
+  category: z.enum(["camera", "accessory"]),
+  subcategory: z
+    .enum([
+      "memory",
+      "power",
+      "case",
+      "strap",
+      "tripod",
+      "cleaning",
+      "protection",
+      "cable",
+      "film",
+      "other",
+      "",
+    ])
+    .optional(),
+});
 
-/**
- * POST: Update a single product's category in Stripe metadata
- */
 export async function POST(request: Request) {
-    try {
-        const body = await request.json()
-        const { productId, category, subcategory } = body
-
-        if (!productId || !category) {
-            return NextResponse.json(
-                { error: "productId and category are required" },
-                { status: 400 }
-            )
-        }
-
-        if (!["camera", "accessory"].includes(category)) {
-            return NextResponse.json(
-                { error: "category must be 'camera' or 'accessory'" },
-                { status: 400 }
-            )
-        }
-
-        // Update Stripe product metadata
-        await stripe.products.update(productId, {
-            metadata: {
-                category,
-                ...(subcategory && { subcategory }),
-                ...(!subcategory && category === "camera" && { subcategory: "" }), // Clear subcategory for cameras
-                categorized_by_llm: "false", // Mark as manually categorized
-                categorized_at: new Date().toISOString()
-            }
-        })
-
-        return NextResponse.json({
-            success: true,
-            productId,
-            category,
-            subcategory: subcategory || null
-        })
-    } catch (error) {
-        console.error("[Products Category API] Error:", error)
-        return NextResponse.json(
-            { error: "Failed to update product category" },
-            { status: 500 }
-        )
-    }
+  try {
+    await requireAdminRequest(request);
+    const parsed = categorySchema.safeParse(await readAdminJson(request));
+    if (!parsed.success)
+      throw new AdminRequestError(
+        400,
+        "Select a valid product, category, and subcategory.",
+      );
+    const { productId, category, subcategory } = parsed.data;
+    if (!process.env.STRIPE_SECRET_KEY)
+      throw new AdminRequestError(
+        503,
+        "Catalog updates are temporarily unavailable.",
+      );
+    await new Stripe(process.env.STRIPE_SECRET_KEY).products.update(productId, {
+      metadata: {
+        category,
+        subcategory: category === "camera" ? "" : subcategory || "",
+        categorized_by_llm: "false",
+        categorized_at: new Date().toISOString(),
+      },
+    });
+    return Response.json(
+      {
+        success: true,
+        productId,
+        category,
+        subcategory: category === "camera" ? null : subcategory || null,
+      },
+      { headers: { "Cache-Control": "no-store" } },
+    );
+  } catch (error) {
+    return adminErrorResponse(error);
+  }
 }
