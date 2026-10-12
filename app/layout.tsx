@@ -1,35 +1,22 @@
-import type React from "react"
-import type { Metadata } from "next"
-import { ClerkProvider } from "@clerk/nextjs"
-import { Inter, Archivo, Space_Mono } from "next/font/google"
-import { Analytics } from "@vercel/analytics/next"
-import { CartProvider } from "@/lib/cart-context"
-import { ExitIntentPopup } from "@/components/exit-intent-popup"
-import { SocialProofToasts } from "@/components/social-proof-toasts"
-import { SITE_URL, organizationJsonLd, websiteJsonLd } from "@/lib/seo"
-import "./globals.css"
-
-// Retrospekt-style type system: Inter (body) + Archivo (display/labels, tracked uppercase) + Space Mono
-const _inter = Inter({ subsets: ["latin"], variable: "--font-inter" })
-const _archivo = Archivo({
-  subsets: ["latin"],
-  weight: ["400", "500", "600", "700", "800"],
-  variable: "--font-archivo",
-})
-const _spaceMono = Space_Mono({
-  subsets: ["latin"],
-  weight: ["400", "700"],
-  variable: "--font-space-mono",
-})
+import type React from "react";
+import type { Metadata } from "next";
+import { ClerkProvider } from "@clerk/nextjs";
+import { Analytics } from "@vercel/analytics/next";
+import { CartProvider } from "@/lib/cart-context";
+import { SITE_URL } from "@/lib/seo";
+import { getSectionContent } from "@/lib/content";
+import { resolveStorefrontCopy } from "@/lib/storefront-copy";
+import { StorefrontCopyProvider } from "@/components/storefront/copy-provider";
+import "./globals.css";
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
   title: {
-    default: "Measure Joy | Y2K Digital Cameras & Retro Tech",
+    default: "Measure Joy — Little camera. Big feeling.",
     template: "%s | Measure Joy",
   },
   description:
-    "Reviving Y2K digital cameras for a new generation. Curated, tested vintage digicams from Canon, Sony, Nikon, Fujifilm, and more — every camera passes a 15-point inspection and ships with a 90-day warranty.",
+    "Vintage digital cameras, film favorites, and a good reason to put your phone down. Find your next memory maker at Measure Joy.",
   keywords: [
     "Y2K digital camera",
     "vintage digital camera",
@@ -49,12 +36,12 @@ export const metadata: Metadata = {
     type: "website",
     siteName: "Measure Joy",
     url: SITE_URL,
-    title: "Measure Joy | Y2K Digital Cameras & Retro Tech",
+    title: "Measure Joy — Little camera. Big feeling.",
     description:
-      "Curated, tested Y2K digital cameras with a 90-day warranty. Capture the authentic early-digital aesthetic.",
+      "Old cameras. New stories. Explore vintage digital cameras, film favorites, and the little extras.",
     images: [
       {
-        url: "/aesthetic-flat-lay-vintage-digital-cameras-y2k-nos.jpg",
+        url: "/brand/social/og-image.png",
         width: 1200,
         height: 630,
         alt: "Measure Joy — Y2K digital camera collection",
@@ -63,10 +50,9 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "Measure Joy | Y2K Digital Cameras & Retro Tech",
-    description:
-      "Curated, tested Y2K digital cameras with a 90-day warranty.",
-    images: ["/aesthetic-flat-lay-vintage-digital-cameras-y2k-nos.jpg"],
+    title: "Measure Joy — Little camera. Big feeling.",
+    description: "Little camera. Big feeling. Find your next memory maker.",
+    images: ["/brand/social/og-image.png"],
   },
   robots: {
     index: true,
@@ -81,39 +67,40 @@ export const metadata: Metadata = {
   icons: {
     icon: [
       {
-        url: "/icon-light-32x32.png",
+        url: "/brand/icons/favicon.ico",
         media: "(prefers-color-scheme: light)",
       },
       {
-        url: "/icon-dark-32x32.png",
+        url: "/brand/icons/favicon.ico",
         media: "(prefers-color-scheme: dark)",
       },
       {
-        url: "/icon.svg",
+        url: "/brand/icons/favicon.svg",
         type: "image/svg+xml",
       },
     ],
-    apple: "/apple-icon.png",
+    apple: "/brand/icons/apple-touch-icon.png",
   },
-}
+};
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
-  children: React.ReactNode
+  children: React.ReactNode;
 }>) {
+  const copy = resolveStorefrontCopy(await getSectionContent("storefront"));
   return (
     <ClerkProvider>
       <html lang="en">
-        <body className={`font-sans antialiased ${_inter.variable} ${_archivo.variable} ${_spaceMono.variable}`}>
+        <body className="font-sans antialiased">
           <CartProvider>
-            {children}
-            <ExitIntentPopup />
-            <SocialProofToasts />
+            <StorefrontCopyProvider copy={copy}>
+              {children}
+            </StorefrontCopyProvider>
           </CartProvider>
           <Analytics />
         </body>
       </html>
     </ClerkProvider>
-  )
+  );
 }

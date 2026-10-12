@@ -1,150 +1,173 @@
-import { headers } from "next/headers"
-import { NextResponse } from "next/server"
-import Stripe from "stripe"
-import { sendOrderConfirmationEmail } from "@/lib/emails"
+import { createHash } from "node:crypto";
+import { headers } from "next/headers";
+import { NextResponse } from "next/server";
+import Stripe from "stripe";
+import { sendOrderConfirmationEmail } from "@/lib/emails";
+import {
+  isPaidSession,
+  originalCheckoutItems,
+  shippingDetails,
+  stockCountFromMetadata,
+} from "@/lib/commerce";
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!)
+function inventoryMarkerSuffix(productId: string) {
+  // Preserve existing retry keys while bounding keys for custom Stripe IDs.
+  return productId.length <= 27
+    ? productId
+    : createHash("sha256").update(productId).digest("hex").slice(0, 24);
+}
 
-// Webhook secret from Stripe Dashboard
-const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET!
+async function fulfillCheckout(stripe: Stripe, sessionId: string) {
+  // Retrieve fresh metadata rather than relying on a possibly retried event.
+  const session = await stripe.checkout.sessions.retrieve(sessionId);
+  if (!isPaidSession(session)) return;
+  const lineItems: Stripe.LineItem[] = [];
+  let startingAfter: string | undefined;
+  do {
+    const page = await stripe.checkout.sessions.listLineItems(session.id, {
+      limit: 100,
+      expand: ["data.price.product"],
+      ...(startingAfter ? { starting_after: startingAfter } : {}),
+    });
+    lineItems.push(...page.data);
+    startingAfter = page.has_more ? page.data.at(-1)?.id : undefined;
+  } while (startingAfter);
 
-export async function POST(req: Request) {
-  try {
-    const body = await req.text()
-    const headersList = await headers()
-    const signature = headersList.get("stripe-signature")
+  const originals = originalCheckoutItems(session);
+  const inventoryItems = originals.length
+    ? originals
+    : lineItems.map((item) => ({
+        productId:
+          typeof item.price?.product === "string"
+            ? item.price.product
+            : item.price?.product?.id || "",
+        quantity: item.quantity || 1,
+      }));
 
-    if (!signature) {
-      console.error("[v0] No Stripe signature found")
-      return NextResponse.json({ error: "No signature" }, { status: 400 })
-    }
-
-    let event: Stripe.Event
-
-    try {
-      // Verify webhook signature
-      event = stripe.webhooks.constructEvent(body, signature, webhookSecret)
-    } catch (err) {
-      console.error("[v0] Webhook signature verification failed:", err)
-      return NextResponse.json({ error: "Invalid signature" }, { status: 400 })
-    }
-
-    console.log("[v0] Received webhook event:", event.type)
-
-    // Handle checkout.session.completed event
-    if (event.type === "checkout.session.completed") {
-      const session = event.data.object as Stripe.Checkout.Session
-
-      console.log("[v0] Processing completed checkout session:", session.id)
-
-      // Retrieve line items from Stripe session
-      const lineItems = await stripe.checkout.sessions.listLineItems(session.id, {
-        expand: ['data.price.product']
-      })
-
-      const items = lineItems.data.map((item) => {
-        const product = item.price?.product as Stripe.Product
-        return {
-          productId: product?.id || 'unknown',
-          name: item.description || product?.name || 'Unknown Product',
-          quantity: item.quantity || 1,
-          priceInCents: item.amount_total || 0,
-          image: product?.images?.[0] || null,
-        }
-      })
-
-      const totalInCents = items.reduce((sum, item) => sum + item.priceInCents, 0)
-
-      // Decrement inventory for each purchased product
-      // Uses Stripe product metadata as source of truth for stockCount
-      for (const item of items) {
-        if (item.productId === "unknown") continue
-        try {
-          await decrementProductStock(item.productId, item.quantity)
-        } catch (stockError) {
-          console.error(`[v0] Failed to decrement stock for ${item.productId}:`, stockError)
-          // Don't fail the webhook if stock update fails - order is already paid
-        }
+  if (session.metadata?.inventory_processed !== "true") {
+    for (const item of inventoryItems) {
+      if (!item.productId.startsWith("prod_"))
+        throw new Error("Checkout item has no catalog product.");
+      const suffix = inventoryMarkerSuffix(item.productId);
+      const doneKey = `stock_done_${suffix}`;
+      const targetKey = `stock_target_${suffix}`;
+      if (session.metadata?.[doneKey] === "true") continue;
+      let target = session.metadata?.[targetKey];
+      if (target === undefined) {
+        const product = await stripe.products.retrieve(item.productId);
+        const currentStock = stockCountFromMetadata(product.metadata);
+        target =
+          currentStock === undefined
+            ? "untracked"
+            : String(Math.max(0, currentStock - item.quantity));
+        // Persist the target first so a retry uses the same idempotent update
+        // even if the preceding request succeeded but its response was lost.
+        await stripe.checkout.sessions.update(
+          session.id,
+          { metadata: { [targetKey]: target } },
+          {
+            idempotencyKey: `stock-plan-${session.id}-${suffix}`,
+          },
+        );
       }
-
-      // Send confirmation email
-      if (session.customer_details?.email) {
-        try {
-          await sendOrderConfirmationEmail({
-            email: session.customer_details.email,
-            orderId: session.id,
-            items: items,
-            totalInCents: totalInCents,
-            shippingAddress: (session as any).shipping_details?.address,
-          })
-          console.log("[v0] Confirmation email sent to:", session.customer_details.email)
-        } catch (emailError) {
-          console.error("[v0] Error sending confirmation email:", emailError)
-        }
+      if (target !== "untracked") {
+        const stock = Number(target);
+        if (!Number.isSafeInteger(stock) || stock < 0)
+          throw new Error("Invalid inventory fulfillment target.");
+        await stripe.products.update(
+          item.productId,
+          {
+            metadata: {
+              stockCount: String(stock),
+              ...(stock === 0 ? { inStock: "false" } : {}),
+            },
+          },
+          { idempotencyKey: `stock-apply-${session.id}-${suffix}` },
+        );
       }
-
-      return NextResponse.json({ received: true })
+      await stripe.checkout.sessions.update(session.id, {
+        metadata: { [doneKey]: "true" },
+      });
     }
-
-    // Handle product events for inventory sync (Log only, no DB)
-    if (event.type === "product.created" || event.type === "product.updated") {
-      const product = event.data.object as Stripe.Product
-      console.log(`[v0] Product ${event.type}:`, product.id, product.name)
-      return NextResponse.json({ received: true })
+    // Finalize and remove per-item retry markers atomically. Keeping those
+    // markers would exhaust Stripe's metadata limit before shipment updates.
+    const completedMetadata: Record<string, string> = {
+      inventory_processed: "true",
+    };
+    for (const item of inventoryItems) {
+      const suffix = inventoryMarkerSuffix(item.productId);
+      completedMetadata[`stock_target_${suffix}`] = "";
+      completedMetadata[`stock_done_${suffix}`] = "";
     }
+    await stripe.checkout.sessions.update(session.id, {
+      metadata: completedMetadata,
+    });
+  }
 
-    if (event.type === "product.deleted") {
-      const product = event.data.object as Stripe.Product
-      console.log(`[v0] Product deleted:`, product.id)
-      return NextResponse.json({ received: true })
-    }
-
-    // Handle price updates
-    if (event.type === "price.created" || event.type === "price.updated") {
-      const price = event.data.object as Stripe.Price
-      console.log(`[v0] Price ${event.type}:`, price.id, `$${(price.unit_amount || 0) / 100}`)
-      return NextResponse.json({ received: true })
-    }
-
-    // Return 200 for other event types
-    return NextResponse.json({ received: true })
-  } catch (error) {
-    console.error("[v0] Webhook error:", error)
-    return NextResponse.json({ error: "Webhook handler failed" }, { status: 500 })
+  if (
+    session.customer_details?.email &&
+    session.metadata?.confirmation_sent !== "true"
+  ) {
+    await sendOrderConfirmationEmail({
+      email: session.customer_details.email,
+      orderId: session.id,
+      items: lineItems.map((item) => ({
+        name: item.description || "Product",
+        quantity: item.quantity || 1,
+        // The existing email renderer shows a line total, not a unit price.
+        priceInCents: item.amount_total,
+      })),
+      totalInCents: session.amount_total || 0,
+      shippingAddress: shippingDetails(session)?.address,
+    });
+    await stripe.checkout.sessions.update(session.id, {
+      metadata: { confirmation_sent: "true" },
+    });
   }
 }
 
-// Decrement a product's stockCount in Stripe metadata by the given quantity.
-// Marks the product as out-of-stock (inStock: "false") when count hits 0.
-// If stockCount is not set on the product, this is a no-op (inventory untracked).
-async function decrementProductStock(productId: string, quantity: number) {
-  const product = await stripe.products.retrieve(productId)
-  const currentStockRaw = product.metadata?.stockCount
-
-  // Skip if inventory isn't tracked for this product
-  if (!currentStockRaw) {
-    console.log(`[v0] Product ${productId} has no stockCount metadata - skipping decrement`)
-    return
+export async function POST(req: Request) {
+  const secretKey = process.env.STRIPE_SECRET_KEY;
+  const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
+  if (!secretKey || !webhookSecret) {
+    console.error("[Stripe webhook] Required Stripe configuration is missing");
+    return NextResponse.json(
+      { error: "Webhook is not configured" },
+      { status: 503 },
+    );
   }
-
-  const currentStock = parseInt(currentStockRaw, 10)
-  if (isNaN(currentStock)) {
-    console.warn(`[v0] Invalid stockCount "${currentStockRaw}" for product ${productId}`)
-    return
+  const signature = (await headers()).get("stripe-signature");
+  if (!signature)
+    return NextResponse.json({ error: "No signature" }, { status: 400 });
+  const stripe = new Stripe(secretKey);
+  let event: Stripe.Event;
+  try {
+    event = stripe.webhooks.constructEvent(
+      await req.text(),
+      signature,
+      webhookSecret,
+    );
+  } catch {
+    return NextResponse.json({ error: "Invalid signature" }, { status: 400 });
   }
-
-  const newStock = Math.max(0, currentStock - quantity)
-
-  const newMetadata: Record<string, string> = {
-    ...product.metadata,
-    stockCount: newStock.toString(),
+  try {
+    if (
+      event.type === "checkout.session.completed" ||
+      event.type === "checkout.session.async_payment_succeeded"
+    ) {
+      await fulfillCheckout(
+        stripe,
+        (event.data.object as Stripe.Checkout.Session).id,
+      );
+    }
+    return NextResponse.json({ received: true });
+  } catch (error) {
+    // Retriable errors must reach Stripe; acknowledging a failed stock update
+    // would permanently lose fulfillment.
+    console.error("[Stripe webhook] Fulfillment failed:", error);
+    return NextResponse.json(
+      { error: "Webhook handler failed" },
+      { status: 500 },
+    );
   }
-
-  // Auto-mark as out of stock when depleted
-  if (newStock === 0) {
-    newMetadata.inStock = "false"
-  }
-
-  await stripe.products.update(productId, { metadata: newMetadata })
-  console.log(`[v0] Decremented stock for ${productId}: ${currentStock} → ${newStock}`)
 }

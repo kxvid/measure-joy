@@ -1,71 +1,136 @@
-"use client"
+"use client";
 
-import { useEffect, useState } from "react"
-import { startCheckoutSession, startSingleProductCheckout } from "@/app/actions/stripe"
-import { useCart } from "@/lib/cart-context"
-import { useAuth } from "@clerk/nextjs"
-import { CheckCircle, Package, ArrowRight, Loader2 } from "lucide-react"
-import { Button } from "@/components/ui/button"
-import Link from "next/link"
+import { useEffect, useRef, useState } from "react";
+import Link from "next/link";
+import { ArrowLeft, ArrowUpRight, Loader2 } from "lucide-react";
+import {
+  startCheckoutSession,
+  startSingleProductCheckout,
+} from "@/app/actions/stripe";
+import { useCart } from "@/lib/cart-context";
 
-interface CheckoutProps {
-  productId?: string
-  quantity?: number
-}
-
-export default function Checkout({ productId, quantity = 1 }: CheckoutProps) {
-  const { items, clearCart } = useCart()
-  const { userId } = useAuth()
-  const [error, setError] = useState<string | null>(null)
-
+export default function Checkout({
+  productId,
+  quantity = 1,
+}: {
+  productId?: string;
+  quantity?: number;
+}) {
+  const { items, isHydrated, refreshCart } = useCart();
+  const [error, setError] = useState("");
+  const [attempt, setAttempt] = useState(0);
+  const started = useRef<string | null>(null);
+  const mounted = useRef(false);
   useEffect(() => {
-    async function redirectToCheckout() {
+    mounted.current = true;
+    return () => {
+      mounted.current = false;
+    };
+  }, []);
+  useEffect(() => {
+    if (!isHydrated || (!productId && items.length === 0)) return;
+    const key = `${productId || "bag"}:${quantity}:${attempt}`;
+    if (started.current === key) return;
+    started.current = key;
+    void (async () => {
       try {
-        const uid = userId || undefined
-
-        let url: string | null
+        let url: string | null;
         if (productId) {
-          url = await startSingleProductCheckout(productId, uid, quantity)
+          url = await startSingleProductCheckout(
+            productId,
+            undefined,
+            quantity,
+          );
         } else {
-          const cartItems = items.map((item) => ({
-            productId: item.product.id,
-            quantity: item.quantity,
-          }))
-          url = await startCheckoutSession(cartItems, uid)
+          const refreshed = await refreshCart();
+          if (!refreshed.items.length)
+            throw new Error(
+              "Your bag is empty. Choose a find before checking out.",
+            );
+          if (refreshed.issues.length)
+            throw new Error(refreshed.issues.join(" "));
+          url = await startCheckoutSession(
+            refreshed.items.map((item) => ({
+              productId: item.product.id,
+              quantity: item.quantity,
+            })),
+            undefined,
+          );
         }
-
-        if (!url) {
-          setError("Failed to create checkout session. Please try again.")
-          return
-        }
-
-        window.location.href = url
-      } catch (err) {
-        console.error("Checkout error:", err)
-        setError(err instanceof Error ? err.message : "Something went wrong. Please try again.")
+        if (!url)
+          throw new Error(
+            "We couldn’t open secure checkout. Please try again.",
+          );
+        const destination = new URL(url);
+        if (
+          destination.protocol !== "https:" ||
+          destination.hostname !== "checkout.stripe.com"
+        )
+          throw new Error(
+            "We couldn’t verify the secure checkout link. Please try again.",
+          );
+        if (mounted.current) window.location.assign(url);
+      } catch (cause) {
+        if (mounted.current)
+          setError(
+            cause instanceof Error
+              ? cause.message
+              : "We couldn’t open checkout. Please try again.",
+          );
       }
-    }
-
-    if (items.length > 0 || productId) {
-      redirectToCheckout()
-    }
-  }, [productId, quantity, items, userId])
-
-  if (error) {
-    return (
-      <div className="text-center py-16">
-        <p className="mb-5 font-display text-sm uppercase tracking-[0.08em] text-destructive">{error}</p>
-        <Button asChild variant="outline" className="rounded-none border-border bg-transparent font-display text-xs font-semibold uppercase tracking-[0.12em] cursor-pointer">
-          <Link href="/cart">Back to Cart</Link>
-        </Button>
-      </div>
-    )
-  }
+    })();
+  }, [productId, quantity, items.length, isHydrated, refreshCart, attempt]);
 
   return (
-    <div className="text-center py-16">
-      <Loader2 className="h-7 w-7 mx-auto animate-spin text-muted-foreground" />
-      <p className="mt-5 font-display text-xs uppercase tracking-[0.14em] text-muted-foreground">Redirecting to secure checkout</p>
-    </div>
-  )
+    <section className="checkout-panel" aria-live="polite">
+      <div className="commerce-mark">
+        <img src="/brand/logos/measure-joy-icon-ink.svg" alt="" />
+      </div>
+      <h2>
+        {error
+          ? "A little pause in the picture."
+          : "One last step to your next chapter."}
+      </h2>
+      {error ? (
+        <>
+          <div className="commerce-alert" role="alert">
+            <p>{error}</p>
+          </div>
+          <div className="checkout-actions">
+            <Link
+              className="commerce-button secondary"
+              href={productId ? `/product/${productId}` : "/cart"}
+            >
+              <ArrowLeft size={15} />{" "}
+              {productId ? "Back to the camera" : "Review your bag"}
+            </Link>
+            <button
+              className="commerce-button"
+              onClick={() => {
+                setError("");
+                setAttempt((value) => value + 1);
+              }}
+            >
+              Try again <ArrowUpRight size={16} />
+            </button>
+          </div>
+        </>
+      ) : (
+        <>
+          <p>
+            We’re checking your finds and opening Stripe’s secure checkout.
+            You’ll review the final details before paying.
+          </p>
+          <div className="checkout-progress" role="status">
+            <Loader2 className="commerce-spinner" size={18} />
+            <span>
+              {isHydrated
+                ? "Opening secure checkout…"
+                : "Getting your bag ready…"}
+            </span>
+          </div>
+        </>
+      )}
+    </section>
+  );
 }

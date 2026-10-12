@@ -1,0 +1,11 @@
+:root {
+  --mj-ivory: #F4F1E8;
+  --mj-ink: #191919;
+  --mj-coral: #FF5439;
+  --mj-acid: #DAFF4F;
+  --mj-silver: #C7C9CF;
+  --mj-font-sans: "Space Grotesk", sans-serif;
+  --mj-font-serif: "Instrument Serif", serif;
+  --mj-space: 8px;
+  --mj-radius-button: 999px;
+}

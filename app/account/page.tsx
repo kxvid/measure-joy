@@ -1,36 +1,48 @@
-import { currentUser } from "@clerk/nextjs/server"
-import { redirect } from "next/navigation"
-import { getOrders } from "@/app/actions/orders"
-import { Header } from "@/components/header"
-import { Footer } from "@/components/footer"
-import { AccountDashboardSections } from "@/components/account-dashboard-sections"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Separator } from "@/components/ui/separator"
-import { User, Package, Heart, Settings, ChevronRight, LogOut, Wrench, Clock } from "lucide-react"
-import Link from "next/link"
-import { SignOutButton } from "@clerk/nextjs"
+import { currentUser } from "@clerk/nextjs/server";
+import { redirect } from "next/navigation";
+import { getOrders } from "@/app/actions/orders";
+import { EditorialPage, EditorialHeading } from "@/components/editorial-page";
+import { AccountDashboardSections } from "@/components/account-dashboard-sections";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Separator } from "@/components/ui/separator";
+import {
+  User,
+  Package,
+  Heart,
+  Settings,
+  ChevronRight,
+  LogOut,
+  Wrench,
+  Clock,
+} from "lucide-react";
+import Link from "next/link";
+import { SignOutButton } from "@clerk/nextjs";
 
 export default async function AccountPage() {
-  const user = await currentUser()
+  const user = await currentUser();
 
   if (!user) {
-    redirect("/sign-in")
+    redirect("/sign-in");
   }
 
-  const orders = await getOrders()
-  const recentOrders = orders.slice(0, 3)
+  const orders = await getOrders();
+  const recentOrders = orders.slice(0, 3);
 
   return (
-    <main className="min-h-screen bg-background">
-      <Header />
-
-      <div className="mx-auto max-w-4xl px-6 lg:px-8 py-8 lg:py-12">
-        <div className="mb-10">
-          <span className="font-mono text-xs text-accent tracking-wide uppercase">Account</span>
-          <h1 className="text-3xl lg:text-4xl font-bold mt-2 tracking-tight">My Account</h1>
-          <p className="text-muted-foreground mt-2">Manage your profile and view orders</p>
-        </div>
+    <EditorialPage className="ed-account">
+      <div className="ed-account-content">
+        <EditorialHeading
+          label="Your little corner"
+          title="My Account"
+          description="Manage your profile and view orders"
+        />
 
         <div className="grid md:grid-cols-3 gap-6">
           {/* Profile Card */}
@@ -45,14 +57,22 @@ export default async function AccountPage() {
             <CardContent className="space-y-4">
               <div className="grid gap-1">
                 <span className="text-sm text-muted-foreground">Email</span>
-                <span className="font-medium">{user.emailAddresses[0]?.emailAddress}</span>
+                <span className="font-medium">
+                  {user.emailAddresses[0]?.emailAddress}
+                </span>
               </div>
               <div className="grid gap-1">
                 <span className="text-sm text-muted-foreground">Name</span>
-                <span className="font-medium">{user.firstName ? `${user.firstName} ${user.lastName || ""}` : "Not set"}</span>
+                <span className="font-medium">
+                  {user.firstName
+                    ? `${user.firstName} ${user.lastName || ""}`
+                    : "Not set"}
+                </span>
               </div>
               <div className="grid gap-1">
-                <span className="text-sm text-muted-foreground">Member since</span>
+                <span className="text-sm text-muted-foreground">
+                  Member since
+                </span>
                 <span className="font-medium">
                   {new Date(user.createdAt).toLocaleDateString("en-US", {
                     month: "long",
@@ -61,7 +81,11 @@ export default async function AccountPage() {
                 </span>
               </div>
               <div className="pt-2">
-                <Button asChild variant="outline" className="rounded-xl bg-transparent">
+                <Button
+                  asChild
+                  variant="outline"
+                  className="rounded-xl bg-transparent"
+                >
                   <Link href="/account/settings">
                     <Settings className="h-4 w-4 mr-2" />
                     Edit Profile
@@ -75,7 +99,7 @@ export default async function AccountPage() {
           <div className="space-y-4">
             <Card className="border-2">
               <CardContent className="p-4">
-                <nav className="space-y-1">
+                <nav className="ed-account-nav space-y-1" aria-label="Account">
                   <Link
                     href="/account/orders"
                     className="flex items-center justify-between px-3 py-2.5 rounded-xl hover:bg-secondary transition-colors group"
@@ -116,7 +140,9 @@ export default async function AccountPage() {
                   >
                     <div className="flex items-center gap-3">
                       <Wrench className="h-4 w-4 text-muted-foreground" />
-                      <span className="text-sm font-medium">Repairs & Services</span>
+                      <span className="text-sm font-medium">
+                        Repairs & Services
+                      </span>
                     </div>
                     <ChevronRight className="h-4 w-4 text-muted-foreground group-hover:translate-x-0.5 transition-transform" />
                   </Link>
@@ -126,7 +152,9 @@ export default async function AccountPage() {
                   >
                     <div className="flex items-center gap-3">
                       <Clock className="h-4 w-4 text-muted-foreground" />
-                      <span className="text-sm font-medium">Recently Viewed</span>
+                      <span className="text-sm font-medium">
+                        Recently Viewed
+                      </span>
                     </div>
                     <ChevronRight className="h-4 w-4 text-muted-foreground group-hover:translate-x-0.5 transition-transform" />
                   </Link>
@@ -160,7 +188,12 @@ export default async function AccountPage() {
                 <CardDescription>Your latest purchases</CardDescription>
               </div>
               {orders.length > 0 && (
-                <Button asChild variant="outline" size="sm" className="rounded-xl bg-transparent">
+                <Button
+                  asChild
+                  variant="outline"
+                  size="sm"
+                  className="rounded-xl bg-transparent"
+                >
                   <Link href="/account/orders">View all</Link>
                 </Button>
               )}
@@ -170,15 +203,28 @@ export default async function AccountPage() {
             {recentOrders.length > 0 ? (
               <div className="space-y-4">
                 {recentOrders.map((order) => (
-                  <div key={order.id} className="flex items-center justify-between p-4 border rounded-xl hover:bg-secondary/50 transition-colors">
+                  <div
+                    key={order.id}
+                    className="flex items-center justify-between p-4 border rounded-xl hover:bg-secondary/50 transition-colors"
+                  >
                     <div>
-                      <p className="font-medium">Order #{order.id.slice(0, 8).toUpperCase()}</p>
+                      <p className="font-medium">
+                        Order #{order.id.slice(0, 8).toUpperCase()}
+                      </p>
                       <p className="text-sm text-muted-foreground">
-                        {new Date(order.created_at).toLocaleDateString()} • {order.items.length} items
+                        {new Date(order.created_at).toLocaleDateString()} •{" "}
+                        {order.items.length} items
                       </p>
                     </div>
-                    <Button asChild variant="ghost" size="sm" className="rounded-lg">
-                      <Link href={`/account/orders/${order.id}`}>View Details</Link>
+                    <Button
+                      asChild
+                      variant="ghost"
+                      size="sm"
+                      className="rounded-lg"
+                    >
+                      <Link href={`/account/orders/${order.id}`}>
+                        View Details
+                      </Link>
                     </Button>
                   </div>
                 ))}
@@ -195,8 +241,6 @@ export default async function AccountPage() {
           </CardContent>
         </Card>
       </div>
-
-      <Footer />
-    </main>
-  )
+    </EditorialPage>
+  );
 }

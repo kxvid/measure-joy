@@ -1,57 +1,56 @@
-import { redirect, notFound } from "next/navigation"
-import { currentUser } from "@clerk/nextjs/server"
-import { getOrderById, getOrderTracking } from "@/app/actions/orders"
-import { Header } from "@/components/header"
-import { Footer } from "@/components/footer"
-import { OrderTrackingTimeline } from "@/components/order-tracking-timeline"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { ChevronLeft, Package, MapPin, CreditCard } from "lucide-react"
-import Link from "next/link"
-import { formatPrice } from "@/lib/products"
+import { redirect, notFound } from "next/navigation";
+import { currentUser } from "@clerk/nextjs/server";
+import { getOrderById, getOrderTracking } from "@/app/actions/orders";
+import { EditorialPage, EditorialBackLink } from "@/components/editorial-page";
+import { OrderTrackingTimeline } from "@/components/order-tracking-timeline";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Package, MapPin, CreditCard } from "lucide-react";
+import Link from "next/link";
+import { formatPrice } from "@/lib/products";
 
-export default async function OrderDetailPage({ params }: { params: Promise<{ id: string }> }) {
-  const { id } = await params
-  const user = await currentUser()
+export default async function OrderDetailPage({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}) {
+  const { id } = await params;
+  const user = await currentUser();
 
   if (!user) {
-    redirect("/sign-in")
+    redirect("/sign-in");
   }
 
-  const order = await getOrderById(id)
+  const order = await getOrderById(id);
 
   if (!order) {
-    notFound()
+    notFound();
   }
 
   // Fetch tracking information
-  const tracking = await getOrderTracking(id)
+  const tracking = await getOrderTracking(id);
 
   const shippingAddress = order.shipping_address as {
-    name: string
-    line1: string
-    line2?: string
-    city: string
-    state: string
-    postal_code: string
-    country: string
-  } | null
+    name: string;
+    line1: string;
+    line2?: string;
+    city: string;
+    state: string;
+    postal_code: string;
+    country: string;
+  } | null;
 
   return (
-    <main className="min-h-screen bg-background">
-      <Header />
-
-      <div className="mx-auto max-w-4xl px-6 lg:px-8 py-8 lg:py-12">
-        <Link
-          href="/account/orders"
-          className="inline-flex items-center text-sm text-muted-foreground hover:text-foreground mb-6"
-        >
-          <ChevronLeft className="h-4 w-4 mr-1" />
+    <EditorialPage className="ed-account">
+      <div className="ed-account-content">
+        <EditorialBackLink href="/account/orders">
           Back to Orders
-        </Link>
+        </EditorialBackLink>
 
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
+        <div className="ed-account-order-heading flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
           <div>
-            <p className="font-mono text-xs text-muted-foreground mb-1">Order #{order.id.slice(0, 8).toUpperCase()}</p>
+            <p className="font-mono text-xs text-muted-foreground mb-1">
+              Order #{order.id.slice(0, 8).toUpperCase()}
+            </p>
             <h1 className="text-2xl font-bold tracking-tight">Order Details</h1>
             <p className="text-muted-foreground">
               Placed on{" "}
@@ -69,7 +68,7 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ id
                 : order.status === "shipped"
                   ? "bg-blue-100 text-blue-800"
                   : "bg-yellow-100 text-yellow-800"
-              }`}
+            }`}
           >
             {order.status.charAt(0).toUpperCase() + order.status.slice(1)}
           </span>
@@ -94,10 +93,16 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ id
               </CardHeader>
               <CardContent className="space-y-4">
                 {order.items.map((item: any, idx: number) => (
-                  <div key={idx} className="flex gap-4 pb-4 border-b last:border-0 last:pb-0">
+                  <div
+                    key={idx}
+                    className="flex gap-4 pb-4 border-b last:border-0 last:pb-0"
+                  >
                     <div className="w-20 h-20 rounded-xl bg-secondary overflow-hidden shrink-0">
                       <img
-                        src={item.image || "/placeholder.svg?height=80&width=80&query=camera"}
+                        src={
+                          item.image ||
+                          "/placeholder.svg?height=80&width=80&query=camera"
+                        }
                         alt={item.name}
                         className="w-full h-full object-cover"
                       />
@@ -109,12 +114,18 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ id
                       >
                         {item.name}
                       </Link>
-                      <p className="text-sm text-muted-foreground mt-1">Qty: {item.quantity}</p>
+                      <p className="text-sm text-muted-foreground mt-1">
+                        Qty: {item.quantity}
+                      </p>
                     </div>
                     <div className="text-right">
-                      <p className="font-bold">{formatPrice(item.priceInCents * item.quantity)}</p>
+                      <p className="font-bold">
+                        {formatPrice(item.priceInCents * item.quantity)}
+                      </p>
                       {item.quantity > 1 && (
-                        <p className="text-xs text-muted-foreground">{formatPrice(item.priceInCents)} each</p>
+                        <p className="text-xs text-muted-foreground">
+                          {formatPrice(item.priceInCents)} each
+                        </p>
                       )}
                     </div>
                   </div>
@@ -163,12 +174,21 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ id
                 <CardContent>
                   <address className="text-sm not-italic space-y-1">
                     <p className="font-medium">{shippingAddress.name}</p>
-                    <p className="text-muted-foreground">{shippingAddress.line1}</p>
-                    {shippingAddress.line2 && <p className="text-muted-foreground">{shippingAddress.line2}</p>}
                     <p className="text-muted-foreground">
-                      {shippingAddress.city}, {shippingAddress.state} {shippingAddress.postal_code}
+                      {shippingAddress.line1}
                     </p>
-                    <p className="text-muted-foreground">{shippingAddress.country}</p>
+                    {shippingAddress.line2 && (
+                      <p className="text-muted-foreground">
+                        {shippingAddress.line2}
+                      </p>
+                    )}
+                    <p className="text-muted-foreground">
+                      {shippingAddress.city}, {shippingAddress.state}{" "}
+                      {shippingAddress.postal_code}
+                    </p>
+                    <p className="text-muted-foreground">
+                      {shippingAddress.country}
+                    </p>
                   </address>
                 </CardContent>
               </Card>
@@ -176,8 +196,6 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ id
           </div>
         </div>
       </div>
-
-      <Footer />
-    </main>
-  )
+    </EditorialPage>
+  );
 }
