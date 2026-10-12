@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { headers } from "next/headers";
 import { NextResponse } from "next/server";
 import Stripe from "stripe";
@@ -8,6 +9,13 @@ import {
   shippingDetails,
   stockCountFromMetadata,
 } from "@/lib/commerce";
+
+function inventoryMarkerSuffix(productId: string) {
+  // Preserve existing retry keys while bounding keys for custom Stripe IDs.
+  return productId.length <= 27
+    ? productId
+    : createHash("sha256").update(productId).digest("hex").slice(0, 24);
+}
 
 async function fulfillCheckout(stripe: Stripe, sessionId: string) {
   // Retrieve fresh metadata rather than relying on a possibly retried event.
@@ -40,8 +48,9 @@ async function fulfillCheckout(stripe: Stripe, sessionId: string) {
     for (const item of inventoryItems) {
       if (!item.productId.startsWith("prod_"))
         throw new Error("Checkout item has no catalog product.");
-      const doneKey = `stock_done_${item.productId}`;
-      const targetKey = `stock_target_${item.productId}`;
+      const suffix = inventoryMarkerSuffix(item.productId);
+      const doneKey = `stock_done_${suffix}`;
+      const targetKey = `stock_target_${suffix}`;
       if (session.metadata?.[doneKey] === "true") continue;
       let target = session.metadata?.[targetKey];
       if (target === undefined) {
@@ -57,7 +66,7 @@ async function fulfillCheckout(stripe: Stripe, sessionId: string) {
           session.id,
           { metadata: { [targetKey]: target } },
           {
-            idempotencyKey: `stock-plan-${session.id}-${item.productId}`,
+            idempotencyKey: `stock-plan-${session.id}-${suffix}`,
           },
         );
       }
@@ -73,15 +82,25 @@ async function fulfillCheckout(stripe: Stripe, sessionId: string) {
               ...(stock === 0 ? { inStock: "false" } : {}),
             },
           },
-          { idempotencyKey: `stock-apply-${session.id}-${item.productId}` },
+          { idempotencyKey: `stock-apply-${session.id}-${suffix}` },
         );
       }
       await stripe.checkout.sessions.update(session.id, {
         metadata: { [doneKey]: "true" },
       });
     }
+    // Finalize and remove per-item retry markers atomically. Keeping those
+    // markers would exhaust Stripe's metadata limit before shipment updates.
+    const completedMetadata: Record<string, string> = {
+      inventory_processed: "true",
+    };
+    for (const item of inventoryItems) {
+      const suffix = inventoryMarkerSuffix(item.productId);
+      completedMetadata[`stock_target_${suffix}`] = "";
+      completedMetadata[`stock_done_${suffix}`] = "";
+    }
     await stripe.checkout.sessions.update(session.id, {
-      metadata: { inventory_processed: "true" },
+      metadata: completedMetadata,
     });
   }
 

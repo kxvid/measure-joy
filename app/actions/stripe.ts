@@ -14,6 +14,8 @@ import {
 
 async function createCheckout(items: CheckoutItem[], cancelPath: string) {
   const normalized = normalizeCheckoutItems(items);
+  if (normalized.length > 20)
+    throw new Error("Please check out with 20 or fewer different items at a time.");
   const lineItems = await Promise.all(
     normalized.map(async ({ productId, quantity }) => {
       const product = await stripe.products.retrieve(productId, {

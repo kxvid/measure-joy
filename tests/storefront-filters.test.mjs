@@ -81,3 +81,18 @@ test('legacy category and year links retain their meaning', () => {
   const filters = {...DEFAULT_FILTERS, year:'2005'};
   assert.equal(new URL(filtersUrl('https://www.measurejoy.org/shop?utm_source=club',filters)).searchParams.get('year'),'2005');
 });
+
+test('legacy q search links remain searchable and can be cleared', () => {
+  const filters = readFilters('?q=canon');
+  assert.equal(filters.query, 'canon');
+  assert.equal(new URL(filtersUrl('https://www.measurejoy.org/shop?q=canon', DEFAULT_FILTERS)).searchParams.has('q'), false);
+});
+
+test('film packs remain accessories while actual film cameras remain cameras', () => {
+  for (const name of ['Kodak Gold 200 35mm Film 3 Pack', 'Fujifilm Instax Mini Instant Film Twin Pack']) {
+    const product = {name, category:'accessory', subcategory:'film'};
+    assert.equal(categoryMatch(product,'accessory'), true);
+    assert.equal(categoryMatch(product,'camera'), false);
+  }
+  assert.equal(categoryMatch({name:'Olympus Trip 35 Film Camera',category:'camera',subcategory:'film'},'film'),true);
+});

@@ -14,7 +14,18 @@ function setup({ item = product(), pages, sessions = [], session, authUserId = "
       retrieve: async () => session,
       list: async ({ starting_after }) => ({ data: starting_after ? sessions.slice(1) : sessions.slice(0, 1), has_more: !starting_after && sessions.length > 1 }),
       listLineItems: async () => ({ data: session.line_items.data, has_more: false }),
-      update: async (_, data) => { Object.assign(session.metadata, data.metadata); return session },
+      update: async (_, data, options) => {
+        if (options?.idempotencyKey?.length > 255) throw new Error('Stripe idempotency key too long')
+        const metadata = { ...session.metadata }
+        for (const [key, value] of Object.entries(data.metadata)) {
+          if (key.length > 40) throw new Error('Stripe metadata key too long')
+          if (value === '') delete metadata[key]
+          else metadata[key] = value
+        }
+        if (Object.keys(metadata).length > 50) throw new Error('Stripe metadata limit exceeded')
+        session.metadata = metadata
+        return session
+      },
     } },
     webhooks: { constructEvent: () => ({ id: 'evt_Test', type: 'checkout.session.completed', data: { object: session } }) },
   }
@@ -38,6 +49,17 @@ test('invalid quantities and combined quantities beyond stock cannot create paym
   const { load, writes } = setup()
   await assert.rejects(load('app/actions/stripe.ts').startCheckoutSession([{ productId: 'prod_Camera', quantity: 2 }, { productId: 'prod_Camera', quantity: 2 }]))
   assert.equal(writes.length, 0)
+})
+test('checkout bounds distinct items before creating a session but still merges duplicate products', async () => {
+  const { load, writes } = setup()
+  const checkout = load('app/actions/stripe.ts').startCheckoutSession
+  await assert.rejects(checkout(Array.from({ length: 21 }, (_, index) => ({ productId: `prod_${index}`, quantity: 1 }))), /20 or fewer/)
+  assert.equal(writes.length, 0)
+  await checkout([{ productId: 'prod_Camera', quantity: 1 }, { productId: 'prod_Camera', quantity: 1 }])
+  assert.equal(writes[0].line_items.length, 1)
+  assert.equal(writes[0].line_items[0].quantity, 2)
+  await checkout(Array.from({ length: 20 }, (_, index) => ({ productId: `prod_${index}`, quantity: 1 })))
+  assert.equal(writes[1].line_items.length, 20)
 })
 test('missing prices and depleted stock cannot be purchased', async () => {
   for (const item of [product({ default_price: null }), product({ metadata: { stockCount: '0' } }), product({ default_price: { ...product().default_price, active: false } })]) {
@@ -84,6 +106,56 @@ test('paid legacy sessions decrement original catalog stock and repeated deliver
   await route.POST(new Request('https://measurejoy.org/api/stripe/webhook', { method: 'POST', body: '{}' }))
   assert.equal(updates.length, 1)
   assert.equal(emails.length, 1)
+})
+test('large orders release retry metadata so shipment details fit within Stripe limits', async () => {
+  const productIds = Array.from({ length: 22 }, (_, index) => `prod_${String(index).padStart(14, '0')}`)
+  const session = paidSession({ metadata: { user_id: 'user_real', items: productIds.map(id => `${id}:1`).join(',') } })
+  assert.ok(session.metadata.items.length <= 500)
+  const { load, stripe, updates, emails } = setup({ session })
+  const route = load('app/api/stripe/webhook/route.ts')
+  const request = () => new Request('https://measurejoy.org/api/stripe/webhook', { method: 'POST', body: '{}' })
+  assert.equal((await route.POST(request())).status, 200)
+  assert.equal(updates.length, 22)
+  assert.equal(Object.keys(session.metadata).some(key => key.startsWith('stock_')), false)
+  assert.equal(session.metadata.inventory_processed, 'true')
+  await stripe.checkout.sessions.update(session.id, { metadata: { tracking_number: 'mock-tracking', tracking_carrier: 'USPS', order_status: 'shipped' } })
+  assert.equal((await route.POST(request())).status, 200)
+  assert.equal(updates.length, 22)
+  assert.equal(emails.length, 1)
+})
+test('custom long product IDs stay within Stripe metadata key limits during fulfillment', async () => {
+  const productId = `prod_${'A'.repeat(220)}`
+  const session = paidSession({ id: `cs_live_${'B'.repeat(60)}`, metadata: { user_id: 'user_real', items: `${productId}:1` } })
+  const { load, updates, stripe } = setup({ session })
+  const originalUpdate = stripe.products.update
+  stripe.products.update = async (...args) => {
+    assert.ok(args[2].idempotencyKey.length <= 255)
+    return originalUpdate(...args)
+  }
+  const response = await load('app/api/stripe/webhook/route.ts').POST(new Request('https://measurejoy.org/api/stripe/webhook', { method: 'POST', body: '{}' }))
+  assert.equal(response.status, 200)
+  assert.equal(updates[0].id, productId)
+  assert.equal(session.metadata.inventory_processed, 'true')
+})
+test('lost inventory-finalization responses do not repeat completed inventory updates', async () => {
+  const session = paidSession()
+  const { load, stripe, updates } = setup({ session })
+  const originalUpdate = stripe.checkout.sessions.update
+  let loseResponse = true
+  stripe.checkout.sessions.update = async (...args) => {
+    const result = await originalUpdate(...args)
+    if (args[1].metadata.inventory_processed === 'true' && loseResponse) {
+      loseResponse = false
+      throw new Error('Connection lost after finalization')
+    }
+    return result
+  }
+  const route = load('app/api/stripe/webhook/route.ts')
+  const request = () => new Request('https://measurejoy.org/api/stripe/webhook', { method: 'POST', body: '{}' })
+  assert.equal((await route.POST(request())).status, 500)
+  assert.equal((await route.POST(request())).status, 200)
+  assert.equal(updates.length, 1)
+  assert.equal(Object.keys(session.metadata).some(key => key.startsWith('stock_')), false)
 })
 test('completed but unpaid sessions do not fulfill or claim a completed payment', async () => {
   const { load, updates, emails } = setup({ session: paidSession({ payment_status: 'unpaid' }) })

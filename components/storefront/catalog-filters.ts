@@ -47,6 +47,12 @@ export function classifyProduct(
   const title = product.name.split(
     /\b(?:with|includes?|for|compatible with)\b/i,
   )[0];
+  const filmConsumable =
+    !/\bcamera\b/i.test(title) &&
+    /\bfilm\b/i.test(title) &&
+    (product.category === "accessory" ||
+      /\b(?:packs?|rolls?|cartridges?|sheets?|exposures?)\b/i.test(title));
+  if (filmConsumable) return "accessory";
   const camera =
     /\bcamera\b(?!\s+(?:lens|battery|charger|case|bag|strap|manual|adapter|cable|cap))|\b(?:camcorder|handycam|digicam|instax)\b/i.test(
       title,
@@ -79,7 +85,11 @@ export function classifyProduct(
     if (/\b(?:film|instant|instax|analog|analogue)\b/i.test(title))
       return "film";
   }
-  if (subcategory === "film" || subcategory === "instant") return "film";
+  if (
+    (camera || product.category === "camera") &&
+    (subcategory === "film" || subcategory === "instant")
+  )
+    return "film";
   if (subcategory === "lens" || subcategory === "lenses") return "lens";
   if (subcategory === "memory" || subcategory === "memory-card")
     return "memory";
@@ -122,7 +132,7 @@ export function readFilters(search: string): ShopFilters {
     year: /^\d{4}$/.test(params.get("year") || "")
       ? params.get("year")!
       : "all",
-    query: params.get("search") || "",
+    query: params.get("search") || params.get("q") || "",
     sort: sort === "price-low" || sort === "price-high" ? sort : "fresh",
     onlyAvailable: params.get("stock") !== "all",
     savedOnly: params.get("saved") === "1",
@@ -138,6 +148,7 @@ export function filtersUrl(currentUrl: string, filters: ShopFilters): string {
     "brand",
     "year",
     "search",
+    "q",
     "sort",
     "stock",
     "saved",

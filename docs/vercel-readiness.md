@@ -1,6 +1,6 @@
 # Vercel readiness audit
 
-Audited 12 October 2026 with the authenticated Vercel plugin, Vercel CLI 63.1.0 and the repository source. This audit's external inspection was read-only. Environment variable **names, scopes and metadata** were inspected with `decrypt=false`; this audit did not retrieve, copy or commit credential values. Later service checks and local catalog checks by the integration team are recorded below. This report is not evidence that the rebuilt source has been deployed or that external services have passed end-to-end tests.
+Audited 12 October 2026 with the authenticated Vercel plugin, Vercel CLI 63.1.0 and the repository source. This audit's external inspection was read-only. Environment variable **names, scopes and metadata** were inspected with `decrypt=false`; this audit did not retrieve, copy or commit credential values. Later service checks and local catalog checks by the integration team are recorded below. The rebuild deployment evidence below confirms a hosted preview; external services have not passed end-to-end tests where launch blockers remain.
 
 ## Verified deployment target
 
@@ -94,7 +94,7 @@ Vercel Authentication is enabled with `all_except_custom_domains`; password prot
 
 The user explicitly chose **“Use live catalog and checkout”** for the rebuild preview. The integration team privately used the authorized live Stripe credentials locally and verified **68 visible catalog products, 26 available**. Purchases from that preview can use live payments; automated verification must not submit a payment or alter live inventory.
 
-Only branch-scoped Preview overrides for `STRIPE_SECRET_KEY` and `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` on `codex/measurejoy-storefront-redesign` are intended. The first creation attempt was rejected because the remote branch did not yet exist. At the time of this update the branch must be pushed, overrides created, and their scopes verified before rebuilding. Other preview branches should retain their existing configuration. This audit has not confirmed those mutations or a resulting rebuild deployment.
+After pushing `codex/measurejoy-storefront-redesign`, branch-scoped Preview overrides for `STRIPE_SECRET_KEY` and `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` were created successfully. They use the existing production Stripe credentials as explicitly requested; other preview branches retain their existing configuration. Vercel deployment `dpl_3GgxKv1DGycFPJcFZwdMue1Ryon7` reached `READY` for commit `61bd1fc54e1706fb794633461fdee18a2eb1bb92`. The protected hosted homepage and shop rendered successfully. Final review corrections follow in the same draft [PR #361](https://github.com/kxvid/measure-joy/pull/361); verify its newest deployment before release.
 
 Before claiming functional preview completion:
 
@@ -121,9 +121,9 @@ Before claiming functional preview completion:
 
 The authenticated runtime-error endpoint returned one error group for invalid Stripe product `prod_null` on `/product/[id]` (4 occurrences in the returned group, last seen 12 October 2026). Its first-seen date was older than the requested 24-hour window, so do not interpret that group count as a verified daily rate. Invalid product identifiers should lead to a safe not-found page without becoming valid catalogue entries.
 
-The integration fixed the inherited original-product inventory mismatch: native checkout uses existing default-price IDs, and legacy sessions resolve original IDs through session metadata. Fulfillment now waits for paid state, persists per-product stock targets, uses Stripe idempotency keys, skips completed markers and returns 500 on stock-update failures for retry. Order history uses supported paginated listing with server ownership checks. Catalog listing paginates and reports outages as 503 rather than a successful empty array. Twelve isolated mocked commerce tests cover these paths; see [production route map](./production-route-map.md).
+The integration fixed the inherited original-product inventory mismatch: native checkout uses existing default-price IDs, and legacy sessions resolve original IDs through session metadata. Fulfillment now waits for paid state, persists per-product stock targets, uses Stripe idempotency keys, skips completed markers and returns 500 on stock-update failures for retry. Order history uses supported paginated listing with server ownership checks. Catalog listing paginates and reports outages as 503 rather than a successful empty array. Isolated mocked commerce tests cover these paths, including inventory marker cleanup and lost finalization responses; see [production route map](./production-route-map.md).
 
-These changes are not an atomic reservation system. Simultaneous distinct checkout sessions can still oversell the same inventory, and email/network ambiguity needs provider-level idempotency for strict exactly-once delivery. Missing webhook configuration still blocks live fulfillment verification. See [public form delivery](./forms.md) for the separate form delivery and schema evidence.
+New checkout sessions are limited to 20 distinct items, leaving room within Stripe’s 50-key metadata limit for inventory retry markers and shipping updates. Long product IDs use bounded hashed marker suffixes. Finalization atomically clears those markers and records completion. These changes are not an atomic reservation system. Simultaneous distinct checkout sessions can still oversell the same inventory, and email/network ambiguity needs provider-level idempotency for strict exactly-once delivery. Missing webhook configuration still blocks live fulfillment verification. See [public form delivery](./forms.md) for the separate form delivery and schema evidence.
 
 ## Release conditions
 
