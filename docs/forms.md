@@ -4,24 +4,29 @@
 
 | Surface | Server path | Result |
 | --- | --- | --- |
-| Contact | `POST /api/contact` | Email to Christian, with visitor reply-to |
-| Repair, restoration, cleaning, film, quote | `POST /api/repairs` | Complete service inquiry email to Christian; does not book a service |
+| Contact | `POST /api/contact` | FormSubmit email to Christian after activation, with visitor reply-to |
+| Repair, restoration, cleaning, film, quote | `POST /api/repairs` | FormSubmit email with the complete service inquiry after activation; does not book a service |
 | Newsletter / welcome popup | `POST /api/subscribe` | Existing subscriber upsert, notification to Christian, then visitor welcome email |
 | Product review | `submitReviewAction` | Existing authenticated review save, notification to Christian, best-effort profile sync |
 | Search | Client navigation | No customer message is submitted |
 | Checkout, payment, account forms | Existing Stripe / Clerk / commerce paths | Existing transactional behavior preserved |
 
-All owner notifications go to `christianvelasquez363@gmail.com`. This recipient exists only in server code. Submitted `to`, `from`, or other unknown fields cannot change it. Existing order/shipping email behavior in `lib/emails.ts` is outside this change.
+All owner notifications go to `christianvelasquez363@gmail.com`. The delivery recipient is fixed in server code; the same address is publicly available as a direct-contact fallback. Submitted `to`, `from`, or other unknown fields cannot change it. Existing order/shipping email behavior in `lib/emails.ts` is outside this change.
 
 ## Runtime configuration
 
-- `RESEND_API_KEY`: required server-only delivery credential. Missing configuration fails publicly with HTTP 503; it never simulates a send.
-- `RESEND_FROM_EMAIL`: optional server-only verified sender override. Default: `Measure Joy <orders@measurejoy.org>`, matching the existing order sender. Its domain must be verified in Resend.
+- Contact and repair requests use FormSubmit through a server-only AJAX adapter. No API key, new Vercel variable, or sending-domain DNS change is required for these two forms. Christian must activate the form from the email sent to `christianvelasquez363@gmail.com`.
+- `RESEND_API_KEY`: still required for newsletter/review notifications and existing transactional email. Missing configuration fails those notification paths explicitly; contact and repair requests do not depend on this key.
+- `RESEND_FROM_EMAIL`: optional server-only verified sender override for newsletter/review notifications. Default: `Measure Joy <orders@measurejoy.org>`, matching the existing order sender. Its domain must be verified in Resend.
 - `NEXT_PUBLIC_APP_URL`: optional canonical origin. Same-origin form requests also work without it.
 - `VERCEL_URL`, `VERCEL_PROJECT_PRODUCTION_URL`: optional Vercel system origins, also allowed explicitly.
 - Existing `NEXT_PUBLIC_SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY`: required for newsletter storage and reviews. No tables or schema changes are introduced.
 
-The Vercel audit found `RESEND_API_KEY` configured for development, preview and production. A subsequent read-only `GET /domains` check with that configured account returned only `kahlalabs.com` with `status: not_started` and no additional pages. `measurejoy.org` is absent and there is no verified sending domain. **Live delivery is blocked until the operator verifies the Measure Joy domain or supplies a key/sender for a verified sending domain.** No credentials were printed or changed. No live email or production database write was used for verification. Read-only Supabase OpenAPI and zero-row HEAD requests confirmed that subscribers, reviews, and profiles exist with the expected columns; review and profile user identifiers are text and are compatible with Clerk IDs.
+Both contact and repair submissions use the fixed FormSubmit recipient and the same `_url` and `Referer`: `https://www.measurejoy.org/`. The actual contact/repair page is included as a normal content field. Keeping the canonical form identity consistent avoids creating a separate activation flow for each route or deployment. Preview and local submissions also target this live recipient: use mocked tests rather than submitting test inquiries from previews.
+
+On 12 October 2026, one owner-authorized setup request received FormSubmit's explicit activation-required response: it reported sending an email with an **Activate Form** link. Inbox arrival and activation have not been independently confirmed. According to [FormSubmit's help](https://formsubmit.co/help), submissions are held until activation and retained for 30 days. The UI shows this pending state and offers Christian's direct email for time-sensitive help. Unknown provider failures never become a successful submission.
+
+Newsletter, review and order email delivery still use Resend and require a verified sender. Their existing domain-verification dependency is separate from this FormSubmit setup. Read-only Supabase checks previously confirmed subscribers, reviews and profiles with the expected columns; this change makes no database or schema mutations.
 
 ## API contract
 
@@ -63,11 +68,16 @@ Repair:
 
 Newsletter: `{email, source?: "newsletter" | "welcome_popup", website?: "", requestToken?: UUID}`. Token omission is supported for older clients; a stable hash of normalized email and source is then used.
 
-Generate a UUID when starting a new submission. Reuse it when retrying unchanged content after a network or delivery error. Generate a new UUID when editing submitted content or starting another inquiry. [Resend idempotency](https://resend.com/docs/dashboard/emails/idempotency-keys) suppresses duplicate emails for the same key and payload for 24 hours, including across server instances. Changed content with the same key receives HTTP 409; this asks the client to start a new request. A retry after 24 hours can send another email.
+Generate a UUID when starting a new submission. Reuse it when retrying unchanged content after a network error. Generate a new UUID when editing submitted content or starting another inquiry. FormSubmit does not document provider-level idempotency; a retry after an ambiguous network failure can create a duplicate inquiry. Request tokens are included for identification, not a cross-instance deduplication guarantee. Newsletter/review notifications still use [Resend idempotency](https://resend.com/docs/dashboard/emails/idempotency-keys), which suppresses duplicate emails for the same key and payload for 24 hours; changed content with the same key receives HTTP 409.
 
-Success: HTTP 200, `{success:true,message}`. The UI must check both HTTP success and `success === true`. For contact/repair, this means Resend accepted the email with a message ID. It does not prove final inbox placement or that the recipient has read it.
+Contact/repair success: HTTP 200 for accepted submissions or HTTP 202 for activation pending, with `{success:true,status:"accepted"|"activation_pending",message}`. The UI checks HTTP success and `success === true` and distinguishes the status:
 
-Failure: `{success:false,error,fieldErrors?}`. Codes: 400 validation/honeypot/JSON; 403 origin; 409 changed retry; 413 body too large; 415 media type; 429 rate limit (with `Retry-After`); 502 upstream delivery failure; 503 unavailable configuration/storage. Upstream error bodies and customer content are not exposed in error logs.
+- `accepted`: FormSubmit accepted the submission. This does not prove inbox delivery or that Christian has read it.
+- `activation_pending`: FormSubmit explicitly says activation is required and that it sent the activation email. The request is queued under the provider's retention policy; the UI must not claim it was emailed to Christian.
+
+FormSubmit can return JSON with a `text/html` content type and string booleans (`"true"`, `"false"`). The adapter parses and validates the response body. Only the recognized activation-required response can turn `success:false` into the explicit pending state; other false, malformed, HTTP or network failures return an error.
+
+Failure: `{success:false,error,fieldErrors?}`. Codes: 400 validation/honeypot/JSON; 403 origin; 409 changed Resend retry; 413 body too large; 415 media type; 429 rate limit (with `Retry-After`); 502 upstream submission failure; 503 unavailable configuration/storage. Upstream error bodies and customer content are not exposed in error logs.
 
 Newsletter success additionally returns `welcomeSent`. The UI should only promise a welcome email when true. A database failure returns an error before any mail. If subscriber storage succeeds but owner delivery fails, the response has `success:false,subscriptionSaved:true`; retrying the same input is safe because storage is an upsert and delivery is idempotent.
 
@@ -75,11 +85,11 @@ Reviews retain their existing server action signature. The result adds `notifica
 
 ## Abuse controls and verification
 
-HTTP bodies are capped at 16 KiB while reading the stream, including when `Content-Length` is missing or inaccurate. A hidden `website` honeypot must stay empty. HTML escapes every visitor-supplied value; plain text is included. Reply-to is the visitor email; sender and recipient remain controlled by the server.
+HTTP bodies are capped at 16 KiB while reading the stream, including when `Content-Length` is missing or inaccurate. A hidden `website` honeypot must stay empty. Contact/repair details are sent as JSON fields to FormSubmit with its table template and the visitor email as reply-to. Provider control fields are set only by the server; arbitrary submitted recipients, CCs, URLs and webhooks are never forwarded. Resend notifications still escape every visitor-supplied value in HTML and include plain text. Contact/repair use `_captcha:false` to keep the existing in-page experience, with the validation, honeypot and throttle below retained.
 
 Limits allow at most five attempts per ten minutes per email and, on Vercel, per trusted `x-vercel-forwarded-for` address across public form endpoints. Reviews are limited per authenticated user. This bounded in-process limiter is best effort: a cold start or a different server instance has independent counters. Distributed bot protection should be applied in the deployment firewall if traffic requires it. The trusted header is documented in [Vercel request headers](https://vercel.com/docs/headers/request-headers#x-vercel-forwarded-for). Origin checks protect browser cross-site submissions; they do not authenticate non-browser callers.
 
-Run `pnpm test` with Node 24 after `pnpm install --frozen-lockfile` (the repository pins pnpm 11.25.0). Tests run the real route handlers, validators, Resend SDK and Supabase client, intercepting all outbound HTTP with fixtures. Clerk identity and Next cache invalidation are supplied by test-only adapters. There are no live third-party calls, secrets, or database mutations in the test run. Tests cover delivery recipient and reply-to, escaping, validation, parsing, origins, body limits, honeypot, limits, stable retry keys, explicit provider failures, subscription partial failures, and review notifications.
+Run `pnpm test` with Node 24 after `pnpm install --frozen-lockfile` (the repository pins pnpm 11.25.0). Tests run the real route handlers, validators, FormSubmit adapter, Resend SDK and Supabase client, intercepting all outbound HTTP with fixtures. Clerk identity and Next cache invalidation are supplied by test-only adapters. There are no live third-party calls, secrets, or database mutations in the test run. Tests cover fixed recipient and reply-to, canonical form identity, validation, parsing, origins, body limits, honeypot, limits, activation-pending and accepted states, provider false/malformed/HTTP/network failures, unchanged Resend retry behavior, subscription partial failures, and review notifications.
 
 ## Catalog administration
 
