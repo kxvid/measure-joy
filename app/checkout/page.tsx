@@ -40,7 +40,7 @@ function CheckoutContent() {
       setLoading(false);
       return;
     }
-    fetch(`/api/products?id=${encodeURIComponent(productId)}&fresh=true`, {
+    fetch(`/api/products?id=${encodeURIComponent(productId)}`, {
       cache: "no-store",
       signal: controller.signal,
     })

@@ -3,12 +3,11 @@ import "server-only";
 import { createHash } from "node:crypto";
 import { Resend } from "resend";
 import { z } from "zod";
+import { consumeRateLimit } from "@/lib/rate-limit";
 
 // Keep delivery routing on the server. Never accept a recipient from a public form.
 const INQUIRY_RECIPIENT = "christianvelasquez363@gmail.com";
 const MAX_BODY_BYTES = 16_384;
-const WINDOW_MS = 10 * 60 * 1000;
-const attempts = new Map<string, { count: number; expires: number }>();
 const singleLine = (max: number) =>
   z
     .string()
@@ -64,9 +63,7 @@ export const repairSchema = z
       .default(""),
     preferredContact: z.enum(["email", "phone"]),
     consent: z.literal(true, {
-      errorMap: () => ({
-        message: "Please agree to being contacted about this request.",
-      }),
+      error: "Please agree to being contacted about this request.",
     }),
   })
   .superRefine((data, context) => {
@@ -232,45 +229,38 @@ async function readJson(request: Request): Promise<unknown> {
   }
 }
 
-// Best-effort per-process abuse control, shared by all public form types.
-// A deployment firewall is still needed for distributed bot attacks; this is not a global quota.
-export function limitFormAttempts(identity: string, maximum = 5) {
-  const now = Date.now();
-  for (const [key, value] of attempts)
-    if (value.expires <= now) attempts.delete(key);
-  const key = digest(identity);
-  const current = attempts.get(key);
-  if (current && current.count >= maximum)
+// Durable quota shared by every form type, instance and cold start.
+export async function limitFormAttempts(identity: string, maximum = 5) {
+  let result;
+  try {
+    result = await consumeRateLimit(`forms:${identity}`, maximum);
+  } catch {
+    throw new FormError(503, "Requests are temporarily unavailable. Please try again shortly.");
+  }
+  if (!result.allowed)
     throw new FormError(
       429,
       "Too many requests. Please wait a few minutes before trying again.",
       undefined,
-      Math.ceil((current.expires - now) / 1000),
+      Math.max(1, result.retryAfter),
     );
-  if (!current && attempts.size >= 10_000)
-    throw new FormError(
-      429,
-      "We're receiving many requests. Please try again in a few minutes.",
-      undefined,
-      60,
-    );
-  attempts.set(key, {
-    count: (current?.count ?? 0) + 1,
-    expires: current?.expires ?? now + WINDOW_MS,
-  });
 }
 
-export async function readPublicForm<T extends z.ZodTypeAny>(
+export async function readPublicForm<T extends z.ZodType<{ email: string; website?: string }>>(
   request: Request,
   schema: T,
 ): Promise<z.infer<T>> {
+  // Reject cross-site/media/body violations before touching the shared quota.
+  const raw = await readJson(request);
   // Vercel supplies this trusted client address. Never trust an arbitrary forwarded header.
   const trustedIp =
     process.env.VERCEL === "1"
       ? request.headers.get("x-vercel-forwarded-for")?.split(",")[0].trim()
       : null;
-  if (trustedIp) limitFormAttempts(`ip:${trustedIp}`);
-  const parsed = schema.safeParse(await readJson(request));
+  if (trustedIp) await limitFormAttempts(`ip:${trustedIp}`);
+  else if (process.env.VERCEL === "1")
+    throw new FormError(503, "Requests are temporarily unavailable. Please try again shortly.");
+  const parsed = schema.safeParse(raw);
   if (!parsed.success)
     throw new FormError(
       400,
@@ -279,7 +269,7 @@ export async function readPublicForm<T extends z.ZodTypeAny>(
     );
   if (parsed.data.website?.trim())
     throw new FormError(400, "This submission could not be accepted.");
-  limitFormAttempts(`email:${parsed.data.email}`);
+  await limitFormAttempts(`email:${parsed.data.email}`);
   return parsed.data;
 }
 

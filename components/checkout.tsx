@@ -8,6 +8,7 @@ import {
   startSingleProductCheckout,
 } from "@/app/actions/stripe";
 import { useCart } from "@/lib/cart-context";
+import { checkoutRedirectUrl } from "@/lib/checkout-redirect";
 
 export default function Checkout({
   productId,
@@ -61,15 +62,12 @@ export default function Checkout({
           throw new Error(
             "We couldn’t open secure checkout. Please try again.",
           );
-        const destination = new URL(url);
-        if (
-          destination.protocol !== "https:" ||
-          destination.hostname !== "checkout.stripe.com"
-        )
+        const destination = checkoutRedirectUrl(url, window.location.origin);
+        if (!destination)
           throw new Error(
             "We couldn’t verify the secure checkout link. Please try again.",
           );
-        if (mounted.current) window.location.assign(url);
+        if (mounted.current) window.location.assign(destination);
       } catch (cause) {
         if (mounted.current)
           setError(

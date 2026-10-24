@@ -2,16 +2,23 @@
 const test = require('node:test')
 const assert = require('node:assert/strict')
 const makeLoader = require('./helpers/load-typescript.cjs')
+const makeInventoryStore = require('./helpers/inventory-store.cjs')
 const plain = (value) => JSON.parse(JSON.stringify(value))
 const product = (changes = {}) => ({ id: 'prod_Camera', object: 'product', active: true, name: 'Canon camera', description: 'Tested camera', images: ['https://example.com/camera.jpg'], created: 1700000000, metadata: { stockCount: '3', category: 'camera' }, default_price: { id: 'price_Camera', object: 'price', product: 'prod_Camera', active: true, type: 'one_time', currency: 'usd', unit_amount: 12000 }, ...changes })
 function setup({ item = product(), pages, sessions = [], session, authUserId = "user_real" } = {}) {
   const writes = [], emails = [], updates = []
+  const store = makeInventoryStore()
+  const cookieValues = new Map(), createdSessions = new Map()
+  const cookieStore = { get: name => cookieValues.has(name) ? { value: cookieValues.get(name) } : undefined, set: (name, value) => cookieValues.set(name, value), delete: name => cookieValues.delete(name) }
+  const productsById = new Map([[item.id, item]])
+  const getProduct = id => { if (!productsById.has(id)) productsById.set(id, { ...plain(item), id }); return productsById.get(id) }
   const stripe = {
-    products: { retrieve: async () => item, list: async ({ starting_after }) => pages ? pages[starting_after ? 1 : 0] : { data: [item], has_more: false }, update: async (id, data, options) => { updates.push({ id, data, options }); Object.assign(item.metadata, data.metadata); return item } },
+    products: { retrieve: async (id) => getProduct(id), list: async ({ starting_after }) => pages ? pages[starting_after ? 1 : 0] : { data: [item], has_more: false }, update: async (id, data, options) => { updates.push({ id, data, options }); Object.assign(getProduct(id).metadata, data.metadata); return getProduct(id) } },
     prices: { retrieve: async () => item.default_price },
     checkout: { sessions: {
-      create: async (data) => { writes.push(data); return { url: 'https://checkout.stripe.com/session' } },
-      retrieve: async () => session,
+      create: async (data) => { writes.push(data); const created = { id: `cs_test_created${writes.length}`, status: 'open', payment_status: 'unpaid', metadata: data.metadata, url: 'https://checkout.stripe.com/session' }; createdSessions.set(created.id, created); return created },
+      retrieve: async id => createdSessions.get(id) || session,
+      expire: async id => { const existing = createdSessions.get(id); existing.status = 'expired'; return existing },
       list: async ({ starting_after }) => ({ data: starting_after ? sessions.slice(1) : sessions.slice(0, 1), has_more: !starting_after && sessions.length > 1 }),
       listLineItems: async () => ({ data: session.line_items.data, has_more: false }),
       update: async (_, data, options) => {
@@ -29,8 +36,8 @@ function setup({ item = product(), pages, sessions = [], session, authUserId = "
     } },
     webhooks: { constructEvent: () => ({ id: 'evt_Test', type: 'checkout.session.completed', data: { object: session } }) },
   }
-  const load = makeLoader({ stripe: class { constructor() { return stripe } }, '@/lib/stripe': { stripe }, '@clerk/nextjs/server': { auth: async () => ({ userId: authUserId }) }, 'next/headers': { headers: async () => new Headers({ origin: 'https://preview.vercel.app', host: 'preview.vercel.app', 'stripe-signature': 'mock-signature' }) }, 'next/server': { NextResponse: { json: (body, options) => Response.json(body, options) } }, '@/lib/emails': { sendOrderConfirmationEmail: async (data) => { emails.push(data) } } }, { STRIPE_SECRET_KEY: 'sk_test_mock_only', STRIPE_WEBHOOK_SECRET: 'whsec_mock_only', NEXT_PUBLIC_APP_URL: 'https://www.measurejoy.org', NODE_ENV: 'test' })
-  return { load, writes, updates, emails, stripe }
+  const load = makeLoader({ '@/lib/supabase/admin': { createAdminClient: () => store.client }, '@/lib/rate-limit': { consumeRateLimit: async () => ({ allowed: true, retryAfter: 0 }) }, 'next/cache': { unstable_cache: (fn) => fn, revalidateTag() {} }, stripe: class { constructor() { return stripe } }, '@/lib/stripe': { stripe }, '@clerk/nextjs/server': { auth: async () => ({ userId: authUserId }) }, 'next/headers': { cookies: async () => cookieStore, headers: async () => new Headers({ origin: 'https://preview.vercel.app', host: 'preview.vercel.app', 'stripe-signature': 'mock-signature' }) }, 'next/server': { NextResponse: { json: (body, options) => Response.json(body, options) } }, '@/lib/emails': { sendOrderConfirmationEmail: async (data) => { emails.push(data) } } }, { STRIPE_SECRET_KEY: 'sk_test_mock_only', STRIPE_WEBHOOK_SECRET: 'whsec_mock_only', NEXT_PUBLIC_APP_URL: 'https://www.measurejoy.org', NODE_ENV: 'test' })
+  return { load, writes, updates, emails, stripe, store }
 }
 test('checkout uses the live native Stripe price and verified user identity on the preview origin', async () => {
   const { load, writes } = setup()
@@ -202,4 +209,9 @@ test('guest checkout uses server identity even when a client supplies a stale si
   await load('app/actions/stripe.ts').startCheckoutSession([{ productId: 'prod_Camera', quantity: 1 }], 'stale_client_user')
   assert.equal(writes[0].metadata.user_id, '')
   assert.deepEqual(plain(writes[0].line_items), [{ price: 'price_Camera', quantity: 1 }])
+})
+
+ test('public checkout status omits customer details', async () => {
+  const { load } = setup({ session: paidSession() })
+  assert.deepEqual(plain(await load('app/actions/stripe.ts').getCheckoutSessionStatus('cs_test_order')), { status: 'complete' })
 })

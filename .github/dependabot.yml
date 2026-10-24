@@ -1,6 +1,6 @@
 version: 2
 updates:
-  # ── npm dependencies ──────────────────────────────────────────────────────
+  # pnpm uses the npm ecosystem. pnpm-lock.yaml is the only install lockfile.
   - package-ecosystem: "npm"
     directory: "/"
     schedule:
@@ -10,8 +10,22 @@ updates:
     labels:
       - "dependencies"
       - "automated"
-    # Group all patch + minor updates into one PR per week to reduce noise
+    # Keep framework and peer packages together; review all update PRs.
     groups:
+      framework:
+        patterns:
+          - "next"
+          - "eslint-config-next"
+          - "@next/*"
+          - "react"
+          - "react-dom"
+          - "@types/react"
+          - "@types/react-dom"
+        update-types: ["minor", "patch"]
+      security-patches:
+        applies-to: security-updates
+        patterns: ["*"]
+        update-types: ["minor", "patch"]
       radix-ui:
         patterns:
           - "@radix-ui/*"
@@ -27,6 +41,8 @@ updates:
           - "@clerk/*"
     # Pin major versions of core framework deps — review manually
     ignore:
+      - dependency-name: "@clerk/*"
+        update-types: ["version-update:semver-major"]
       - dependency-name: "next"
         update-types: ["version-update:semver-major"]
       - dependency-name: "react"

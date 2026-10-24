@@ -1,5 +1,5 @@
+import { requireAdminRequest, readAdminJson, adminErrorResponse } from "@/lib/admin-auth"
 import { createAdminClient } from "@/lib/supabase/admin"
-import { checkAdminAccess } from "@/app/actions/auth-admin"
 
 const SEED_DATA = [
     // Hero
@@ -92,12 +92,10 @@ const SEED_DATA = [
     ]},
 ]
 
-export async function POST() {
-    if (!await checkAdminAccess()) {
-        return Response.json({ error: "Unauthorized" }, { status: 401 })
-    }
-
+export async function POST(request: Request) {
     try {
+        await requireAdminRequest(request)
+        await readAdminJson(request)
         const supabase = createAdminClient()
 
         // Check if table exists by trying to query it
@@ -128,7 +126,7 @@ export async function POST() {
             .upsert(rows, { onConflict: "section,key", ignoreDuplicates: true })
 
         if (upsertError) {
-            return Response.json({ error: upsertError.message }, { status: 500 })
+            return adminErrorResponse(upsertError)
         }
 
         // Count rows
@@ -142,6 +140,6 @@ export async function POST() {
             count,
         })
     } catch (err: any) {
-        return Response.json({ error: err.message }, { status: 500 })
+        return adminErrorResponse(err)
     }
 }

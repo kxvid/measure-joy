@@ -90,6 +90,8 @@ export function EmailPreview({
                     {/* The actual email iframe */}
                     <iframe
                         srcDoc={html}
+                        sandbox=""
+                        referrerPolicy="no-referrer"
                         title="Email preview"
                         className="w-full border-0 bg-white"
                         style={{ height: "calc(100vh - 320px)", minHeight: "500px" }}
