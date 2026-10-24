@@ -190,6 +190,84 @@ test('completed historical sessions import their ledger without decrementing sto
   assert.equal(h.store.tables.commerce_checkouts[0].state, 'fulfilled')
 })
 
+test('markerless paid legacy replays cannot adopt holds or decrement current stock', async () => {
+  for (const useFallback of [false, true]) {
+    const h = setup(9)
+    const session = { id: 'cs_test_historical', payment_status: 'paid', metadata: useFallback ? {} : { items: 'prod_Camera:1' } }
+    await assert.rejects(h.inventory.fulfillInventory(h.stripe, session, useFallback ? [{ productId: 'prod_Camera', quantity: 1 }] : []), /Legacy inventory history requires manual reconciliation/)
+    assert.equal(h.writes(), 0)
+    assert.equal(h.product.metadata.stockCount, '9')
+    assert.equal(h.store.tables.commerce_checkouts.length, 0)
+    assert.equal(h.store.tables.commerce_checkout_items.length, 0)
+    assert.equal(h.store.calls.length, 0)
+  }
+})
+
+test('one completed legacy item does not authorize deduction of unmarked historical items', async () => {
+  const h = setup(9)
+  const session = { id: 'cs_test_historical_mixed', payment_status: 'paid', metadata: { items: 'prod_Camera:1,prod_Lens:1', stock_done_prod_Camera: 'true' } }
+  await assert.rejects(h.inventory.fulfillInventory(h.stripe, session, []), /Legacy inventory history requires manual reconciliation/)
+  assert.equal(h.writes(), 0)
+  assert.equal(h.store.tables.commerce_checkouts.length, 0)
+})
+
+test('fully marked legacy items import as applied even after catalog products are removed', async () => {
+  const h = setup(9)
+  h.stripe.products.retrieve = async () => { throw new Error('Historical products need not still exist') }
+  const session = { id: 'cs_test_historical_done', payment_status: 'paid', metadata: { items: 'prod_Camera:1,prod_Lens:1', stock_done_prod_Camera: 'true', stock_done_prod_Lens: 'true' } }
+  await h.inventory.fulfillInventory(h.stripe, session, [])
+  assert.equal(h.writes(), 0)
+  assert.equal(h.store.tables.commerce_checkouts[0].state, 'fulfilled')
+  assert.ok(h.store.tables.commerce_checkout_items.every(item => item.state === 'applied'))
+})
+
+test('explicitly adopted pending legacy sessions still fulfill delayed payment exactly once', async () => {
+  const h = setup(9)
+  const session = { id: 'cs_test_adopted_pending', status: 'complete', payment_status: 'unpaid', metadata: { items: 'prod_Camera:1' } }
+  await h.store.client.rpc('commerce_adopt_checkout', { p_id: session.id, p_session_id: session.id, p_items: [{ productId: 'prod_Camera', quantity: 1, applied: false }] })
+  session.payment_status = 'paid'
+  await h.inventory.fulfillInventory(h.stripe, session, [])
+  await h.inventory.fulfillInventory(h.stripe, session, [])
+  assert.equal(h.writes(), 1)
+  assert.equal(h.product.metadata.stockCount, '8')
+})
+
+test('a mismatched legacy ledger does not authorize historical inventory writes', async () => {
+  const h = setup(9)
+  const session = { id: 'cs_test_mismatched', payment_status: 'paid', metadata: { items: 'prod_Camera:1' } }
+  await h.store.client.rpc('commerce_adopt_checkout', { p_id: session.id, p_session_id: 'cs_test_other', p_items: [{ productId: 'prod_Camera', quantity: 1, applied: false }] })
+  await assert.rejects(h.inventory.fulfillInventory(h.stripe, session, []), /identity mismatch/)
+  assert.equal(h.writes(), 0)
+  assert.equal(h.product.metadata.stockCount, '9')
+})
+
+test('existing legacy adoptions cannot authorize extra products or changed quantities', async () => {
+  for (const items of ['prod_Camera:1,prod_Lens:1', 'prod_Camera:2']) {
+    const h = setup(9)
+    const session = { id: 'cs_test_adopted_scope', payment_status: 'paid', metadata: { items } }
+    await h.store.client.rpc('commerce_adopt_checkout', { p_id: session.id, p_session_id: session.id, p_items: [{ productId: 'prod_Camera', quantity: 1, applied: false }] })
+    h.store.calls.length = 0
+    await assert.rejects(h.inventory.fulfillInventory(h.stripe, session, []), /items differ from the verified adoption/)
+    assert.equal(h.writes(), 0)
+    assert.equal(h.store.tables.commerce_checkout_items.length, 1)
+    assert.equal(h.store.tables.commerce_checkout_items[0].quantity, 1)
+    assert.equal(h.store.calls.length, 0)
+  }
+})
+
+test('verified legacy ledger products take priority over synthetic line-item fallbacks', async () => {
+  const h = setup(9)
+  const session = { id: 'cs_test_adopted_fallback', payment_status: 'paid', metadata: {} }
+  await h.store.client.rpc('commerce_adopt_checkout', { p_id: session.id, p_session_id: session.id, p_items: [{ productId: 'prod_Camera', quantity: 1, applied: false }] })
+  h.store.calls.length = 0
+  await h.inventory.fulfillInventory(h.stripe, session, [{ productId: 'prod_Synthetic', quantity: 2 }])
+  assert.equal(h.writes(), 1)
+  assert.equal(h.product.metadata.stockCount, '8')
+  assert.equal(h.store.tables.commerce_checkout_items.length, 1)
+  assert.equal(h.store.tables.commerce_checkout_items[0].product_id, 'prod_Camera')
+  assert.equal(h.store.calls.some(call => call.name === 'commerce_adopt_checkout'), false)
+})
+
 
 test('checkout independently limits trusted IP and signed-in identity before stock reads', async () => {
   const calls = []

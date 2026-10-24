@@ -100,6 +100,19 @@ export async function fulfillInventory(stripe: Stripe, session: Stripe.Checkout.
     if (!record) throw new Error("Checkout reservation is missing; manual reconciliation required.");
     await rpc("commerce_bind_checkout", { p_id: id, p_session_id: session.id, p_state: "pending" });
   } else {
+    const record = await checkoutRecord(id);
+    if (record && record.session_id !== session.id) throw new Error("Checkout reservation identity mismatch.");
+    if (record) {
+      const { data, error } = await createAdminClient().from("commerce_checkout_items").select("product_id,quantity").eq("checkout_id", id);
+      if (error || !data?.length) throw new Error("Checkout inventory ledger is missing.");
+      const adoptedItems = normalizeCheckoutItems(data.map(row => ({ productId: row.product_id as string, quantity: row.quantity as number })));
+      const signature = (values: CheckoutItem[]) => values.map(item => `${item.productId}:${item.quantity}`).sort().join(",");
+      if (originals.length && signature(originals) !== signature(adoptedItems)) throw new Error("Legacy inventory items differ from the verified adoption; manual reconciliation required.");
+      // A verified legacy ledger can map old inline line-item products back to
+      // the catalog. Never append fallback products or widen its quantities.
+      items = adoptedItems;
+    }
+    const appliedItems = items.map(item => ({ ...item, applied: session.metadata?.inventory_processed === "true" || session.metadata?.[`stock_done_${inventoryMarkerSuffix(item.productId)}`] === "true" }));
     for (const item of items) {
       const suffix = inventoryMarkerSuffix(item.productId);
       if (session.metadata?.inventory_processed !== "true" && session.metadata?.[`stock_done_${suffix}`] !== "true" && session.metadata?.[`stock_target_${suffix}`] !== undefined) {
@@ -108,10 +121,18 @@ export async function fulfillInventory(stripe: Stripe, session: Stripe.Checkout.
         throw new Error("Legacy partial inventory fulfillment requires manual reconciliation.");
       }
     }
-    await rpc("commerce_adopt_checkout", {
-      p_id: id, p_session_id: session.id,
-      p_items: items.map(item => ({ ...item, applied: session.metadata?.inventory_processed === "true" || session.metadata?.[`stock_done_${inventoryMarkerSuffix(item.productId)}`] === "true" })),
-    });
+    // Earlier storefronts adjusted stock without these markers, including
+    // manual adjustments. Their absence cannot authorize a historical debit.
+    // Only an explicit, matching cutover adoption may hold unmarked items.
+    if (!record && appliedItems.some(item => !item.applied)) {
+      throw new Error("Legacy inventory history requires manual reconciliation before replay.");
+    }
+    if (!record) {
+      await rpc("commerce_adopt_checkout", {
+        p_id: id, p_session_id: session.id,
+        p_items: appliedItems,
+      });
+    }
   }
   const { data: ledgerItems, error: ledgerError } = await createAdminClient().from("commerce_checkout_items").select("product_id,quantity,state").eq("checkout_id", id);
   if (ledgerError || !ledgerItems?.length) throw new Error("Checkout inventory ledger is missing.");

@@ -7,6 +7,7 @@ import { ArrowLeft, ArrowUpRight, Loader2, LockKeyhole } from "lucide-react";
 import { CommerceShell } from "@/components/storefront/commerce-shell";
 import Checkout from "@/components/checkout";
 import { useCart } from "@/lib/cart-context";
+import { CheckoutPublicError, checkoutErrorMessage } from "@/lib/checkout-errors";
 import {
   formatPrice,
   parseCatalog,
@@ -46,18 +47,18 @@ function CheckoutContent() {
     })
       .then(async (response) => {
         if (!response.ok)
-          throw new Error(
+          throw new CheckoutPublicError(
             response.status === 404
               ? "We couldn’t find this camera. Explore the collection for another good find."
               : "We couldn’t check this find right now. Please try again shortly.",
           );
         const current = parseCatalog([await response.json()])[0];
         if (!current.inStock || current.stockCount === 0)
-          throw new Error(
+          throw new CheckoutPublicError(
             "This find has already found a home. Explore the collection for something new.",
           );
         if (current.stockCount !== undefined && quantity > current.stockCount)
-          throw new Error(
+          throw new CheckoutPublicError(
             `Only ${current.stockCount} of this find available. Please update your quantity.`,
           );
         return current;
@@ -65,11 +66,7 @@ function CheckoutContent() {
       .then(setProduct)
       .catch((cause) => {
         if (!controller.signal.aborted)
-          setError(
-            cause instanceof Error
-              ? cause.message
-              : "We couldn’t load this find.",
-          );
+          setError(checkoutErrorMessage(cause));
       })
       .finally(() => {
         if (!controller.signal.aborted) setLoading(false);

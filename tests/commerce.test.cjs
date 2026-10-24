@@ -92,6 +92,11 @@ test('catalog outages return an actionable 503 rather than a successful empty sh
 function paidSession(changes = {}) {
   return { id: 'cs_test_order', object: 'checkout.session', created: 1700000000, status: 'complete', payment_status: 'paid', amount_total: 22000, metadata: { user_id: 'user_real', items: 'prod_Camera:2' }, customer_details: { email: 'buyer@example.com' }, collected_information: { shipping_details: { name: 'Buyer', address: { line1: '1 Main St', line2: null, city: 'Covina', state: 'CA', postal_code: '91722', country: 'US' } } }, line_items: { data: [{ id: 'li_Test', quantity: 2, amount_total: 22000, amount_subtotal: 24000, description: 'Canon camera', price: { unit_amount: 12000, product: product({ id: 'prod_Synthetic' }) } }], has_more: false }, ...changes }
 }
+async function adoptPendingSession(harness, session) {
+  const items = harness.load('lib/commerce.ts').originalCheckoutItems(session)
+  const { error } = await harness.store.client.rpc('commerce_adopt_checkout', { p_id: session.id, p_session_id: session.id, p_items: items.map(item => ({ ...item, applied: false })) })
+  assert.equal(error, null)
+}
 test('order history lists owned completed sessions and preserves unit prices and current shipping fields', async () => {
   const session = paidSession()
   const { load } = setup({ sessions: [paidSession({ id: 'cs_other', metadata: { user_id: 'user_other' } }), session], session })
@@ -102,8 +107,10 @@ test('order history lists owned completed sessions and preserves unit prices and
   assert.equal(orders[0].items[0].priceInCents, 12000)
   assert.equal(orders[0].shipping_address.city, 'Covina')
 })
-test('paid legacy sessions decrement original catalog stock and repeated deliveries do not repeat fulfillment', async () => {
-  const { load, updates, emails } = setup({ session: paidSession() })
+test('explicitly adopted legacy sessions decrement original catalog stock and repeated deliveries do not repeat fulfillment', async () => {
+  const session = paidSession()
+  const { load, updates, emails, store } = setup({ session })
+  await adoptPendingSession({ load, store }, session)
   const route = load('app/api/stripe/webhook/route.ts')
   assert.equal((await route.POST(new Request('https://measurejoy.org/api/stripe/webhook', { method: 'POST', body: '{}' }))).status, 200)
   assert.equal(updates[0].id, 'prod_Camera')
@@ -114,11 +121,26 @@ test('paid legacy sessions decrement original catalog stock and repeated deliver
   assert.equal(updates.length, 1)
   assert.equal(emails.length, 1)
 })
+test('unadopted historical paid webhooks fail closed without stock, session metadata, or email writes', async () => {
+  const session = paidSession()
+  const originalMetadata = plain(session.metadata)
+  const { load, updates, emails, store } = setup({ session })
+  const route = load('app/api/stripe/webhook/route.ts')
+  for (let attempt = 0; attempt < 2; attempt++) {
+    assert.equal((await route.POST(new Request('https://measurejoy.org/api/stripe/webhook', { method: 'POST', body: '{}' }))).status, 500)
+  }
+  assert.equal(updates.length, 0)
+  assert.equal(emails.length, 0)
+  assert.deepEqual(session.metadata, originalMetadata)
+  assert.equal(store.tables.commerce_checkouts.length, 0)
+  assert.equal(store.tables.commerce_checkout_items.length, 0)
+})
 test('large orders release retry metadata so shipment details fit within Stripe limits', async () => {
   const productIds = Array.from({ length: 22 }, (_, index) => `prod_${String(index).padStart(14, '0')}`)
   const session = paidSession({ metadata: { user_id: 'user_real', items: productIds.map(id => `${id}:1`).join(',') } })
   assert.ok(session.metadata.items.length <= 500)
-  const { load, stripe, updates, emails } = setup({ session })
+  const { load, stripe, updates, emails, store } = setup({ session })
+  await adoptPendingSession({ load, store }, session)
   const route = load('app/api/stripe/webhook/route.ts')
   const request = () => new Request('https://measurejoy.org/api/stripe/webhook', { method: 'POST', body: '{}' })
   assert.equal((await route.POST(request())).status, 200)
@@ -133,7 +155,8 @@ test('large orders release retry metadata so shipment details fit within Stripe 
 test('custom long product IDs stay within Stripe metadata key limits during fulfillment', async () => {
   const productId = `prod_${'A'.repeat(220)}`
   const session = paidSession({ id: `cs_live_${'B'.repeat(60)}`, metadata: { user_id: 'user_real', items: `${productId}:1` } })
-  const { load, updates, stripe } = setup({ session })
+  const { load, updates, stripe, store } = setup({ session })
+  await adoptPendingSession({ load, store }, session)
   const originalUpdate = stripe.products.update
   stripe.products.update = async (...args) => {
     assert.ok(args[2].idempotencyKey.length <= 255)
@@ -146,7 +169,8 @@ test('custom long product IDs stay within Stripe metadata key limits during fulf
 })
 test('lost inventory-finalization responses do not repeat completed inventory updates', async () => {
   const session = paidSession()
-  const { load, stripe, updates } = setup({ session })
+  const { load, stripe, updates, store } = setup({ session })
+  await adoptPendingSession({ load, store }, session)
   const originalUpdate = stripe.checkout.sessions.update
   let loseResponse = true
   stripe.checkout.sessions.update = async (...args) => {
@@ -173,7 +197,9 @@ test('completed but unpaid sessions do not fulfill or claim a completed payment'
 })
 test('a lost inventory response retries the persisted stock target without subtracting twice', async () => {
   const item = product()
-  const { load, stripe } = setup({ item, session: paidSession() })
+  const session = paidSession()
+  const { load, stripe, store } = setup({ item, session })
+  await adoptPendingSession({ load, store }, session)
   const originalUpdate = stripe.products.update
   let loseResponse = true
   stripe.products.update = async (...args) => {

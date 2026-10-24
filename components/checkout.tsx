@@ -9,6 +9,7 @@ import {
 } from "@/app/actions/stripe";
 import { useCart } from "@/lib/cart-context";
 import { checkoutRedirectUrl } from "@/lib/checkout-redirect";
+import { CheckoutPublicError, checkoutErrorMessage } from "@/lib/checkout-errors";
 
 export default function Checkout({
   productId,
@@ -45,11 +46,11 @@ export default function Checkout({
         } else {
           const refreshed = await refreshCart();
           if (!refreshed.items.length)
-            throw new Error(
+            throw new CheckoutPublicError(
               "Your bag is empty. Choose a find before checking out.",
             );
           if (refreshed.issues.length)
-            throw new Error(refreshed.issues.join(" "));
+            throw new CheckoutPublicError(refreshed.issues.join(" "));
           url = await startCheckoutSession(
             refreshed.items.map((item) => ({
               productId: item.product.id,
@@ -59,22 +60,18 @@ export default function Checkout({
           );
         }
         if (!url)
-          throw new Error(
+          throw new CheckoutPublicError(
             "We couldn’t open secure checkout. Please try again.",
           );
         const destination = checkoutRedirectUrl(url, window.location.origin);
         if (!destination)
-          throw new Error(
+          throw new CheckoutPublicError(
             "We couldn’t verify the secure checkout link. Please try again.",
           );
         if (mounted.current) window.location.assign(destination);
       } catch (cause) {
         if (mounted.current)
-          setError(
-            cause instanceof Error
-              ? cause.message
-              : "We couldn’t open checkout. Please try again.",
-          );
+          setError(checkoutErrorMessage(cause));
       }
     })();
   }, [productId, quantity, items.length, isHydrated, refreshCart, attempt]);
