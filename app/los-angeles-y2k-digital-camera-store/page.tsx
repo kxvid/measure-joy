@@ -1,3 +1,5 @@
+import { serializeJsonLd } from "@/lib/output-encoding";
+import { headers } from "next/headers";
 import type { Metadata } from "next"
 import Link from "next/link"
 import { Header } from "@/components/header"
@@ -51,6 +53,7 @@ const LOCAL_FAQS = [
 ]
 
 export default async function LocalStorePage() {
+  const nonce = (await headers()).get("x-nonce") ?? undefined;
   let inventory: any[] = []
   try {
     const products = await getStripeProducts({ category: "camera" })
@@ -62,13 +65,15 @@ export default async function LocalStorePage() {
   return (
     <main className="min-h-screen bg-background">
       <script
+        nonce={nonce}
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(localBusinessJsonLd()) }}
+        dangerouslySetInnerHTML={{ __html: serializeJsonLd(localBusinessJsonLd()) }}
       />
       <script
+        nonce={nonce}
         type="application/ld+json"
         dangerouslySetInnerHTML={{
-          __html: JSON.stringify(
+          __html: serializeJsonLd(
             breadcrumbJsonLd([
               { name: "Home", path: "/" },
               { name: "Los Angeles Y2K Camera Store", path: "/los-angeles-y2k-digital-camera-store" },
@@ -77,8 +82,9 @@ export default async function LocalStorePage() {
         }}
       />
       <script
+        nonce={nonce}
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd(LOCAL_FAQS)) }}
+        dangerouslySetInnerHTML={{ __html: serializeJsonLd(faqJsonLd(LOCAL_FAQS)) }}
       />
       <Header />
 

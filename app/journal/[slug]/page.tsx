@@ -1,3 +1,5 @@
+import { serializeJsonLd } from "@/lib/output-encoding";
+import { headers } from "next/headers";
 import Link from "next/link";
 import Image from "next/image";
 import { notFound } from "next/navigation";
@@ -69,6 +71,7 @@ export default async function JournalArticlePage({
 }: {
   params: Promise<{ slug: string }>;
 }) {
+  const nonce = (await headers()).get("x-nonce") ?? undefined;
   const { slug } = await params;
   const post = getJournalPost(slug);
 
@@ -87,8 +90,9 @@ export default async function JournalArticlePage({
   return (
     <EditorialPage>
       <script
+        nonce={nonce}
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+        dangerouslySetInnerHTML={{ __html: serializeJsonLd(jsonLd) }}
       />
       <article className="ed-article">
         <EditorialBackLink href="/journal">

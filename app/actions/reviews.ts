@@ -133,7 +133,7 @@ export async function submitReviewAction(
         success: false,
         error: parsed.error.issues[0]?.message || "Please check your review.",
       };
-    limitFormAttempts(`review-user:${user.id}`);
+    await limitFormAttempts(`review-user:${user.id}`);
     const review = parsed.data;
     const supabase = createAdminClient();
     const { error } = await supabase.from("reviews").insert({

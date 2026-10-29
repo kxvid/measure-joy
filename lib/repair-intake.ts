@@ -70,7 +70,7 @@ const repairInputSchema = z
     requestToken: z.string().uuid("Please refresh the form and try again."),
     service: z.enum(
       ["repair", "restoration", "cleaning", "film-dev", "quote"],
-      { errorMap: () => ({ message: "Choose a service." }) },
+      { error: "Choose a service." },
     ),
     brand: singleLine(80).pipe(z.string().min(1, "Enter your camera brand.")),
     model: singleLine(120).pipe(
@@ -99,10 +99,8 @@ const repairInputSchema = z
     ),
     preferredContact: z.enum(["email", "phone"]),
     consent: z.literal(true, {
-      errorMap: () => ({
-        message:
-          "Please consent to sharing your contact and camera details for this request.",
-      }),
+      error:
+        "Please consent to sharing your contact and camera details for this request.",
     }),
   })
   .strict()

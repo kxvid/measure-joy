@@ -14,7 +14,7 @@ module.exports = function loader(overrides = {}, env = {}) {
     const source = ts.transpileModule(fs.readFileSync(absolute, 'utf8'), {
       compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022, esModuleInterop: true },
     }).outputText
-    const sandbox = { module: loadedModule, exports: loadedModule.exports, console: { log() {}, warn() {}, error() {} }, URL, Headers, Request, Response, setTimeout, clearTimeout, process: { env }, require(id) {
+    const sandbox = { module: loadedModule, exports: loadedModule.exports, console: { log() {}, warn() {}, error() {} }, URL, Headers, Request, Response, AbortSignal, setTimeout, clearTimeout, process: { env }, require(id) {
       if (Object.hasOwn(overrides, id)) return overrides[id]
       if (id === 'server-only') return {}
       if (id.startsWith('@/')) return load(`${id.slice(2)}.ts`)

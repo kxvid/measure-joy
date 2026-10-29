@@ -1,5 +1,6 @@
 import "server-only";
 import Stripe from "stripe";
+import { unstable_cache } from "next/cache";
 import type { Product } from "./products";
 import { extractProductInfo } from "./product-fallback";
 import { stockCountFromMetadata, usablePrice } from "./commerce";
@@ -111,12 +112,30 @@ async function listStripeProducts(active?: boolean): Promise<Stripe.Product[]> {
   return products;
 }
 
+// All public filters/searches share one fixed-key cache; arbitrary query strings
+// cannot multiply full Stripe listings. Single-flight also bounds concurrent misses
+// inside a worker; Next's data cache shares the result across requests/workers.
+const cachedActiveProducts = unstable_cache(
+  () => listStripeProducts(true),
+  ["stripe-active-catalog-v1"],
+  { revalidate: 60, tags: ["stripe-catalog"] },
+);
+let activeProductsInFlight: Promise<Stripe.Product[]> | null = null;
+function readActiveProducts(): Promise<Stripe.Product[]> {
+  if (!activeProductsInFlight) {
+    activeProductsInFlight = cachedActiveProducts().finally(() => {
+      activeProductsInFlight = null;
+    });
+  }
+  return activeProductsInFlight;
+}
+
 export async function getStripeProducts(options?: {
   category?: "camera" | "accessory";
   limit?: number;
   featured?: boolean;
 }): Promise<Product[]> {
-  const products = (await listStripeProducts(true))
+  const products = (await readActiveProducts())
     .filter((product) => usablePrice(product.default_price))
     .map((product) =>
       transformStripeProduct(product, product.default_price as Stripe.Price),
@@ -154,8 +173,18 @@ export async function getStripeProductById(
   }
 }
 
+const cachedAllProducts = unstable_cache(
+  () => listStripeProducts(),
+  ["stripe-complete-catalog-v1"],
+  { revalidate: 300, tags: ["stripe-catalog"] },
+);
+let allProductsInFlight: Promise<Stripe.Product[]> | null = null;
+
 export async function getAllStripeProducts(): Promise<Product[]> {
-  return (await listStripeProducts()).map((product) =>
+  if (!allProductsInFlight) {
+    allProductsInFlight = cachedAllProducts().finally(() => { allProductsInFlight = null; });
+  }
+  return (await allProductsInFlight).map((product) =>
     transformStripeProduct(
       product,
       product.default_price && typeof product.default_price === "object"

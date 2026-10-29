@@ -1,19 +1,54 @@
 name: Storefront checks
+
 on:
   pull_request:
   push:
-    branches: [codex/measurejoy-storefront-redesign]
+    branches: [main, codex/measurejoy-storefront-redesign]
+  workflow_call:
+  workflow_dispatch:
+
 permissions:
   contents: read
+
 jobs:
   verify:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: measurejoy_ci
+          POSTGRES_DB: measurejoy_ci_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d measurejoy_ci_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 12
+    env:
+      # Disposable service credentials; never use a hosted database in this job.
+      COMMERCE_TEST_DATABASE_URL: postgresql://postgres:measurejoy_ci@127.0.0.1:5432/measurejoy_ci_test
+      TEST_DATABASE_ADMIN_ROLE: postgres
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
         with:
-          node-version: '24'
-      - run: npm install --global pnpm@11.25.0
+          persist-credentials: false
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version-file: .nvmrc
+      - uses: pnpm/action-setup@f40ffcd9367d9f12939873eb1018b921a783ffaa # v4
       - run: pnpm install --frozen-lockfile
       - run: pnpm exec tsc --noEmit
+      - run: pnpm lint
+      - name: Ensure the PostgreSQL client is available
+        run: |
+          if ! command -v psql >/dev/null; then
+            sudo apt-get update
+            sudo apt-get install --yes postgresql-client
+          fi
+      - name: Initialize the disposable inventory database
+        run: node tests/fixtures/setup-inventory-database.cjs
       - run: pnpm test

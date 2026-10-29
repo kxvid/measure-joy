@@ -1,6 +1,7 @@
 import "server-only";
 
 import { Resend } from "resend";
+import { escapeHtml } from "./output-encoding";
 
 const resend = process.env.RESEND_API_KEY
   ? new Resend(process.env.RESEND_API_KEY)
@@ -78,25 +79,25 @@ export async function sendShippingUpdateEmail({
 
     <div style="background: white; padding: 20px; border-radius: 8px; margin: 20px 0; border: 2px solid #14b8a6;">
       <p style="margin: 0; font-size: 14px; color: #666;">Order ID</p>
-      <p style="margin: 5px 0 0 0; font-size: 18px; font-weight: bold; color: #14b8a6;">#${orderId.slice(0, 8).toUpperCase()}</p>
+      <p style="margin: 5px 0 0 0; font-size: 18px; font-weight: bold; color: #14b8a6;">#${escapeHtml(orderId.slice(0, 8).toUpperCase())}</p>
     </div>
 
     <div style="background: white; padding: 20px; border-radius: 8px; margin: 20px 0;">
       <p style="margin: 0; font-size: 14px; color: #666;">Carrier</p>
-      <p style="margin: 5px 0 0 0; font-size: 16px; font-weight: bold;">${carrier.toUpperCase()}</p>
+      <p style="margin: 5px 0 0 0; font-size: 16px; font-weight: bold;">${escapeHtml(carrier.toUpperCase())}</p>
       <p style="margin: 10px 0 0 0; font-size: 14px; color: #666;">Tracking Number</p>
-      <p style="margin: 5px 0 0 0; font-size: 16px; font-weight: bold;">${trackingNumber}</p>
+      <p style="margin: 5px 0 0 0; font-size: 16px; font-weight: bold;">${escapeHtml(trackingNumber)}</p>
     </div>
 
     <div style="text-align: center; margin: 24px 0;">
-      <a href="${trackingUrl}" style="display: inline-block; background: #14b8a6; color: white; padding: 14px 32px; text-decoration: none; font-weight: 600; font-size: 14px; text-transform: uppercase; letter-spacing: 0.5px; border-radius: 4px;">
+      <a href="${escapeHtml(trackingUrl)}" style="display: inline-block; background: #14b8a6; color: white; padding: 14px 32px; text-decoration: none; font-weight: 600; font-size: 14px; text-transform: uppercase; letter-spacing: 0.5px; border-radius: 4px;">
         Track Your Package
       </a>
     </div>
 
     <h3 style="color: #333; margin-top: 30px;">Items Shipped</h3>
     <div style="background: white; padding: 15px; border-radius: 8px;">
-      ${items.map((item) => `<p style="margin: 5px 0;">${item.name} x${item.quantity}</p>`).join("")}
+      ${items.map((item) => `<p style="margin: 5px 0;">${escapeHtml(item.name)} x${escapeHtml(item.quantity)}</p>`).join("")}
     </div>
 
     <div style="text-align: center; margin-top: 30px; padding-top: 30px; border-top: 1px solid #ddd;">
@@ -113,17 +114,15 @@ export async function sendShippingUpdateEmail({
   `;
 
   if (resend) {
-    await resend.emails.send({
+    const { data, error } = await resend.emails.send({
       from: "Measure Joy <orders@measurejoy.org>",
       to: email,
       subject: `Your Order Has Shipped! - #${orderId.slice(0, 8).toUpperCase()}`,
       html: emailHtml,
     });
+    if (error || !data?.id) throw new Error("The email provider did not accept the notification.");
   } else {
-    console.log(
-      "[Email] Resend not configured. Shipping email would be sent to:",
-      email,
-    );
+    throw new Error("Shipping email is not configured.");
   }
 }
 
@@ -136,7 +135,7 @@ export async function sendDeliveryConfirmationEmail({
   orderId: string;
   items: Array<{ name: string; quantity: number; productId?: string }>;
 }) {
-  const shopUrl = process.env.NEXT_PUBLIC_APP_URL || "https://measurejoy.org";
+  const shopUrl = "https://measurejoy.org";
 
   const emailHtml = `
 <!DOCTYPE html>
@@ -158,12 +157,12 @@ export async function sendDeliveryConfirmationEmail({
 
     <div style="background: white; padding: 20px; border-radius: 8px; margin: 20px 0; border: 2px solid #22c55e;">
       <p style="margin: 0; font-size: 14px; color: #666;">Order ID</p>
-      <p style="margin: 5px 0 0 0; font-size: 18px; font-weight: bold; color: #22c55e;">#${orderId.slice(0, 8).toUpperCase()}</p>
+      <p style="margin: 5px 0 0 0; font-size: 18px; font-weight: bold; color: #22c55e;">#${escapeHtml(orderId.slice(0, 8).toUpperCase())}</p>
     </div>
 
     <h3 style="color: #333; margin-top: 30px;">Items Delivered</h3>
     <div style="background: white; padding: 15px; border-radius: 8px;">
-      ${items.map((item) => `<p style="margin: 5px 0;">${item.name} x${item.quantity}</p>`).join("")}
+      ${items.map((item) => `<p style="margin: 5px 0;">${escapeHtml(item.name)} x${escapeHtml(item.quantity)}</p>`).join("")}
     </div>
 
     <div style="background: #fef3c7; border-left: 4px solid #f59e0b; padding: 15px; margin: 30px 0; border-radius: 4px;">
@@ -191,17 +190,15 @@ export async function sendDeliveryConfirmationEmail({
   `;
 
   if (resend) {
-    await resend.emails.send({
+    const { data, error } = await resend.emails.send({
       from: "Measure Joy <orders@measurejoy.org>",
       to: email,
       subject: `Your Order Has Been Delivered! - #${orderId.slice(0, 8).toUpperCase()}`,
       html: emailHtml,
     });
+    if (error || !data?.id) throw new Error("The email provider did not accept the notification.");
   } else {
-    console.log(
-      "[Email] Resend not configured. Delivery email would be sent to:",
-      email,
-    );
+    throw new Error("Delivery email is not configured.");
   }
 }
 
@@ -210,14 +207,15 @@ function getCarrierTrackingUrl(
   trackingNumber: string,
 ): string {
   const carrierLower = carrier.toLowerCase();
+  const encodedTrackingNumber = encodeURIComponent(trackingNumber);
   if (carrierLower === "usps")
-    return `https://tools.usps.com/go/TrackConfirmAction?tLabels=${trackingNumber}`;
+    return `https://tools.usps.com/go/TrackConfirmAction?tLabels=${encodedTrackingNumber}`;
   if (carrierLower === "ups")
-    return `https://www.ups.com/track?tracknum=${trackingNumber}`;
+    return `https://www.ups.com/track?tracknum=${encodedTrackingNumber}`;
   if (carrierLower === "fedex")
-    return `https://www.fedex.com/fedextrack/?trknbr=${trackingNumber}`;
+    return `https://www.fedex.com/fedextrack/?trknbr=${encodedTrackingNumber}`;
   if (carrierLower === "dhl")
-    return `https://www.dhl.com/us-en/home/tracking.html?tracking-id=${trackingNumber}`;
+    return `https://www.dhl.com/us-en/home/tracking.html?tracking-id=${encodedTrackingNumber}`;
   return `https://measurejoy.org/account/orders`;
 }
 
@@ -236,8 +234,8 @@ function generateOrderConfirmationHTML({
     .map(
       (item) => `
     <tr>
-      <td style="padding: 12px; border-bottom: 1px solid #eee;">${item.name}</td>
-      <td style="padding: 12px; border-bottom: 1px solid #eee; text-align: center;">${item.quantity}</td>
+      <td style="padding: 12px; border-bottom: 1px solid #eee;">${escapeHtml(item.name)}</td>
+      <td style="padding: 12px; border-bottom: 1px solid #eee; text-align: center;">${escapeHtml(item.quantity)}</td>
       <td style="padding: 12px; border-bottom: 1px solid #eee; text-align: right;">$${(item.priceInCents / 100).toFixed(2)}</td>
     </tr>
   `,
@@ -264,7 +262,7 @@ function generateOrderConfirmationHTML({
 
     <div style="background: white; padding: 20px; border-radius: 8px; margin: 20px 0; border: 2px solid #ec4899;">
       <p style="margin: 0; font-size: 14px; color: #666;">Order ID</p>
-      <p style="margin: 5px 0 0 0; font-size: 18px; font-weight: bold; color: #ec4899;">#${orderId.slice(0, 8).toUpperCase()}</p>
+      <p style="margin: 5px 0 0 0; font-size: 18px; font-weight: bold; color: #ec4899;">#${escapeHtml(orderId.slice(0, 8).toUpperCase())}</p>
     </div>
 
     <h3 style="color: #333; margin-top: 30px;">Order Details</h3>
@@ -290,10 +288,10 @@ function generateOrderConfirmationHTML({
         ? `
     <h3 style="color: #333; margin-top: 30px;">Shipping Address</h3>
     <div style="background: white; padding: 15px; border-radius: 8px;">
-      <p style="margin: 5px 0;">${shippingAddress.line1}</p>
-      ${shippingAddress.line2 ? `<p style="margin: 5px 0;">${shippingAddress.line2}</p>` : ""}
-      <p style="margin: 5px 0;">${shippingAddress.city}, ${shippingAddress.state} ${shippingAddress.postal_code}</p>
-      <p style="margin: 5px 0;">${shippingAddress.country}</p>
+      <p style="margin: 5px 0;">${escapeHtml(shippingAddress.line1)}</p>
+      ${shippingAddress.line2 ? `<p style="margin: 5px 0;">${escapeHtml(shippingAddress.line2)}</p>` : ""}
+      <p style="margin: 5px 0;">${escapeHtml(shippingAddress.city)}, ${escapeHtml(shippingAddress.state)} ${escapeHtml(shippingAddress.postal_code)}</p>
+      <p style="margin: 5px 0;">${escapeHtml(shippingAddress.country)}</p>
     </div>
     `
         : ""

@@ -1,8 +1,10 @@
 "use server"
 
+import { logServerError } from "@/lib/security-logging"
+import { setCoordinatedStock } from "@/lib/inventory"
 import { stripe } from "@/lib/stripe"
 import { checkAdminAccess } from "@/app/actions/auth-admin"
-import { revalidatePath } from "next/cache"
+import { revalidatePath, updateTag } from "next/cache"
 import { Order, OrderItem, ShippingAddress } from "@/lib/orders"
 import { sendShippingUpdateEmail, sendDeliveryConfirmationEmail } from "@/lib/emails"
 
@@ -60,7 +62,7 @@ export async function getAdminOrders(): Promise<Order[]> {
 
         return orders
     } catch (error) {
-        console.error("Error fetching admin orders:", error)
+        logServerError("Error fetching admin orders:", error)
         return []
     }
 }
@@ -73,6 +75,15 @@ export async function updateOrderTracking(
     if (!await checkAdminAccess()) {
         return { success: false, error: "Unauthorized" }
     }
+
+    const carriers: Record<string, string> = { usps: "USPS", ups: "UPS", fedex: "FedEx", dhl: "DHL", other: "Other" }
+    if (typeof orderId !== "string" || !/^cs_(?:test_|live_)?[A-Za-z0-9]{1,200}$/.test(orderId) ||
+        typeof trackingNumber !== "string" || !/^[A-Za-z0-9][A-Za-z0-9 -]{2,78}[A-Za-z0-9]$/.test(trackingNumber.trim()) ||
+        typeof carrier !== "string" || !Object.hasOwn(carriers, carrier.toLowerCase())) {
+        return { success: false, error: "Enter a valid order, carrier and tracking number." }
+    }
+    trackingNumber = trackingNumber.trim()
+    carrier = carriers[carrier.toLowerCase()]
 
     try {
         const shippedAt = new Date().toISOString()
@@ -109,9 +120,8 @@ export async function updateOrderTracking(
                     carrier,
                     items,
                 })
-                console.log(`[Admin] Shipping notification sent to ${email} for order ${orderId}`)
             } catch (emailError) {
-                console.error("[Admin] Failed to send shipping email:", emailError)
+                logServerError("[Admin] Failed to send shipping email:", emailError)
                 // Don't fail the tracking update if email fails
             }
         }
@@ -122,7 +132,7 @@ export async function updateOrderTracking(
 
         return { success: true }
     } catch (error) {
-        console.error("Error updating order tracking:", error)
+        logServerError("Error updating order tracking:", error)
         return { success: false, error: "Failed to update tracking" }
     }
 }
@@ -141,7 +151,6 @@ export async function markOrderDelivered(orderId: string) {
 
         await stripe.checkout.sessions.update(orderId, {
             metadata: {
-                ...session.metadata,
                 delivered_at: deliveredAt,
             }
         })
@@ -159,9 +168,8 @@ export async function markOrderDelivered(orderId: string) {
 
             try {
                 await sendDeliveryConfirmationEmail({ email, orderId, items })
-                console.log(`[Admin] Delivery confirmation sent to ${email} for order ${orderId}`)
             } catch (emailError) {
-                console.error("[Admin] Failed to send delivery email:", emailError)
+                logServerError("[Admin] Failed to send delivery email:", emailError)
             }
         }
 
@@ -171,7 +179,7 @@ export async function markOrderDelivered(orderId: string) {
 
         return { success: true }
     } catch (error) {
-        console.error("Error marking order as delivered:", error)
+        logServerError("Error marking order as delivered:", error)
         return { success: false, error: "Failed to mark as delivered" }
     }
 }
@@ -217,7 +225,7 @@ export async function listInventoryProducts(): Promise<InventoryProduct[]> {
             }
         })
     } catch (error) {
-        console.error("[Admin] Error listing inventory:", error)
+        logServerError("[Admin] Error listing inventory:", error)
         return []
     }
 }
@@ -234,29 +242,8 @@ export async function updateProductInventory(
     }
 
     try {
-        const product = await stripe.products.retrieve(productId)
-        const existing = product.metadata || {}
-
-        // Build new metadata, preserving other keys
-        const newMetadata: Record<string, string> = { ...existing }
-
-        if (stockCount === null) {
-            // Clear stockCount = back to untracked/unlimited
-            delete newMetadata.stockCount
-        } else {
-            const safeCount = Math.max(0, Math.floor(stockCount))
-            newMetadata.stockCount = safeCount.toString()
-            // Auto-flip inStock when count reaches 0 (unless caller overrides)
-            if (safeCount === 0 && inStock === undefined) {
-                newMetadata.inStock = "false"
-            }
-        }
-
-        if (inStock !== undefined) {
-            newMetadata.inStock = inStock ? "true" : "false"
-        }
-
-        await stripe.products.update(productId, { metadata: newMetadata })
+        await setCoordinatedStock(productId, stockCount, inStock)
+        updateTag("stripe-catalog")
 
         revalidatePath("/admin/inventory")
         revalidatePath(`/product/${productId}`)
@@ -264,7 +251,7 @@ export async function updateProductInventory(
 
         return { success: true }
     } catch (error) {
-        console.error(`[Admin] Error updating inventory for ${productId}:`, error)
+        logServerError("[Admin] Inventory update failed", error)
         return { success: false, error: "Failed to update inventory" }
     }
 }

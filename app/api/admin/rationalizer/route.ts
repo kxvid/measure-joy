@@ -1,3 +1,5 @@
+import { requireAdminRequest, readAdminJson, adminErrorResponse } from "@/lib/admin-auth"
+import { logServerError } from "@/lib/security-logging"
 import { NextResponse } from "next/server"
 import { GoogleGenerativeAI } from "@google/generative-ai"
 import Stripe from "stripe"
@@ -125,7 +127,7 @@ Respond in this exact JSON format:
             confidence: Math.min(1, Math.max(0, parsed.confidence || 0.8))
         }
     } catch (error) {
-        console.error("Error rationalizing product:", error)
+        logServerError("Error rationalizing product:", error)
         // Return rule-based fallback
         return rationalizeByRules(name, existingDescription, existingMetadata)
     }
@@ -238,13 +240,9 @@ function needsRationalization(value: string | undefined | null): boolean {
  * POST: Rationalize all products or a specific product
  */
 export async function POST(request: Request) {
-    // 1. Security Check: Ensure user is an allowlisted admin (Clerk + ADMIN_EMAILS)
-    if (!await checkAdminAccess()) {
-        return NextResponse.json({ error: "Unauthorized" }, { status: 403 })
-    }
-
     try {
-        const body = await request.json()
+        await requireAdminRequest(request)
+        const body = await readAdminJson(request) as { productId?: string; dryRun?: boolean; force?: boolean }
         const { productId, dryRun = false, force = false } = body
         const startTime = Date.now()
 
@@ -322,7 +320,6 @@ export async function POST(request: Request) {
                     await stripe.products.update(product.id, {
                         description: enriched.description,
                         metadata: {
-                            ...metadata,
                             brand: enriched.brand,
                             year: enriched.year,
                             category: enriched.category,
@@ -359,7 +356,7 @@ export async function POST(request: Request) {
                     category: metadata.category || "camera",
                     copyGenerated: false,
                     success: false,
-                    error: String(error)
+                    error: "Product update failed."
                 })
             }
         }
@@ -379,11 +376,7 @@ export async function POST(request: Request) {
         return NextResponse.json({ summary, results })
 
     } catch (error) {
-        console.error("[Rationalizer API] Error:", error)
-        return NextResponse.json(
-            { error: "Failed to rationalize products", details: String(error) },
-            { status: 500 }
-        )
+        return adminErrorResponse(error)
     }
 }
 
@@ -448,7 +441,7 @@ export async function GET() {
         })
 
     } catch (error) {
-        console.error("[Rationalizer API] Error:", error)
+        logServerError("[Rationalizer API] Error:", error)
         return NextResponse.json(
             { error: "Failed to get product status" },
             { status: 500 }
