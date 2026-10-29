@@ -97,6 +97,30 @@ jobs:
       - uses: zaproxy/action-baseline@6c5a007541891231cd9e0ddec25d4f25c59c9874 # v0.15.0
         with:
           target: https://www.measurejoy.org
-          cmd_options: '-a -j'
+          # Crawl links only. AJAX interaction and generated form submissions can
+          # send customer messages or create checkout sessions on the live site.
+          # Use the traditional runner so its explicit spider settings apply.
+          cmd_options: >-
+            -a -m 1 -T 5 --autooff
+            -z "-config spider.processform=false -config spider.postform=false -config spider.thread=2"
           fail_action: true
           allow_issue_writing: false
+          artifact_name: zap-passive-${{ github.run_id }}-${{ github.run_attempt }}
+      - name: Summarize production scan
+        if: always()
+        shell: bash
+        run: |
+          if ! jq -e '.site | type == "array" and length > 0' report_json.json > /dev/null; then
+            echo "::error::ZAP did not produce a valid site report; inspect the scan logs."
+            exit 1
+          fi
+          {
+            echo '### Production OWASP ZAP scan'
+            echo 'Target: https://www.measurejoy.org. This scans the deployed storefront, not the checked-out branch.'
+            echo 'Form submission and AJAX interactions are disabled. Findings still fail the check.'
+            echo 'Alert counts by ZAP risk code (0 informational, 1 low, 2 medium, 3 high):'
+            echo '```json'
+            jq '[.site[].alerts[]?] | group_by(.riskcode) | map({riskcode: .[0].riskcode, alerts: length})' report_json.json
+            echo '```'
+            echo 'Download the ZAP artifact for affected URLs and remediation details.'
+          } >> "$GITHUB_STEP_SUMMARY"
