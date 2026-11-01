@@ -148,7 +148,7 @@ export async function getStripeProducts(options?: {
   return options?.limit ? products.slice(0, options.limit) : products;
 }
 
-/** Archived products remain available as sold-out pages for existing links. */
+/** Fresh product read for the rate-limited API and checkout availability checks. */
 export async function getStripeProductById(
   productId: string,
 ): Promise<Product | null> {
@@ -175,22 +175,45 @@ export async function getStripeProductById(
 
 const cachedAllProducts = unstable_cache(
   () => listStripeProducts(),
-  ["stripe-complete-catalog-v1"],
-  { revalidate: 300, tags: ["stripe-catalog"] },
+  ["stripe-complete-catalog-v2"],
+  { revalidate: 60, tags: ["stripe-catalog"] },
 );
 let allProductsInFlight: Promise<Stripe.Product[]> | null = null;
 
-export async function getAllStripeProducts(): Promise<Product[]> {
+function readAllProducts(): Promise<Stripe.Product[]> {
   if (!allProductsInFlight) {
     allProductsInFlight = cachedAllProducts().finally(() => { allProductsInFlight = null; });
   }
-  return (await allProductsInFlight).map((product) =>
+  return allProductsInFlight;
+}
+
+export async function getAllStripeProducts(): Promise<Product[]> {
+  return (await readAllProducts()).map((product) =>
     transformStripeProduct(
       product,
       product.default_price && typeof product.default_price === "object"
         ? product.default_price
         : null,
     ),
+  );
+}
+
+/**
+ * Public HTML/metadata share the complete catalog with the sitemap. A crawl of
+ * distinct or unknown product URLs cannot fan out into uncached Stripe reads.
+ * Archived products stay available as sold-out pages; checkout reads stay fresh.
+ */
+export async function getCachedStripeProductById(
+  productId: string,
+): Promise<Product | null> {
+  if (!/^prod_[A-Za-z0-9]{1,100}$/.test(productId)) return null;
+  const product = (await readAllProducts()).find((item) => item.id === productId);
+  if (!product) return null;
+  return transformStripeProduct(
+    product,
+    product.default_price && typeof product.default_price === "object"
+      ? product.default_price
+      : null,
   );
 }
 

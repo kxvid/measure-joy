@@ -8,7 +8,7 @@ import type { Product } from "@/lib/products";
 import type { Metadata } from "next";
 import { permanentRedirect } from "next/navigation";
 import { ProductDetailClient } from "./product-detail-client";
-import { getStripeProductById, getStripeProducts } from "@/lib/stripe-products";
+import { getCachedStripeProductById, getStripeProducts } from "@/lib/stripe-products";
 import {
   productJsonLd,
   productPath,
@@ -22,7 +22,7 @@ export async function generateMetadata({
   params: Promise<{ id: string }>;
 }): Promise<Metadata> {
   const { id } = await params;
-  const product = await getStripeProductById(resolveProductParam(id));
+  const product = await getCachedStripeProductById(resolveProductParam(id));
 
   if (!product) {
     return { title: "Product Not Found" };
@@ -66,7 +66,7 @@ export default async function ProductPage({
   const { id } = await params;
 
   // Fetch product from Stripe — the param may be a raw prod_ id or a slug path
-  const product = await getStripeProductById(resolveProductParam(id));
+  const product = await getCachedStripeProductById(resolveProductParam(id));
 
   if (!product) {
     return (
