@@ -2,6 +2,7 @@
 
 // A fresh enforced CSP nonce is set by middleware for each dynamic document.
 const nextConfig = {
+  poweredByHeader: false,
   images: {
     // Optimize images (WebP/AVIF, srcset, lazy). Product photos are served
     // from Stripe; local /public images need no remote pattern.
