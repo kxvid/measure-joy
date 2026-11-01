@@ -1,6 +1,7 @@
+import { requireAdminRequest, readAdminJson, adminErrorResponse } from "@/lib/admin-auth"
+import { logServerError } from "@/lib/security-logging"
 import { NextResponse } from "next/server"
 import { GoogleGenerativeAI } from "@google/generative-ai"
-import { checkAdminAccess } from "@/app/actions/auth-admin"
 
 const genAI = new GoogleGenerativeAI(process.env.GOOGLE_AI_API_KEY || "")
 
@@ -20,22 +21,16 @@ BRAND VOICE: Playful, nostalgic, confident, slightly irreverent about retro tech
 TYPICAL CUSTOMER: 18-35, creative, values aesthetic and authenticity over convenience, posts on Instagram, loves the digital grain and imperfections of old cameras.`
 
 export async function POST(request: Request) {
-    if (!(await checkAdminAccess())) {
-        return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+    let body: unknown
+    try {
+        await requireAdminRequest(request)
+        body = await readAdminJson(request)
+    } catch (error) {
+        return adminErrorResponse(error)
     }
 
     if (!process.env.GOOGLE_AI_API_KEY) {
-        return NextResponse.json(
-            { error: "GOOGLE_AI_API_KEY not configured" },
-            { status: 500 }
-        )
-    }
-
-    let body: any
-    try {
-        body = await request.json()
-    } catch {
-        return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 })
+        return NextResponse.json({ error: "Email copy generation is unavailable." }, { status: 503 })
     }
 
     const {
@@ -161,9 +156,9 @@ Return ONLY valid JSON. No markdown, no code blocks, no explanation.`
             button: parsed.button || "",
         })
     } catch (error: any) {
-        console.error("[generate-email-copy]", error)
+        logServerError("[generate-email-copy]", error)
         return NextResponse.json(
-            { error: error?.message || "Failed to generate copy" },
+            { error: "Failed to generate copy" },
             { status: 500 }
         )
     }

@@ -1,3 +1,4 @@
+import { requireAdminRequest, readAdminJson, adminErrorResponse } from "@/lib/admin-auth"
 import { cookies } from "next/headers"
 import { NextResponse } from "next/server"
 import { checkAdminAccess } from "@/app/actions/auth-admin"
@@ -41,15 +42,12 @@ export async function GET() {
 // POST — save new drafts to the admin's cookie.
 // Body: { drafts: { [section]: { [key]: value } } }
 export async function POST(req: Request) {
-    if (!await checkAdminAccess()) {
-        return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
-    }
-
     try {
-        const body = await req.json()
+        await requireAdminRequest(req)
+        const body = await readAdminJson(req) as { drafts?: DraftsPayload["drafts"] }
         const drafts = body?.drafts
 
-        if (!drafts || typeof drafts !== "object") {
+        if (!drafts || typeof drafts !== "object" || Array.isArray(drafts)) {
             return NextResponse.json(
                 { error: "Expected { drafts: { [section]: { [key]: value } } }" },
                 { status: 400 }
@@ -82,18 +80,18 @@ export async function POST(req: Request) {
 
         return NextResponse.json({ ok: true, size: serialized.length })
     } catch (error) {
-        console.error("[CMS Preview] POST error:", error)
-        return NextResponse.json({ error: "Failed to save drafts" }, { status: 500 })
+        return adminErrorResponse(error)
     }
 }
 
 // DELETE — discard all drafts for the admin.
-export async function DELETE() {
-    if (!await checkAdminAccess()) {
-        return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+export async function DELETE(request: Request) {
+    try {
+        await requireAdminRequest(request)
+        const cookieStore = await cookies()
+        cookieStore.delete(CMS_DRAFTS_COOKIE)
+        return NextResponse.json({ ok: true })
+    } catch (error) {
+        return adminErrorResponse(error)
     }
-
-    const cookieStore = await cookies()
-    cookieStore.delete(CMS_DRAFTS_COOKIE)
-    return NextResponse.json({ ok: true })
 }

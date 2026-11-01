@@ -1,5 +1,7 @@
 "use server";
 
+import { unstable_cache } from "next/cache";
+import { consumeRateLimit } from "@/lib/rate-limit";
 import { auth } from "@clerk/nextjs/server";
 import type Stripe from "stripe";
 import { stripe } from "@/lib/stripe";
@@ -20,9 +22,7 @@ async function getLineItems(sessionId: string): Promise<Stripe.LineItem[]> {
   return items;
 }
 
-export async function getOrders(): Promise<Order[]> {
-  const { userId } = await auth();
-  if (!userId) return [];
+async function readOwnedOrders(userId: string): Promise<Order[]> {
   const owned: Stripe.Checkout.Session[] = [];
   let startingAfter: string | undefined;
   // Checkout Sessions have no metadata search endpoint. Filter on the server
@@ -40,19 +40,43 @@ export async function getOrders(): Promise<Order[]> {
       ),
     );
     startingAfter = page.has_more ? page.data.at(-1)?.id : undefined;
-  } while (startingAfter && owned.length < 10);
-  return Promise.all(
-    owned
-      .slice(0, 10)
-      .map(async (session) =>
-        orderFromSession(session, await getLineItems(session.id)),
-      ),
-  );
+  } while (startingAfter);
+  // Keep the complete history without an unbounded burst of line-item requests.
+  const orders: Order[] = [];
+  for (let offset = 0; offset < owned.length; offset += 5) {
+    orders.push(...await Promise.all(owned.slice(offset, offset + 5).map(async session =>
+      orderFromSession(session, await getLineItems(session.id)),
+    )));
+  }
+  return orders;
+}
+
+// Next includes function arguments in the cache key. Only the user ID obtained
+// from auth() reaches this function; no caller-supplied identity is accepted.
+const cachedOwnedOrders = unstable_cache(readOwnedOrders, ["customer-orders-v1"], { revalidate: 60 });
+const ordersInFlight = new Map<string, Promise<Order[]>>();
+
+async function requireOrderReadBudget(userId: string): Promise<void> {
+  const quota = await consumeRateLimit(`order-reads:${userId}`, 30, 60);
+  if (!quota.allowed) throw new Error("Please wait before refreshing your orders.");
+}
+
+export async function getOrders(): Promise<Order[]> {
+  const { userId } = await auth();
+  if (!userId) return [];
+  await requireOrderReadBudget(userId);
+  let pending = ordersInFlight.get(userId);
+  if (!pending) {
+    pending = cachedOwnedOrders(userId).finally(() => { ordersInFlight.delete(userId); });
+    ordersInFlight.set(userId, pending);
+  }
+  return pending;
 }
 
 export async function getOrderById(orderId: string): Promise<Order | null> {
   const { userId } = await auth();
-  if (!userId || !orderId.startsWith("cs_")) return null;
+  if (!userId || typeof orderId !== "string" || !/^cs_(?:test_|live_)?[A-Za-z0-9]{1,200}$/.test(orderId)) return null;
+  await requireOrderReadBudget(userId);
   try {
     const session = await stripe.checkout.sessions.retrieve(orderId);
     if (session.metadata?.user_id !== userId || session.status !== "complete")

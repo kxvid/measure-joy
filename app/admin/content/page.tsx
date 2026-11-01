@@ -198,7 +198,7 @@ export default function ContentEditorPage() {
     setSetupRunning(true);
     setErrorMessage(null);
     try {
-      const resp = await fetch("/api/admin/setup-cms", { method: "POST" });
+      const resp = await fetch("/api/admin/setup-cms", { method: "POST", headers: { "Content-Type": "application/json" }, body: "{}" });
       const data = await resp.json();
       if (resp.ok) {
         setSuccessMessage(data.message || "CMS initialized");

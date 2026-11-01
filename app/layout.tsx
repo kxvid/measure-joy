@@ -1,3 +1,4 @@
+import { headers } from "next/headers";
 import type React from "react";
 import type { Metadata } from "next";
 import { ClerkProvider } from "@clerk/nextjs";
@@ -88,9 +89,11 @@ export default async function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  // Request-bound headers make HTML dynamic: a nonce must never be reused by ISR/CDN HTML caching.
+  const nonce = (await headers()).get("x-nonce") ?? undefined;
   const copy = resolveStorefrontCopy(await getSectionContent("storefront"));
   return (
-    <ClerkProvider>
+    <ClerkProvider dynamic nonce={nonce}>
       <html lang="en">
         <body className="font-sans antialiased">
           <CartProvider>

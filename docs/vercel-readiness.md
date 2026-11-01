@@ -144,3 +144,8 @@ The visual rebuild can be reviewed separately from the inherited service gaps. A
 - Production build staged and verified before assigning live custom domains. Promoting a preview can rebuild with production variables; a previously tested preview is not evidence that the production build is identical. See [deployment promotion](https://vercel.com/docs/deployments/promoting-a-deployment).
 
 No production deployment, promotion, domain change, environment mutation, database migration, purchase, webhook registration or email delivery was performed by this audit. The plugin's compact project response omitted several settings, and its webhook/analytics/drain/connector reads returned permission or not-found errors. The mapped read-only CLI fallback, explicitly scoped to the same verified project/team, succeeded and supplies the current findings above. This audit did not broaden the project scope or change account permissions.
+
+
+## October 23 security release
+
+The earlier inventory limitation above is superseded by the durable reservation and fulfillment ledger in `lib/inventory.ts`. Stripe remains the source of product, price and stock values; PostgreSQL coordinates holds and external-write recovery. Follow `docs/security-remediation.md` for release sequencing, migration checks and rollback constraints. Production uses patched Next/Clerk, nonce-enforced CSP and shared request quotas. `instrumentation.ts` emits a private startup Node version and refuses runtimes below the October security baseline; no public diagnostics endpoint is added.

@@ -1,3 +1,4 @@
+import { requireAdminRequest, readAdminJson, adminErrorResponse } from "@/lib/admin-auth"
 import { NextResponse } from "next/server"
 import { checkAdminAccess } from "@/app/actions/auth-admin"
 import { stripe } from "@/lib/stripe"
@@ -20,12 +21,9 @@ import {
  * Returns current copy for a product
  */
 export async function POST(request: Request) {
-    if (!await checkAdminAccess()) {
-        return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
-    }
-
     try {
-        const body = await request.json()
+        await requireAdminRequest(request)
+        const body = await readAdminJson(request) as { productId?: string; generateAll?: boolean; variant?: CopyVariant; allVariants?: boolean }
         const { productId, generateAll, variant = "A", allVariants = false } = body
 
         // Check for API key
@@ -68,7 +66,6 @@ export async function POST(request: Request) {
                     await stripe.products.update(product.id, {
                         description: copy.description,
                         metadata: {
-                            ...product.metadata,
                             longDescription: copy.longDescription,
                             features: JSON.stringify(copy.features),
                             sellingPoints: JSON.stringify(copy.sellingPoints),
@@ -89,7 +86,7 @@ export async function POST(request: Request) {
                         id: product.id,
                         name: product.name,
                         success: false,
-                        error: String(error),
+                        error: "Product copy generation failed.",
                         progress: `${i + 1}/${total}`,
                     })
                 }
@@ -159,11 +156,7 @@ export async function POST(request: Request) {
             { status: 400 }
         )
     } catch (error) {
-        console.error("[Generate Copy API] Error:", error)
-        return NextResponse.json(
-            { error: "Failed to generate copy", details: String(error) },
-            { status: 500 }
-        )
+        return adminErrorResponse(error)
     }
 }
 
@@ -171,12 +164,9 @@ export async function POST(request: Request) {
  * Apply generated copy to a product
  */
 export async function PUT(request: Request) {
-    if (!await checkAdminAccess()) {
-        return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
-    }
-
     try {
-        const body = await request.json()
+        await requireAdminRequest(request)
+        const body = await readAdminJson(request) as { productId?: string; copy?: Awaited<ReturnType<typeof generateProductCopy>>; variant?: CopyVariant }
         const { productId, copy, variant } = body
 
         if (!productId || !copy) {
@@ -191,7 +181,6 @@ export async function PUT(request: Request) {
         await stripe.products.update(productId, {
             description: copy.description,
             metadata: {
-                ...product.metadata,
                 longDescription: copy.longDescription,
                 features: JSON.stringify(copy.features),
                 sellingPoints: JSON.stringify(copy.sellingPoints),
@@ -205,11 +194,7 @@ export async function PUT(request: Request) {
             product: product.name,
         })
     } catch (error) {
-        console.error("[Generate Copy API] Error applying copy:", error)
-        return NextResponse.json(
-            { error: "Failed to apply copy" },
-            { status: 500 }
-        )
+        return adminErrorResponse(error)
     }
 }
 

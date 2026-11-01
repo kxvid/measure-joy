@@ -1,4 +1,6 @@
 import "server-only";
+import { Buffer } from "node:buffer";
+import { logServerError } from "./security-logging";
 import { getAdminStatus } from "@/app/actions/auth-admin";
 
 export class AdminRequestError extends Error {
@@ -28,7 +30,7 @@ export async function requireAdminRequest(request: Request) {
 
 export async function readAdminJson(request: Request): Promise<unknown> {
   if (
-    request.headers.get("content-type")?.split(";")[0].trim() !==
+    request.headers.get("content-type")?.split(";")[0].trim().toLowerCase() !==
     "application/json"
   )
     throw new AdminRequestError(415, "JSON request required.");
@@ -49,7 +51,10 @@ export async function readAdminJson(request: Request): Promise<unknown> {
       }
       chunks.push(value);
     }
-    return JSON.parse(Buffer.concat(chunks).toString("utf8")) as unknown;
+    const body: unknown = JSON.parse(Buffer.concat(chunks).toString("utf8"));
+    if (!body || typeof body !== "object" || Array.isArray(body))
+      throw new AdminRequestError(400, "JSON object required.");
+    return body;
   } catch (error) {
     if (error instanceof AdminRequestError) throw error;
     throw new AdminRequestError(400, "Invalid JSON request.");
@@ -59,12 +64,13 @@ export async function readAdminJson(request: Request): Promise<unknown> {
 }
 
 export function adminErrorResponse(error: unknown) {
+  if (!(error instanceof AdminRequestError)) logServerError("[Admin API] Request failed", error);
   return Response.json(
     {
       error:
         error instanceof AdminRequestError
           ? error.message
-          : "The catalog update could not be completed.",
+          : "The administrative request could not be completed.",
     },
     {
       status: error instanceof AdminRequestError ? error.status : 502,

@@ -1,3 +1,5 @@
+import { headers } from "next/headers";
+import { serializeJsonLd } from "@/lib/output-encoding";
 import Link from "next/link";
 import Image from "next/image";
 import { notFound } from "next/navigation";
@@ -62,6 +64,7 @@ export default async function CollectionPage({
 }: {
   params: Promise<{ slug: string }>;
 }) {
+  const nonce = (await headers()).get("x-nonce") ?? undefined;
   const { slug } = await params;
   const collection = getCollection(slug);
   if (!collection) notFound();
@@ -96,8 +99,9 @@ export default async function CollectionPage({
   return (
     <EditorialPage>
       <script
+        nonce={nonce}
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+        dangerouslySetInnerHTML={{ __html: serializeJsonLd(jsonLd) }}
       />
       <section className="ed-collection-hero">
         <div>

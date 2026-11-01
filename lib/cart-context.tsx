@@ -108,7 +108,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
     if (refreshRef.current) return refreshRef.current;
     setIsRefreshing(true);
     const request = (async () => {
-      const response = await fetch("/api/products?fresh=true", {
+      const response = await fetch("/api/products", {
         cache: "no-store",
       });
       if (!response.ok)

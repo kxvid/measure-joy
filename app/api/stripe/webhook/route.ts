@@ -1,21 +1,15 @@
-import { createHash } from "node:crypto";
+import { revalidateTag } from "next/cache";
 import { headers } from "next/headers";
 import { NextResponse } from "next/server";
 import Stripe from "stripe";
+import { logServerError } from "@/lib/security-logging";
 import { sendOrderConfirmationEmail } from "@/lib/emails";
 import {
   isPaidSession,
-  originalCheckoutItems,
   shippingDetails,
-  stockCountFromMetadata,
 } from "@/lib/commerce";
 
-function inventoryMarkerSuffix(productId: string) {
-  // Preserve existing retry keys while bounding keys for custom Stripe IDs.
-  return productId.length <= 27
-    ? productId
-    : createHash("sha256").update(productId).digest("hex").slice(0, 24);
-}
+import { confirmationAction, fulfillInventory, releaseExpiredCheckout } from "@/lib/inventory";
 
 async function fulfillCheckout(stripe: Stripe, sessionId: string) {
   // Retrieve fresh metadata rather than relying on a possibly retried event.
@@ -33,80 +27,25 @@ async function fulfillCheckout(stripe: Stripe, sessionId: string) {
     startingAfter = page.has_more ? page.data.at(-1)?.id : undefined;
   } while (startingAfter);
 
-  const originals = originalCheckoutItems(session);
-  const inventoryItems = originals.length
-    ? originals
-    : lineItems.map((item) => ({
-        productId:
-          typeof item.price?.product === "string"
-            ? item.price.product
-            : item.price?.product?.id || "",
-        quantity: item.quantity || 1,
-      }));
-
+  const fallbackItems = lineItems.map(item => ({
+    productId: typeof item.price?.product === "string" ? item.price.product : item.price?.product?.id || "",
+    quantity: item.quantity || 1,
+  }));
+  const checkoutId = await fulfillInventory(stripe, session, fallbackItems);
+  revalidateTag("stripe-catalog", { expire: 0 });
   if (session.metadata?.inventory_processed !== "true") {
-    for (const item of inventoryItems) {
-      if (!item.productId.startsWith("prod_"))
-        throw new Error("Checkout item has no catalog product.");
-      const suffix = inventoryMarkerSuffix(item.productId);
-      const doneKey = `stock_done_${suffix}`;
-      const targetKey = `stock_target_${suffix}`;
-      if (session.metadata?.[doneKey] === "true") continue;
-      let target = session.metadata?.[targetKey];
-      if (target === undefined) {
-        const product = await stripe.products.retrieve(item.productId);
-        const currentStock = stockCountFromMetadata(product.metadata);
-        target =
-          currentStock === undefined
-            ? "untracked"
-            : String(Math.max(0, currentStock - item.quantity));
-        // Persist the target first so a retry uses the same idempotent update
-        // even if the preceding request succeeded but its response was lost.
-        await stripe.checkout.sessions.update(
-          session.id,
-          { metadata: { [targetKey]: target } },
-          {
-            idempotencyKey: `stock-plan-${session.id}-${suffix}`,
-          },
-        );
-      }
-      if (target !== "untracked") {
-        const stock = Number(target);
-        if (!Number.isSafeInteger(stock) || stock < 0)
-          throw new Error("Invalid inventory fulfillment target.");
-        await stripe.products.update(
-          item.productId,
-          {
-            metadata: {
-              stockCount: String(stock),
-              ...(stock === 0 ? { inStock: "false" } : {}),
-            },
-          },
-          { idempotencyKey: `stock-apply-${session.id}-${suffix}` },
-        );
-      }
-      await stripe.checkout.sessions.update(session.id, {
-        metadata: { [doneKey]: "true" },
-      });
+    const completedMetadata: Record<string, string> = { inventory_processed: "true" };
+    // Remove old per-item metadata, keeping enough room for shipping fields.
+    for (const key of Object.keys(session.metadata || {})) {
+      if (key.startsWith("stock_target_") || key.startsWith("stock_done_")) completedMetadata[key] = "";
     }
-    // Finalize and remove per-item retry markers atomically. Keeping those
-    // markers would exhaust Stripe's metadata limit before shipment updates.
-    const completedMetadata: Record<string, string> = {
-      inventory_processed: "true",
-    };
-    for (const item of inventoryItems) {
-      const suffix = inventoryMarkerSuffix(item.productId);
-      completedMetadata[`stock_target_${suffix}`] = "";
-      completedMetadata[`stock_done_${suffix}`] = "";
-    }
-    await stripe.checkout.sessions.update(session.id, {
-      metadata: completedMetadata,
-    });
+    await stripe.checkout.sessions.update(session.id, { metadata: completedMetadata });
   }
+  if (session.metadata?.confirmation_sent === "true") await confirmationAction(checkoutId, true);
 
   if (
     session.customer_details?.email &&
-    session.metadata?.confirmation_sent !== "true"
+    (await confirmationAction(checkoutId)).action === "send"
   ) {
     await sendOrderConfirmationEmail({
       email: session.customer_details.email,
@@ -120,6 +59,7 @@ async function fulfillCheckout(stripe: Stripe, sessionId: string) {
       totalInCents: session.amount_total || 0,
       shippingAddress: shippingDetails(session)?.address,
     });
+    await confirmationAction(checkoutId, true);
     await stripe.checkout.sessions.update(session.id, {
       metadata: { confirmation_sent: "true" },
     });
@@ -160,11 +100,16 @@ export async function POST(req: Request) {
         (event.data.object as Stripe.Checkout.Session).id,
       );
     }
+    if (event.type === "checkout.session.expired" || event.type === "checkout.session.async_payment_failed") {
+      const session = await stripe.checkout.sessions.retrieve((event.data.object as Stripe.Checkout.Session).id);
+      if (isPaidSession(session)) await fulfillCheckout(stripe, session.id);
+      else await releaseExpiredCheckout(stripe, session, event.type === "checkout.session.async_payment_failed");
+    }
     return NextResponse.json({ received: true });
   } catch (error) {
     // Retriable errors must reach Stripe; acknowledging a failed stock update
     // would permanently lose fulfillment.
-    console.error("[Stripe webhook] Fulfillment failed:", error);
+    logServerError("[Stripe webhook] Fulfillment failed", error);
     return NextResponse.json(
       { error: "Webhook handler failed" },
       { status: 500 },

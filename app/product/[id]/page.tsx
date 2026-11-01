@@ -1,3 +1,5 @@
+import { headers } from "next/headers";
+import { serializeJsonLd } from "@/lib/output-encoding";
 import { Header } from "@/components/header";
 import { Footer } from "@/components/footer";
 import { Button } from "@/components/ui/button";
@@ -60,6 +62,7 @@ export default async function ProductPage({
 }: {
   params: Promise<{ id: string }>;
 }) {
+  const nonce = (await headers()).get("x-nonce") ?? undefined;
   const { id } = await params;
 
   // Fetch product from Stripe — the param may be a raw prod_ id or a slug path
@@ -112,12 +115,10 @@ export default async function ProductPage({
   return (
     <>
       <script
+        nonce={nonce}
         type="application/ld+json"
         dangerouslySetInnerHTML={{
-          __html: JSON.stringify(productJsonLd(product, canonical)).replace(
-            /</g,
-            "\\u003c",
-          ),
+          __html: serializeJsonLd(productJsonLd(product, canonical)),
         }}
       />
       <ProductDetailClient

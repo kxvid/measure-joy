@@ -11,6 +11,10 @@ registerHooks({
     if (specifier === '@clerk/nextjs/server') return { url: new URL('./fixtures/clerk.mjs', import.meta.url).href, shortCircuit: true }
     if (specifier === 'next/server') return nextResolve('next/server.js', context)
     if (specifier === 'next/cache') return { url: new URL('./fixtures/next-cache.mjs', import.meta.url).href, shortCircuit: true }
+    if ((specifier.startsWith('./') || specifier.startsWith('../')) && context.parentURL?.startsWith('file:') && !context.parentURL.includes('/node_modules/')) {
+      const path = fileURLToPath(new URL(specifier, context.parentURL))
+      if (existsSync(`${path}.ts`)) return { url: pathToFileURL(`${path}.ts`).href, shortCircuit: true }
+    }
     if (specifier.startsWith('@/')) {
       const path = resolvePath(root, specifier.slice(2))
       if (existsSync(`${path}.ts`)) return { url: pathToFileURL(`${path}.ts`).href, shortCircuit: true }

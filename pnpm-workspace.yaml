@@ -2,3 +2,29 @@ allowBuilds:
   '@clerk/shared': true
   sharp: true
   unrs-resolver: true
+overrides:
+  # GHSA-g3hv-75wg-m249 is fixed only in minimatch 11. The versioned
+  # consumer patches below adapt legacy ESLint APIs without restoring its regex engine.
+  'minimatch@<11.0.1': 11.0.3
+minimumReleaseAgeExclude:
+  - '@next/env@16.4.3'
+  - '@next/eslint-plugin-next@16.4.3'
+  - '@next/swc-darwin-arm64@16.4.3'
+  - '@next/swc-darwin-x64@16.4.3'
+  - '@next/swc-linux-arm64-gnu@16.4.3'
+  - '@next/swc-linux-arm64-musl@16.4.3'
+  - '@next/swc-linux-x64-gnu@16.4.3'
+  - '@next/swc-linux-x64-musl@16.4.3'
+  - '@next/swc-win32-arm64-msvc@16.4.3'
+  - '@next/swc-win32-x64-msvc@16.4.3'
+  - eslint-config-next@16.4.3
+  - next@16.4.3
+  # Exact security fix and its replacement matching engine.
+  - minimatch@11.0.3
+  - '@isaacs/nonrecursive-glob-match@1.0.3'
+patchedDependencies:
+  '@eslint/config-array@0.21.2': patches/@eslint__config-array@0.21.2.patch
+  '@eslint/eslintrc@3.3.6': patches/@eslint__eslintrc@3.3.6.patch
+  eslint-plugin-import@2.32.0: patches/eslint-plugin-import@2.32.0.patch
+  eslint-plugin-jsx-a11y@6.10.2: patches/eslint-plugin-jsx-a11y@6.10.2.patch
+  eslint-plugin-react@7.37.5: patches/eslint-plugin-react@7.37.5.patch

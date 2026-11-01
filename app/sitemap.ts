@@ -1,3 +1,4 @@
+import { logServerError } from "@/lib/security-logging"
 import type { MetadataRoute } from "next"
 import { getAllStripeProducts } from "@/lib/stripe-products"
 import { productPath } from "@/lib/seo"
@@ -46,7 +47,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
             priority: product.inStock ? 0.8 : 0.4,
         }))
     } catch (error) {
-        console.error("[Sitemap] Failed to fetch products:", error)
+        logServerError("[Sitemap] Catalog read failed", error)
     }
 
     return [...staticPages, ...productPages]

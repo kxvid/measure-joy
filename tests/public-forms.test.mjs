@@ -7,7 +7,7 @@ import { POST as subscribe } from '../app/api/subscribe/route.ts'
 
 const originalFetch = globalThis.fetch
 const savedEnv = { ...process.env }
-let sent, writes, deliveryError, databaseError, formSubmitResult
+let sent, writes, deliveryError, databaseError, formSubmitResult, quotaError, quotaCounts
 let identity = 0
 beforeEach(() => {
   process.env.RESEND_API_KEY = 're_mock_only'
@@ -15,7 +15,7 @@ beforeEach(() => {
   process.env.SUPABASE_SERVICE_ROLE_KEY = 'test-key'
   process.env.VERCEL = '1'
   delete process.env.RESEND_FROM_EMAIL
-  sent = []; writes = []; deliveryError = null; databaseError = false
+  sent = []; writes = []; deliveryError = null; databaseError = false; quotaError = false; quotaCounts = new Map()
   formSubmitResult = { success: "true", message: "The form was submitted successfully." }
   globalThis.fetch = async (input, init) => {
     const url = String(input instanceof Request ? input.url : input)
@@ -34,6 +34,13 @@ beforeEach(() => {
       if (deliveryError === 'malformed') return Response.json({})
       if (deliveryError) return Response.json({ name: 'validation_error', message: 'private provider details', statusCode: deliveryError }, { status: deliveryError })
       return Response.json({ id: 'email-test-id' })
+    }
+    if (url === 'https://database.invalid/rest/v1/rpc/consume_rate_limit') {
+      if (quotaError) return Response.json({ message: 'private database error' }, { status: 503 })
+      const { p_key, p_limit } = JSON.parse(init.body)
+      const count = (quotaCounts.get(p_key) ?? 0) + 1
+      quotaCounts.set(p_key, count)
+      return Response.json([{ allowed: count <= p_limit, retry_after: count <= p_limit ? 0 : 600 }])
     }
     if (url.startsWith('https://database.invalid/rest/v1/')) {
       writes.push({ url, body: init.body ? JSON.parse(init.body) : null })
@@ -388,4 +395,30 @@ test('a failed account wishlist read reports failure instead of an empty saved l
   databaseError = true
   context.mock.method(console, 'error', () => {})
   await assert.rejects(getWishlist(), /wishlist/i)
+})
+
+
+test('quota service failure fails closed before sending or saving', async () => {
+  quotaError = true
+  const response = await contact(request('contact', contactData()))
+  assert.equal(response.status, 503)
+  assert.equal(sent.length, 0)
+  assert.equal(writes.length, 0)
+  assert.doesNotMatch(await response.text(), /private database/)
+})
+
+test('production forms reject missing trusted address rather than trusting forwarded-for', async () => {
+  const response = await contact(request('contact', contactData(), { 'x-vercel-forwarded-for': '', 'x-forwarded-for': '203.0.113.1' }))
+  assert.equal(response.status, 503)
+  assert.equal(sent.length, 0)
+})
+
+
+test('invalid origin or media cannot consume another visitor quota', async () => {
+  for (const headers of [{ origin: 'https://attacker.invalid' }, { 'content-type': 'text/plain' }]) {
+    const response = await contact(request('contact', contactData(), headers))
+    assert.ok([403, 415].includes(response.status))
+  }
+  assert.equal(quotaCounts.size, 0)
+  assert.equal(sent.length, 0)
 })
