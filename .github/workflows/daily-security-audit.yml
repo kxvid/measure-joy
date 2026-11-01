@@ -54,7 +54,7 @@ jobs:
           jq '.metadata.vulnerabilities' dependency-audit.json
           jq -e '[.metadata.vulnerabilities | .low, .moderate, .high, .critical] | all(.[]; . == 0)' dependency-audit.json > /dev/null
           exit "$audit_status"
-      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: always()
         with:
           name: dependency-audit-${{ matrix.scope }}-${{ github.run_id }}
@@ -81,7 +81,7 @@ jobs:
             fi
           done
           exit "$missing"
-      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: always()
         with:
           name: security-headers-${{ github.run_id }}
