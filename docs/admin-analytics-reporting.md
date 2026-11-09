@@ -27,7 +27,7 @@ Reports include:
 
 GA4 reflects visitors who allow analytics and can be affected by blocked tags, incomplete browser purchase events, processing delays and Google's privacy thresholds. Recent data can change for 24–48 hours. Empty reports show a distinct “no activity” state; connection, quota, schema and permission errors never appear as fabricated zero sales. Restricted revenue metrics fail explicitly. Sampling, truncation and threshold warnings are carried into the view. Refunds can make revenue negative.
 
-Use Stripe Orders for fulfillment and financial totals. Do not sum daily/source active-user values to infer period-wide unique users, or treat item units as a user conversion funnel. Historical product IDs remain visible when a catalog name is unavailable.
+Use Stripe Orders for fulfillment and financial totals. Do not sum daily/source active-user values to infer period-wide unique users, or treat item units as a user conversion funnel. Historical product IDs remain visible when a catalog name is unavailable. For source attribution and the prepared social/email links, see [Traffic sources and campaign links](traffic-attribution.md).
 
 ## Limits and verification
 

@@ -1,17 +1,20 @@
 "use client";
-import { useEffect, useRef, useState } from "react";
-import { usePathname } from "next/navigation";
+import { Suspense, useEffect, useRef, useState } from "react";
+import { usePathname, useSearchParams } from "next/navigation";
 import {
   analyticsConfig,
+  campaignContext,
   campaignParameters,
   CONSENT_EVENT,
   CONSENT_KEY,
   currentConsent,
   publicAnalyticsPath,
+  rememberTrafficAttribution,
   safeMetaPage,
   safePageLocation,
   safeReferrer,
   type AnalyticsConsent,
+  type TrafficAttribution,
 } from "@/lib/analytics";
 import "./privacy-controls.css";
 
@@ -30,12 +33,26 @@ type TagWindow = Window & {
   [key: `ga-disable-${string}`]: boolean;
 };
 export function CommerceAnalytics({ nonce }: { nonce?: string }) {
+  return (
+    <Suspense fallback={null}>
+      <CommerceAnalyticsControls nonce={nonce} />
+    </Suspense>
+  );
+}
+function CommerceAnalyticsControls({ nonce }: { nonce?: string }) {
   const path = usePathname();
+  const searchParams = useSearchParams();
+  // Only accepted campaign changes affect measurement; filters and private
+  // query edits must not create extra page views or enter retained state.
+  const campaignKey = JSON.stringify(
+    campaignParameters(`https://www.measurejoy.org/?${searchParams.toString()}`),
+  );
   const [consent, setConsent] = useState<AnalyticsConsent | null>(null);
   const [show, setShow] = useState(false);
   const config = analyticsConfig();
   const lastGaPage = useRef<string | null>(null);
   const lastMetaPage = useRef<string | null>(null);
+  const attribution = useRef<TrafficAttribution | null>(null);
   useEffect(() => {
     function sync() {
       setConsent(currentConsent());
@@ -58,9 +75,35 @@ export function CommerceAnalytics({ nonce }: { nonce?: string }) {
     };
   }, []);
   useEffect(() => {
-    if (!consent) return;
     const target = window as unknown as TagWindow;
     const publicPage = publicAnalyticsPath(path) || path === "/checkout/return";
+    // This snapshot is memory-only and contains no raw query. It survives
+    // internal navigation while a visitor decides, but never an explicit denial.
+    try {
+      const gpc = (navigator as Navigator & { globalPrivacyControl?: boolean })
+        .globalPrivacyControl;
+      const decided = localStorage.getItem(CONSENT_KEY);
+      if (gpc || (decided && !currentConsent().analytics)) {
+        attribution.current = null;
+      } else if (config.ga4) {
+        attribution.current = rememberTrafficAttribution(
+          attribution.current,
+          location.href,
+          document.referrer,
+        );
+      }
+    } catch {
+      attribution.current = null;
+    }
+    if (!consent) return;
+    const pageContext = {
+      page_location: safePageLocation(location.href),
+      page_referrer:
+        attribution.current?.referrer ?? safeReferrer(document.referrer),
+      page_title: "Measure Joy",
+      ...campaignContext(attribution.current?.campaign),
+    };
+    const pageKey = JSON.stringify([path, attribution.current?.campaign ?? {}]);
     function script(id: string, src: string) {
       if (document.getElementById(id)) return;
       const el = document.createElement("script");
@@ -92,18 +135,13 @@ export function CommerceAnalytics({ nonce }: { nonce?: string }) {
             send_page_view: false,
             allow_google_signals: false,
             allow_ad_personalization_signals: false,
-            page_location: safePageLocation(location.href),
-            page_referrer: safeReferrer(document.referrer),
-            page_title: "Measure Joy",
+            ...pageContext,
           });
           target.gtag("js", new Date());
           target.gtag("config", config.ga4, {
             send_page_view: false,
             allow_google_signals: false,
             allow_ad_personalization_signals: false,
-            page_location: safePageLocation(location.href),
-            page_referrer: safeReferrer(document.referrer),
-            page_title: "Measure Joy",
           });
           script(
             "measurejoy-ga4",
@@ -116,17 +154,11 @@ export function CommerceAnalytics({ nonce }: { nonce?: string }) {
           ad_user_data: "denied",
           ad_personalization: "denied",
         });
-        target.gtag("set", {
-          page_location: safePageLocation(location.href),
-          page_referrer: safeReferrer(document.referrer),
-          page_title: "Measure Joy",
-        });
-        if (lastGaPage.current !== path) {
-          lastGaPage.current = path;
+        target.gtag("set", pageContext);
+        if (lastGaPage.current !== pageKey) {
+          lastGaPage.current = pageKey;
           target.gtag("event", "page_view", {
-            page_location: safePageLocation(location.href),
-            page_title: "Measure Joy",
-            ...campaignParameters(location.href),
+            ...pageContext,
             send_to: config.ga4,
           });
         }
@@ -172,7 +204,7 @@ export function CommerceAnalytics({ nonce }: { nonce?: string }) {
       target.fbq?.("consent", "revoke");
     }
     window.dispatchEvent(new Event("measurejoy:analytics-ready"));
-  }, [consent, path, nonce, config.ga4, config.meta]);
+  }, [consent, path, campaignKey, nonce, config.ga4, config.meta]);
   function choose(analytics: boolean, marketing: boolean) {
     const next: AnalyticsConsent = { version: 1, analytics, marketing };
     try {

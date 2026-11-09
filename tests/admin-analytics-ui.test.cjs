@@ -112,3 +112,47 @@ test('external GA product IDs cannot render inherited or non-string dictionary p
     if (Object.hasOwn(productNames, 'prod_Camera')) assert.match(markup, /Canon camera/)
   }
 })
+
+test('share links use fixed canonical destinations and bounded platform campaign tags', () => {
+  const { CAMPAIGN_LINKS } = makeLoader()('lib/campaign-links.ts')
+  const expected = [
+    ['Instagram', 'instagram', 'social', 'profile', 'bio'],
+    ['TikTok', 'tiktok', 'social', 'profile', 'bio'],
+    ['Facebook', 'facebook', 'social', 'profile', 'bio'],
+    ['YouTube', 'youtube', 'social', 'profile', 'description'],
+    ['Newsletter', 'newsletter', 'email', 'weekly_drop', 'email_link'],
+  ]
+  assert.equal(CAMPAIGN_LINKS.length, expected.length)
+  for (const [index, [label, source, medium, campaign, content]] of expected.entries()) {
+    const link = CAMPAIGN_LINKS[index]
+    assert.equal(link.label, label)
+    assert.equal(link.source, source)
+    const url = new URL(link.url)
+    assert.equal(url.origin + url.pathname, 'https://www.measurejoy.org/shop')
+    assert.equal(url.hash, '')
+    assert.deepEqual(Object.fromEntries(url.searchParams), { utm_source: source, utm_medium: medium, utm_campaign: campaign, utm_content: content })
+    for (const value of url.searchParams.values()) assert.match(value, /^[a-z_]{1,32}$/)
+  }
+})
+
+test('share links render labeled copyable read-only inputs without outbound or write controls', () => {
+  const load = makeLoader()
+  const { CAMPAIGN_LINKS } = load('lib/campaign-links.ts')
+  const { AnalyticsDashboard } = load('app/admin/analytics/analytics-dashboard.tsx')
+  const markup = renderToStaticMarkup(React.createElement(AnalyticsDashboard, { report: report() }))
+  const section = markup.split('aria-labelledby="share-links"')[1].split('</section>')[0]
+  const inputs = [...section.matchAll(/<input\b[^>]*>/g)].map(([input]) => input)
+  assert.equal(inputs.length, 5)
+  for (const { label, source, url } of CAMPAIGN_LINKS) {
+    assert.ok(section.includes(`for="share-link-${source}">${label}`))
+    const input = inputs.find(value => value.includes(`id="share-link-${source}"`))
+    assert.ok(input)
+    assert.match(input, /readOnly=""|readonly=""/)
+    assert.match(input, /type="url"/)
+    assert.match(input, /aria-describedby="share-links-help"/)
+    assert.ok(input.replaceAll('&amp;', '&').includes(`value="${url}"`))
+  }
+  assert.match(section, /Direct \/ none can include visits from apps that hide/)
+  assert.match(section, /Visitors must allow analytics/)
+  assert.doesNotMatch(section, /<a\b|<button\b|<form\b|<script\b|formaction=|onClick=|onChange=/i)
+})
