@@ -13,6 +13,7 @@ import {
     Boxes,
     Mail,
     ShieldAlert,
+    ChartNoAxesCombined,
 } from "lucide-react"
 import { SignOutButton } from "@clerk/nextjs"
 import { Button } from "@/components/ui/button"
@@ -20,6 +21,7 @@ import { getAdminStatus } from "@/app/actions/auth-admin"
 
 const NAV_ITEMS = [
     { href: "/admin/orders", label: "Orders", icon: ShoppingCart },
+    { href: "/admin/analytics", label: "Analytics", icon: ChartNoAxesCombined },
     { href: "/admin/inventory", label: "Inventory", icon: Boxes },
     { href: "/admin/categories", label: "Categories", icon: Package },
     { href: "/admin/emails", label: "Emails", icon: Mail },
@@ -94,7 +96,7 @@ export default async function AdminLayout({
 
     return (
         <div className="min-h-screen flex flex-col">
-            <header className="border-b h-14 flex items-center px-4 gap-4 bg-background sticky top-0 z-50">
+            <header className="border-b min-h-14 flex flex-wrap items-center px-4 py-3 gap-x-4 gap-y-3 bg-background sticky top-0 z-50 xl:flex-nowrap xl:py-0">
                 <Button variant="ghost" size="icon" asChild className="mr-2">
                     <Link href="/" title="Back to Store">
                         <Home className="h-5 w-5" />
@@ -102,12 +104,12 @@ export default async function AdminLayout({
                     </Link>
                 </Button>
 
-                <div className="flex items-center gap-1 font-semibold text-lg">
+                <div className="flex shrink-0 items-center gap-1 font-semibold text-lg">
                     <LayoutDashboard className="h-5 w-5 mr-2" />
                     Admin
                 </div>
 
-                <nav className="ml-6 flex items-center gap-1 text-sm font-medium">
+                <nav aria-label="Admin sections" className="order-last flex w-full min-w-0 items-center gap-1 overflow-x-auto pb-1 text-sm font-medium xl:order-none xl:ml-6 xl:w-auto xl:flex-1 xl:py-2">
                     {NAV_ITEMS.map((item) => {
                         const Icon = item.icon
                         const isActive = pathname.startsWith(item.href)
@@ -115,7 +117,8 @@ export default async function AdminLayout({
                             <Link
                                 key={item.href}
                                 href={item.href}
-                                className={`flex items-center gap-2 px-3 py-1.5 rounded-md transition-colors ${
+                                aria-current={isActive ? "page" : undefined}
+                                className={`flex shrink-0 items-center gap-2 whitespace-nowrap px-3 py-1.5 rounded-md transition-colors ${
                                     isActive
                                         ? "bg-foreground text-background"
                                         : "text-muted-foreground hover:text-foreground hover:bg-secondary"
@@ -128,9 +131,9 @@ export default async function AdminLayout({
                     })}
                 </nav>
 
-                <div className="ml-auto flex items-center gap-3">
+                <div className="ml-auto flex shrink-0 items-center gap-3">
                     {email && (
-                        <span className="text-xs text-muted-foreground font-mono hidden md:inline">
+                        <span className="text-xs text-muted-foreground font-mono hidden 2xl:inline">
                             {email}
                         </span>
                     )}
