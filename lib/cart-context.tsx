@@ -12,6 +12,7 @@ import {
 } from "react";
 import type { Product } from "./products";
 import { parseCatalog } from "./storefront-catalog";
+import { commerceEvent, trackCommerce } from "./analytics";
 import {
   boundedQuantity,
   parseStoredCart,
@@ -41,18 +42,45 @@ export function CartProvider({ children }: { children: ReactNode }) {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const itemsRef = useRef(items);
   const refreshRef = useRef<Promise<CartRefresh> | null>(null);
-  useEffect(() => {
-    itemsRef.current = items;
-  }, [items]);
+  const replaceItems = useCallback((next: CartItem[]) => {
+    itemsRef.current = next;
+    setItems(next);
+  }, []);
+  const changeItems = useCallback(
+    (next: CartItem[]) => {
+      const previous = itemsRef.current;
+      replaceItems(next);
+      const added = next.flatMap((item) => {
+        const before =
+          previous.find((entry) => entry.product.id === item.product.id)
+            ?.quantity || 0;
+        return item.quantity > before
+          ? [{ product: item.product, quantity: item.quantity - before }]
+          : [];
+      });
+      const removed = previous.flatMap((item) => {
+        const after =
+          next.find((entry) => entry.product.id === item.product.id)?.quantity ||
+          0;
+        return item.quantity > after
+          ? [{ product: item.product, quantity: item.quantity - after }]
+          : [];
+      });
+      // Only user changes emit events. Keep side effects outside React state updaters.
+      if (added.length) trackCommerce("add_to_cart", commerceEvent(added));
+      if (removed.length) trackCommerce("remove_from_cart", commerceEvent(removed));
+    },
+    [replaceItems],
+  );
 
   useEffect(() => {
     try {
-      setItems(parseStoredCart(localStorage.getItem("measurejoy-cart")));
+      replaceItems(parseStoredCart(localStorage.getItem("measurejoy-cart")));
     } catch {
       /* Private browsing may block storage. */
     }
     setIsHydrated(true);
-  }, []);
+  }, [replaceItems]);
   useEffect(() => {
     if (isHydrated) {
       try {
@@ -63,47 +91,52 @@ export function CartProvider({ children }: { children: ReactNode }) {
     }
   }, [items, isHydrated]);
 
-  const addItem = useCallback((product: Product, quantity = 1) => {
-    if (!Number.isSafeInteger(quantity) || quantity < 1) return;
-    setItems((previous) => {
+  const addItem = useCallback(
+    (product: Product, quantity = 1) => {
+      if (!Number.isSafeInteger(quantity) || quantity < 1) return;
+      const previous = itemsRef.current;
       const existing = previous.find((item) => item.product.id === product.id);
       const nextQuantity = boundedQuantity(
         product,
         (existing?.quantity || 0) + quantity,
       );
-      if (nextQuantity === 0) return previous;
-      return existing
-        ? previous.map((item) =>
-            item.product.id === product.id
-              ? { product, quantity: nextQuantity }
-              : item,
-          )
-        : [...previous, { product, quantity: nextQuantity }];
-    });
-  }, []);
+      if (nextQuantity === 0) return;
+      changeItems(
+        existing
+          ? previous.map((item) =>
+              item.product.id === product.id
+                ? { product, quantity: nextQuantity }
+                : item,
+            )
+          : [...previous, { product, quantity: nextQuantity }],
+      );
+    },
+    [changeItems],
+  );
   const removeItem = useCallback(
     (productId: string) =>
-      setItems((previous) =>
-        previous.filter((item) => item.product.id !== productId),
+      changeItems(
+        itemsRef.current.filter((item) => item.product.id !== productId),
       ),
-    [],
+    [changeItems],
   );
-  const updateQuantity = useCallback((productId: string, quantity: number) => {
-    if (!Number.isSafeInteger(quantity)) return;
-    setItems((previous) =>
-      quantity < 1
-        ? previous.filter((item) => item.product.id !== productId)
-        : previous.map((item) => {
-            if (item.product.id !== productId) return item;
-            const next = boundedQuantity(item.product, quantity);
-            return next > 0 ? { ...item, quantity: next } : item;
-          }),
-    );
-  }, []);
-  const clearCart = useCallback(
-    () => setItems((previous) => (previous.length ? [] : previous)),
-    [],
+  const updateQuantity = useCallback(
+    (productId: string, quantity: number) => {
+      if (!Number.isSafeInteger(quantity)) return;
+      const previous = itemsRef.current;
+      changeItems(
+        quantity < 1
+          ? previous.filter((item) => item.product.id !== productId)
+          : previous.map((item) => {
+              if (item.product.id !== productId) return item;
+              const next = boundedQuantity(item.product, quantity);
+              return next > 0 ? { ...item, quantity: next } : item;
+            }),
+      );
+    },
+    [changeItems],
   );
+  const clearCart = useCallback(() => replaceItems([]), [replaceItems]);
   const refreshCart = useCallback(() => {
     if (refreshRef.current) return refreshRef.current;
     setIsRefreshing(true);
@@ -117,7 +150,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
         );
       const catalog = parseCatalog(await response.json());
       const refreshed = reconcileCart(itemsRef.current, catalog);
-      setItems(refreshed.items);
+      replaceItems(refreshed.items);
       return refreshed;
     })().finally(() => {
       refreshRef.current = null;
@@ -125,7 +158,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
     });
     refreshRef.current = request;
     return request;
-  }, []);
+  }, [replaceItems]);
   const value = useMemo(
     () => ({
       items,

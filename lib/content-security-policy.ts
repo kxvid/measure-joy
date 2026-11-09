@@ -10,6 +10,7 @@ export function contentSecurityPolicy(nonce: string, development = false): strin
       ...clerk, "https://challenges.cloudflare.com", "https://*.protect.clerk.com",
       "https://js.stripe.com", "https://*.js.stripe.com", "https://checkout.stripe.com",
       "https://maps.googleapis.com", "https://va.vercel-scripts.com",
+      "https://www.googletagmanager.com", "https://connect.facebook.net",
     ],
     // Clerk, Radix and animation components generate style attributes at runtime.
     "style-src": ["'self'", "'unsafe-inline'"],
@@ -21,6 +22,8 @@ export function contentSecurityPolicy(nonce: string, development = false): strin
       "https://api.stripe.com", "https://checkout.stripe.com", "https://maps.googleapis.com",
       "https://m.stripe.com", "https://m.stripe.network", "https://r.stripe.com",
       "https://vitals.vercel-insights.com", "https://va.vercel-scripts.com",
+      "https://www.google-analytics.com", "https://region1.google-analytics.com",
+      "https://www.googletagmanager.com", "https://www.facebook.com",
       ...(development ? ["ws://localhost:*", "ws://127.0.0.1:*"] : []),
     ],
     "frame-src": [

@@ -113,6 +113,13 @@ export function categoryMatch(
   return kind === category;
 }
 
+/** Testing claims require explicit seller verification and an actual camera. */
+export function isTestedCamera(
+  product: Pick<Product, "name" | "category" | "subcategory" | "tested">,
+): boolean {
+  return product.tested === true && categoryMatch(product, "camera");
+}
+
 export function readFilters(search: string): ShopFilters {
   const params = new URLSearchParams(search);
   const legacySub = params.get("sub");

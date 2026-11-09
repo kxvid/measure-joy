@@ -87,7 +87,7 @@ export function parseCatalog(value: unknown): Product[] {
         throw new Error("Invalid catalog list");
       }
     }
-    for (const field of ["isTrending", "isBestseller"]) {
+    for (const field of ["isTrending", "isBestseller", "tested"]) {
       if (product[field] !== undefined && typeof product[field] !== "boolean")
         throw new Error("Invalid catalog flag");
     }

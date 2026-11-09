@@ -1,4 +1,5 @@
 "use client";
+import { ProductView } from "@/components/analytics/product-view";
 import Storefront from "@/components/storefront/storefront";
 import type { Product } from "@/lib/products";
 export function ProductDetailClient({
@@ -9,11 +10,14 @@ export function ProductDetailClient({
   relatedProducts?: Product[];
 }) {
   return (
-    <Storefront
-      mode="product"
-      productSlug={product.id}
-      initialProduct={product}
-      initialProducts={[product, ...relatedProducts]}
-    />
+    <>
+      <ProductView id={product.id} priceInCents={product.priceInCents} />
+      <Storefront
+        mode="product"
+        productSlug={product.id}
+        initialProduct={product}
+        initialProducts={[product, ...relatedProducts]}
+      />
+    </>
   );
 }

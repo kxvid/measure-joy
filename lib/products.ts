@@ -16,6 +16,8 @@ export interface Product {
   category: "camera" | "accessory"
   subcategory?: string
   condition: string
+  /** Explicit seller verification, sourced from Stripe metadata.tested. */
+  tested?: boolean
   specs: {
     megapixels?: string
     zoom?: string

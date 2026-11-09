@@ -1,8 +1,7 @@
 import {
   formErrorResponse,
   formResponse,
-  readPublicForm,
-  repairSchema,
+  readPublicRepairForm,
   sendRepair,
 } from "@/lib/inquiries";
 
@@ -10,8 +9,8 @@ export const runtime = "nodejs";
 
 export async function POST(request: Request) {
   try {
-    const data = await readPublicForm(request, repairSchema);
-    const { status } = await sendRepair(data);
+    const { data, photos } = await readPublicRepairForm(request);
+    const { status } = await sendRepair(data, photos);
     return formResponse(
       {
         success: true,

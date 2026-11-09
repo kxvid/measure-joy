@@ -10,12 +10,16 @@ import {
 import { useCart } from "@/lib/cart-context";
 import { checkoutRedirectUrl } from "@/lib/checkout-redirect";
 import { CheckoutPublicError, checkoutErrorMessage } from "@/lib/checkout-errors";
+import { commerceEvent, trackCommerce, type CommerceEvent } from "@/lib/analytics";
+import type { Product } from "@/lib/products";
 
 export default function Checkout({
   productId,
+  product,
   quantity = 1,
 }: {
   productId?: string;
+  product?: Product;
   quantity?: number;
 }) {
   const { items, isHydrated, refreshCart } = useCart();
@@ -37,12 +41,15 @@ export default function Checkout({
     void (async () => {
       try {
         let url: string | null;
+        let measurement: CommerceEvent | null = null;
         if (productId) {
           url = await startSingleProductCheckout(
             productId,
             undefined,
             quantity,
           );
+          if (product?.id === productId)
+            measurement = commerceEvent([{ product, quantity }]);
         } else {
           const refreshed = await refreshCart();
           if (!refreshed.items.length)
@@ -58,6 +65,7 @@ export default function Checkout({
             })),
             undefined,
           );
+          measurement = commerceEvent(refreshed.items);
         }
         if (!url)
           throw new CheckoutPublicError(
@@ -68,13 +76,18 @@ export default function Checkout({
           throw new CheckoutPublicError(
             "We couldn’t verify the secure checkout link. Please try again.",
           );
-        if (mounted.current) window.location.assign(destination);
+        if (mounted.current) {
+          // A resumed paid-session status page is not a newly begun checkout.
+          if (new URL(destination).origin === "https://checkout.stripe.com")
+            trackCommerce("begin_checkout", measurement);
+          window.location.assign(destination);
+        }
       } catch (cause) {
         if (mounted.current)
           setError(checkoutErrorMessage(cause));
       }
     })();
-  }, [productId, quantity, items.length, isHydrated, refreshCart, attempt]);
+  }, [productId, product, quantity, items.length, isHydrated, refreshCart, attempt]);
 
   return (
     <section className="checkout-panel" aria-live="polite">

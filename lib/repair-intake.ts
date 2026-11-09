@@ -2,31 +2,57 @@ import { z } from "zod";
 
 export const REPAIR_SERVICES = [
   {
+    value: "cleaning-restoration",
+    label: "Cleaning & restoration",
+    description: "Care for an old favorite",
+    group: "Camera care",
+  },
+  {
+    value: "battery-charging",
+    label: "Battery & charging",
+    description: "Power and charging problems",
+    group: "Camera care",
+  },
+  {
+    value: "photo-recovery",
+    label: "Photo recovery",
+    description: "Ask about missing camera photos",
+    group: "Camera care",
+  },
+  {
     value: "repair",
-    label: "Camera repair",
-    description: "Power, lens, screen & more",
+    label: "Other camera repair",
+    description: "Lens, screen, flash & more",
+    group: "Camera care",
   },
   {
-    value: "restoration",
-    label: "Restoration",
-    description: "A little care for an old favorite",
+    value: "trade-in",
+    label: "Trade in my camera",
+    description: "Ask about a possible trade-in",
+    group: "Other requests",
   },
   {
-    value: "cleaning",
-    label: "Sensor cleaning",
-    description: "A clearer view of things",
+    value: "rental-enquiry",
+    label: "Party rental kit enquiry",
+    description: "Explore dates and availability",
+    group: "Other requests",
   },
   {
-    value: "film-dev",
-    label: "Film development",
-    description: "35mm & disposable cameras",
-  },
-  {
-    value: "quote",
-    label: "Just a quote",
-    description: "Explore what’s possible",
+    value: "referral",
+    label: "Something else",
+    description: "Advice or a trusted shop referral",
+    group: "Other requests",
   },
 ] as const;
+// Older clients and existing records keep their original service values.
+export const REPAIR_SERVICE_VALUES = [
+  "repair", "restoration", "cleaning", "film-dev", "quote",
+  "cleaning-restoration", "battery-charging", "photo-recovery",
+  "trade-in", "rental-enquiry", "referral",
+] as const;
+export function repairNeedsCamera(service: string) {
+  return service !== "rental-enquiry" && service !== "referral";
+}
 export const REPAIR_ISSUES = [
   "Won't turn on",
   "Lens stuck/jammed",
@@ -69,13 +95,11 @@ const repairInputSchema = z
     website: z.string().max(200).optional(),
     requestToken: z.string().uuid("Please refresh the form and try again."),
     service: z.enum(
-      ["repair", "restoration", "cleaning", "film-dev", "quote"],
+      REPAIR_SERVICE_VALUES,
       { error: "Choose a service." },
     ),
-    brand: singleLine(80).pipe(z.string().min(1, "Enter your camera brand.")),
-    model: singleLine(120).pipe(
-      z.string().min(1, "Enter a model, or ‘Unknown’."),
-    ),
+    brand: singleLine(80),
+    model: singleLine(120),
     issues: z
       .array(z.enum(REPAIR_ISSUES))
       .max(10)
@@ -83,7 +107,7 @@ const repairInputSchema = z
     description: z
       .string()
       .trim()
-      .min(10, "Please include at least 10 characters about your camera.")
+      .min(10, "Please include at least 10 characters about your request.")
       .max(3000, "Keep details under 3,000 characters.")
       .refine(
         (value) => !value.includes("\0"),
@@ -105,6 +129,15 @@ const repairInputSchema = z
   })
   .strict()
   .superRefine((value, ctx) => {
+    if (repairNeedsCamera(value.service)) {
+      for (const key of ["brand", "model"] as const) {
+        if (!value[key]) ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: [key],
+          message: key === "brand" ? "Enter your camera brand." : "Enter a model, or ‘Unknown’.",
+        });
+      }
+    }
     if (value.preferredContact === "phone" && !value.phone)
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
@@ -126,5 +159,9 @@ export function validateRepairInput(value: unknown) {
 }
 
 export function repairServiceLabel(value: string) {
-  return REPAIR_SERVICES.find((s) => s.value === value)?.label || value;
+  const legacy: Record<string, string> = {
+    restoration: "Restoration", cleaning: "Sensor cleaning",
+    "film-dev": "Film development", quote: "Just a quote",
+  };
+  return REPAIR_SERVICES.find((s) => s.value === value)?.label || legacy[value] || value;
 }

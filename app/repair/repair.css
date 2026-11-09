@@ -353,8 +353,17 @@
 }
 .repair-service-options {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 9px;
+}
+.repair-service-category + .repair-service-category {
+  margin-top: 20px;
+}
+.repair-service-category-label {
+  font-size: 12px;
+  line-height: 1.5;
+  margin-bottom: 9px;
+  color: var(--repair-muted);
 }
 .repair-service-choice {
   position: relative;
@@ -367,10 +376,6 @@
   cursor: pointer;
   background: transparent;
 }
-.repair-service-choice:last-child {
-  grid-column: 1/-1;
-  min-height: 67px;
-}
 .repair-service-choice input,
 .repair-issue-chip input {
   position: absolute;
@@ -380,15 +385,19 @@
 }
 .repair-service-choice > span {
   flex: 1;
+  min-width: 0;
+  overflow-wrap: anywhere;
+  white-space: normal;
 }
 .repair-service-choice strong {
   display: block;
-  font-size: 11px;
+  font-size: 13px;
   font-weight: 500;
+  line-height: 1.4;
 }
 .repair-service-choice small {
   display: block;
-  font-size: 9px;
+  font-size: 11px;
   color: var(--repair-muted);
   line-height: 1.5;
   margin-top: 5px;
@@ -396,6 +405,40 @@
 .repair-service-choice > svg {
   color: #9b998f;
   width: 15px;
+  flex-shrink: 0;
+}
+.repair-photos {
+  margin-top: 22px;
+}
+.repair-photos > label {
+  display: block;
+  font-size: 12px;
+  font-weight: 500;
+}
+.repair-photos > label > span {
+  font-weight: 400;
+  color: var(--repair-muted);
+}
+.repair-photos > p {
+  font-size: 11px;
+  line-height: 1.7;
+  color: var(--repair-muted);
+  margin-top: 8px;
+}
+.repair-photos > input {
+  display: block;
+  width: 100%;
+  min-width: 0;
+  margin-top: 12px;
+  font-size: 12px;
+}
+.repair-photos > input::file-selector-button {
+  min-height: 44px;
+  margin-right: 12px;
+  border: 1px solid var(--repair-line);
+  background: #edeae0;
+  padding: 10px 14px;
+  cursor: pointer;
 }
 .repair-service-choice:has(input:checked) {
   background: #daff4f;
@@ -951,10 +994,10 @@
     padding: 12px 10px;
   }
   .repair-service-choice strong {
-    font-size: 10px;
+    font-size: 13px;
   }
   .repair-service-choice small {
-    font-size: 8px;
+    font-size: 11px;
   }
   .repair-hero-actions {
     gap: 18px;
@@ -1146,6 +1189,7 @@
     margin-right: 8px;
   }
   .repair-service-options {
+    grid-template-columns: 1fr;
     gap: 8px;
   }
   .repair-service-choice {
@@ -1154,17 +1198,14 @@
     gap: 5px;
   }
   .repair-service-choice strong {
-    font-size: 10px;
+    font-size: 13px;
   }
   .repair-service-choice small {
-    font-size: 8px;
+    font-size: 11px;
   }
   .repair-service-choice > svg {
     width: 13px;
     height: 13px;
-  }
-  .repair-service-choice:last-child {
-    min-height: 64px;
   }
   .repair-fields-grid {
     gap: 16px 11px;
@@ -1324,6 +1365,9 @@
   }
 }
 @media (max-width: 370px) {
+  .repair-care-stamp {
+    right: -10px;
+  }
   .repair-fields-grid {
     grid-template-columns: 1fr;
   }
@@ -1363,6 +1407,6 @@
 
 @media (max-width: 760px) {
   .repair-care-stamp {
-    right: -16px;
+    right: -10px;
   }
 }

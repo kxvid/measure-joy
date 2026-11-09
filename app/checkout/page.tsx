@@ -147,7 +147,11 @@ function CheckoutContent() {
               </p>
             </div>
             <div className="commerce-grid">
-              <Checkout productId={product?.id} quantity={quantity} />
+              <Checkout
+                productId={product?.id}
+                product={product || undefined}
+                quantity={quantity}
+              />
               <aside className="order-summary">
                 <p className="eyebrow">YOUR GOOD FINDS</p>
                 <h2>Coming along for the ride.</h2>

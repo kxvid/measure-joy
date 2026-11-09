@@ -11,7 +11,7 @@ export default function PrivacyPage() {
     <PolicyPage
       title="Privacy Policy"
       path="/privacy"
-      updated="October 12, 2026"
+      updated="November 9, 2026"
     >
       <div className="prose prose-neutral dark:prose-invert max-w-none space-y-8">
         <section>
@@ -47,10 +47,12 @@ export default function PrivacyPage() {
             and as required by law.
           </p>
           <p className="text-muted-foreground mt-2">
-            Contact and camera service requests are processed by FormSubmit to
-            email your details to our workshop. This includes the contact
-            information and message or camera details you submit. FormSubmit
-            retains form submissions for 30 days.
+            Contact and camera service requests without photos are processed by
+            FormSubmit, which retains submissions for 30 days. Camera service
+            requests with photos are processed by Resend instead. These services
+            email the contact information, message, camera details, and any
+            photos you provide to Christian at our workshop. Photos are sent as
+            email attachments; we do not publish them in a public gallery.
           </p>
         </section>
 
@@ -66,9 +68,24 @@ export default function PrivacyPage() {
         <section>
           <h2 className="text-xl font-bold">Cookies</h2>
           <p className="text-muted-foreground mt-2">
-            We use cookies and similar technologies to enhance your browsing
-            experience, analyze site traffic, and personalize content. You can
-            control cookie preferences through your browser settings.
+            Essential cookies support sign-in and checkout. We also use Vercel
+            Analytics for aggregate site usage. With your permission, Google
+            Analytics measures page views and shopping events, including product
+            views, bag changes, checkout starts, and confirmed purchases. These
+            events use product identifiers and order values; we do not send your
+            name, email, address, form contents, or checkout links to Google Analytics.
+            Google Signals and advertising personalization are disabled.
+          </p>
+        </section>
+
+        <section>
+          <h2 className="text-xl font-bold">Your Analytics Choices</h2>
+          <p className="text-muted-foreground mt-2">
+            Optional analytics starts only after you allow it. Select Privacy
+            choices at the bottom of the page to change your choice at any time.
+            Global Privacy Control disables optional tracking. Declining analytics
+            does not affect shopping or checkout. Your browser settings can also
+            remove cookies already stored on your device.
           </p>
         </section>
 

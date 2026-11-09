@@ -3,6 +3,7 @@ import type React from "react";
 import type { Metadata } from "next";
 import { ClerkProvider } from "@clerk/nextjs";
 import { Analytics } from "@vercel/analytics/next";
+import { CommerceAnalytics } from "@/components/analytics/commerce-analytics";
 import { CartProvider } from "@/lib/cart-context";
 import { SITE_URL } from "@/lib/seo";
 import { getSectionContent } from "@/lib/content";
@@ -101,6 +102,7 @@ export default async function RootLayout({
               {children}
             </StorefrontCopyProvider>
           </CartProvider>
+          <CommerceAnalytics nonce={nonce} />
           <Analytics />
         </body>
       </html>
