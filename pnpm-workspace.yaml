@@ -22,6 +22,7 @@ minimumReleaseAgeExclude:
   # Exact security fix and its replacement matching engine.
   - minimatch@11.0.3
   - '@isaacs/nonrecursive-glob-match@1.0.3'
+  - google-auth-library@11.3.4
 patchedDependencies:
   '@eslint/config-array@0.21.2': patches/@eslint__config-array@0.21.2.patch
   '@eslint/eslintrc@3.3.6': patches/@eslint__eslintrc@3.3.6.patch
