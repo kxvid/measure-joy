@@ -20,7 +20,7 @@ beforeEach(() => {
   globalThis.fetch = async (input, init) => {
     const url = String(input instanceof Request ? input.url : input)
     if (url === 'https://formsubmit.co/ajax/christianvelasquez363@gmail.com') {
-      sent.push({ url, body: JSON.parse(init.body), headers: new Headers(init.headers), init })
+      sent.push({ url, body: init.body instanceof FormData ? Object.fromEntries(init.body) : JSON.parse(init.body), headers: new Headers(init.headers), init })
       if (deliveryError === 'network') throw new TypeError('private connection details')
       if (deliveryError === 'malformed') return Response.json({})
       if (deliveryError === 'invalid-json') return new Response('private provider HTML', { status: 200 })
@@ -28,7 +28,7 @@ beforeEach(() => {
       return new Response(JSON.stringify(formSubmitResult), { headers: { 'content-type': 'text/html; charset=UTF-8' } })
     }
     if (url === 'https://api.resend.com/emails') {
-      const request = { body: JSON.parse(init.body), headers: new Headers(init.headers) }
+      const request = { url, body: JSON.parse(init.body), headers: new Headers(init.headers), init }
       sent.push(request)
       if (deliveryError === 'network') throw new TypeError('simulated connection loss')
       if (deliveryError === 'malformed') return Response.json({})
@@ -59,6 +59,13 @@ function repairData(overrides = {}) {
 }
 function request(path, body, headers = {}) {
   return new Request(`https://measurejoy.org/api/${path}`, { method: 'POST', headers: { 'content-type': 'application/json', origin: 'https://measurejoy.org', 'x-vercel-forwarded-for': `203.0.${Math.floor(identity / 200)}.${identity % 200 + 1}`, ...headers }, body: typeof body === 'string' ? body : JSON.stringify(body) })
+}
+const photoPng = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jRZkAAAAASUVORK5CYII=', 'base64')
+function photoRequest(payload, photos = [new File([photoPng], 'my-camera.png', { type: 'image/png' })], headers = {}) {
+  const body = new FormData()
+  body.set('payload', JSON.stringify(payload))
+  for (const photo of photos) body.append('photos', photo)
+  return new Request('https://measurejoy.org/api/repairs', { method: 'POST', body, headers: { origin: 'https://measurejoy.org', 'x-vercel-forwarded-for': `203.0.${Math.floor(identity / 200)}.${identity % 200 + 1}`, ...headers } })
 }
 
 test('contact acceptance sends fixed FormSubmit settings and visitor content without claiming delivery', async () => {
@@ -251,6 +258,111 @@ test('repair requires consent, a valid service and a phone when phone contact is
     assert.equal(response.status, 400)
   }
   assert.equal(sent.length, 0)
+})
+
+test('new and legacy repair choices are accepted; camera details remain required when relevant', async () => {
+  for (const service of ['cleaning-restoration', 'battery-charging', 'photo-recovery', 'trade-in', 'restoration', 'cleaning', 'film-dev', 'quote']) {
+    assert.equal((await repair(request('repairs', repairData({ service })))).status, 200)
+  }
+  for (const service of ['rental-enquiry', 'referral']) {
+    assert.equal((await repair(request('repairs', repairData({ service, brand: '', model: '' })))).status, 200)
+  }
+  assert.equal((await repair(request('repairs', repairData({ service: 'photo-recovery', brand: '', model: '' })))).status, 400)
+})
+
+test('repair photos use documented Resend attachments with fixed recipient, sanitized names and idempotency', async () => {
+  const payload = repairData({ service: 'cleaning-restoration' })
+  const photos = [new File([photoPng], '../../private-name.png', { type: 'image/png' }), new File([photoPng], 'another.png', { type: 'image/png' })]
+  const response = await repair(photoRequest(payload, photos))
+  assert.equal(response.status, 200)
+  assert.equal(sent.length, 1)
+  const submission = sent[0]
+  assert.equal(submission.url, 'https://api.resend.com/emails')
+  assert.equal(submission.headers.get('content-type'), 'application/json')
+  assert.equal(submission.body.from, 'Measure Joy <orders@measurejoy.org>')
+  assert.deepEqual(submission.body.to, ['christianvelasquez363@gmail.com'])
+  assert.equal(submission.body.reply_to, payload.email)
+  assert.match(submission.body.text, new RegExp(payload.requestToken))
+  assert.equal(submission.body.attachments[0].filename, 'camera-photo-1.png')
+  assert.equal(submission.body.attachments[1].filename, 'camera-photo-2.png')
+  assert.deepEqual(Buffer.from(submission.body.attachments[0].content, 'base64'), photoPng)
+  assert.equal(submission.body.attachments[0].content_type, 'image/png')
+  assert.equal(submission.body.attachments[0].path, undefined)
+  assert.match(submission.headers.get('idempotency-key'), /^measurejoy-repair-[a-f0-9]{64}$/)
+  assert.equal(submission.init.redirect, 'error')
+  await repair(photoRequest(payload, photos))
+  assert.equal(sent[1].headers.get('idempotency-key'), submission.headers.get('idempotency-key'))
+  assert.equal(writes.length, 0, 'photos are never stored in the database or a public bucket')
+})
+
+test('photo submissions require configured delivery and never fall back to a duplicate FormSubmit email', async () => {
+  delete process.env.RESEND_API_KEY
+  assert.equal((await repair(photoRequest(repairData()))).status, 503)
+  assert.equal(sent.length, 0)
+  // Ordinary requests keep their original provider and do not require Resend.
+  assert.equal((await repair(request('repairs', repairData()))).status, 200)
+  assert.equal(sent.length, 1)
+  assert.equal(sent[0].url, 'https://formsubmit.co/ajax/christianvelasquez363@gmail.com')
+})
+
+for (const failure of [409, 422, 429, 500, 'network', 'malformed']) {
+  test(`photo provider failure ${failure} is explicit, sanitized and never double-sent`, async () => {
+    deliveryError = failure
+    const response = await repair(photoRequest(repairData()))
+    assert.equal(response.status, failure === 409 ? 409 : 502)
+    const body = await response.json()
+    assert.equal(body.success, false)
+    assert.doesNotMatch(body.error, /private|simulated|database/i)
+    assert.equal(sent.length, 1)
+    assert.equal(sent[0].url, 'https://api.resend.com/emails')
+  })
+}
+
+test('repair photos reject forged image types, SVG, empty files, too many files and exceeded byte budgets', async () => {
+  const badGroups = [
+    [new File(['<svg onload="alert(1)"></svg>'], 'forged.png', { type: 'image/png' })],
+    [new File([photoPng], 'wrong.jpg', { type: 'image/jpeg' })],
+    [new File(['<svg/>'], 'photo.svg', { type: 'image/svg+xml' })],
+    [new File([], 'empty.png', { type: 'image/png' })],
+    Array.from({ length: 4 }, () => new File([photoPng], 'photo.png', { type: 'image/png' })),
+    [new File([new Uint8Array(2_000_001)], 'large.png', { type: 'image/png' })],
+    Array.from({ length: 2 }, () => new File([new Uint8Array(1_500_001)], 'large.png', { type: 'image/png' })),
+  ]
+  for (const photos of badGroups) {
+    const response = await repair(photoRequest(repairData(), photos))
+    assert.equal(response.status, 400)
+    assert.ok((await response.json()).fieldErrors.photos)
+  }
+  assert.equal(sent.length, 0)
+})
+
+test('multipart repairs preserve origin, honeypot, trusted-IP and durable quota enforcement', async () => {
+  assert.equal((await repair(photoRequest(repairData(), undefined, { origin: 'https://evil.example' }))).status, 403)
+  assert.equal((await repair(photoRequest(repairData({ website: 'bot.invalid' })))).status, 400)
+  assert.equal((await repair(photoRequest(repairData(), undefined, { 'x-vercel-forwarded-for': '' }))).status, 503)
+  quotaError = true
+  assert.equal((await repair(photoRequest(repairData()))).status, 503)
+  quotaError = false
+  for (let i = 0; i < 5; i++) await contact(request('contact', contactData(), { 'x-vercel-forwarded-for': '198.51.100.80' }))
+  const response = await repair(photoRequest(repairData(), undefined, { 'x-vercel-forwarded-for': '198.51.100.80' }))
+  assert.equal(response.status, 429)
+  assert.ok(Number(response.headers.get('retry-after')) > 0)
+  assert.equal(sent.length, 5)
+})
+
+test('multipart parsing is bounded without trusting content length and upstream failure stays explicit', async () => {
+  const huge = new File([new Uint8Array(3_200_001)], 'large.png', { type: 'image/png' })
+  const encoded = photoRequest(repairData(), [huge])
+  // Model an incoming HTTP body rather than undici's outgoing Blob stream.
+  const oversized = new Request(encoded.url, { method: 'POST', headers: encoded.headers, body: await encoded.arrayBuffer() })
+  assert.equal((await repair(oversized)).status, 413)
+  assert.equal((await repair(photoRequest(repairData(), undefined, { 'content-length': '3200001' }))).status, 413)
+  const malformed = new Request('https://measurejoy.org/api/repairs', { method: 'POST', body: 'broken', headers: { origin: 'https://measurejoy.org', 'content-type': 'multipart/form-data; boundary=missing' } })
+  assert.equal((await repair(malformed)).status, 400)
+  deliveryError = 'network'
+  const response = await repair(photoRequest(repairData()))
+  assert.equal(response.status, 502)
+  assert.doesNotMatch((await response.json()).error, /private|camera-photo/i)
 })
 
 test('newsletter stores subscription and notifies Christian before reporting success', async () => {

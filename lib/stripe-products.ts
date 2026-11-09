@@ -52,6 +52,12 @@ function transformStripeProduct(
       (metadata.category as "camera" | "accessory") || fallback.category,
     subcategory: metadata.subcategory || undefined,
     condition: metadata.condition || "Good",
+    tested:
+      metadata.tested === "true"
+        ? true
+        : metadata.tested === "false"
+          ? false
+          : undefined,
     specs: {
       megapixels: metadata.megapixels,
       zoom: metadata.zoom,

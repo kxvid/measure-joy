@@ -74,8 +74,7 @@ export function Newsletter({ cms = {} }: NewsletterProps) {
             {cms.heading || "Good cameras. First dibs."}
           </h2>
           <p className="mt-3 max-w-md text-sm leading-relaxed text-muted-foreground">
-            {cms.subtitle ||
-              "Fresh finds, favorite cameras, and occasional notes from the shop."}
+            One weekly roundup of fresh camera finds and notes from the shop.
           </p>
         </div>
         <div>
@@ -135,7 +134,7 @@ export function Newsletter({ cms = {} }: NewsletterProps) {
                     </>
                   ) : (
                     <>
-                      Count me in{" "}
+                      Get weekly finds{" "}
                       <ArrowRight className="h-4 w-4" aria-hidden="true" />
                     </>
                   )}

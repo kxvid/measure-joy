@@ -466,3 +466,34 @@ test('an imported legacy session without original metadata fulfills from its ver
   assert.equal(h.product.metadata.stockCount, '0')
   assert.equal(h.store.tables.commerce_checkouts[0].state, 'fulfilled')
 })
+
+test('purchase measurement requires both an owned paid checkout and explicit analytics request', async () => {
+  for (const scenario of ['owned', 'unpaid', 'unrelated', 'declined']) {
+    const h = setup(3); await h.buy();
+    const session = h.sessions.get('cs_test_1');
+    Object.assign(session, {currency:'usd', amount_total: 1270, total_details:{amount_shipping:200,amount_tax:70}});
+    let reads = 0;
+    h.stripe.checkout.sessions.listLineItems = async () => { reads++; return {has_more:false,data:[{price:{product:'prod_Camera'},quantity:1,amount_total:1070,amount_tax:70}]}; };
+    if (scenario !== 'unpaid') h.pay('cs_test_1');
+    if (scenario === 'unrelated') h.cookieValues.delete('mj_checkout');
+    const result = await h.getStatus('cs_test_1', scenario !== 'declined');
+    assert.equal(reads, scenario === 'owned' ? 1 : 0);
+    if (scenario === 'owned') {
+      assert.equal(result.purchase.value,10);
+      assert.equal(result.purchase.shipping,2);
+      assert.equal(result.purchase.tax,.7);
+      assert.match(result.purchase.transaction_id,/^mj_[a-f0-9]{32}$/);
+      assert.equal(JSON.stringify(result.purchase).includes('cs_test'),false);
+      assert.deepEqual(copy(result.purchase.items),[{item_id:'prod_Camera',quantity:1,price:10}]);
+      assert.equal((await h.getStatus('cs_test_1',true)).purchase,undefined);
+    } else assert.equal(result.purchase,undefined);
+    assert.equal(h.writes(),0);
+  }
+});
+
+test('analytics provider errors never prevent owned payment acknowledgement', async () => {
+  const h=setup(2);await h.buy();h.pay('cs_test_1');
+  h.stripe.checkout.sessions.listLineItems=async()=>{throw new Error('analytics unavailable')};
+  assert.deepEqual(copy(await h.getStatus('cs_test_1',true)),{status:'complete'});
+  assert.equal(h.cookieValues.has('mj_checkout'),false);
+});

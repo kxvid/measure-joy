@@ -1,6 +1,6 @@
 /** Editable presentation copy. Catalog details and prices always come from Stripe. */
 export const storefrontDefaults = {
-  announcement: "A LITTLE NOSTALGIA. A LOT OF JOY.",
+  announcement: "Free shipping over $75 · 90-day camera warranty",
   hero_badge: "GOOD CAMERAS. GREAT STORIES.",
   hero_line1: "Little camera.",
   hero_line2: "Big",

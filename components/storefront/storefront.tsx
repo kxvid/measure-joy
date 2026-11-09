@@ -38,6 +38,7 @@ import {
   type ShopFilters,
   DEFAULT_FILTERS,
   categoryMatch,
+  isTestedCamera,
   classifyProduct,
   readFilters,
   filtersUrl,
@@ -150,6 +151,11 @@ function ProductCard({
         {product.name}
       </a>
       <p className="product-price">{formatPrice(product.priceInCents)}</p>
+      {isTestedCamera(product) && (
+        <p className="product-tested">
+          <Check size={12} aria-hidden="true" /> Tested
+        </p>
+      )}
     </article>
   );
 }
@@ -159,19 +165,21 @@ export default function Storefront({
   productSlug,
   initialProduct,
   initialProducts,
+  initialError,
   newsletter,
 }: {
   mode?: Mode;
   productSlug?: string;
   initialProduct?: Product;
   initialProducts?: Product[];
+  initialError?: string;
   newsletter?: Record<string, string>;
 }) {
   const cart = useCart();
   const copy = useStorefrontCopy();
   const [products, setProducts] = useState<Product[]>(initialProducts || []);
-  const [loading, setLoading] = useState(!initialProducts);
-  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(!initialProducts && !initialError);
+  const [error, setError] = useState(initialError || "");
   const [retry, setRetry] = useState(0);
   const [filters, setFilters] = useState<ShopFilters>(DEFAULT_FILTERS);
   const [filtersReady, setFiltersReady] = useState(false);
@@ -195,7 +203,10 @@ export default function Storefront({
           throw new Error("We couldn’t load the collection. Please try again.");
         return (await r.json()) as Product[];
       })
-      .then((data) => setProducts(data))
+      .then((data) => {
+        setProducts(data);
+        setError("");
+      })
       .catch((e) => {
         if (e.name !== "AbortError")
           setError("We couldn’t load the collection. Please try again.");
@@ -458,8 +469,9 @@ export default function Storefront({
                   </span>
                 </a>
                 <div className="hero-small">
-                  <span className="small-star">✦</span> Vintage finds. Ready for
-                  your next chapter.
+                  <Check size={14} aria-hidden="true" /> Tested cameras
+                  <span aria-hidden="true">·</span>
+                  <a href="/returns">90-day warranty</a>
                 </div>
               </div>
               <div className="hero-sticker">
@@ -645,15 +657,11 @@ export default function Storefront({
             <div className="shop-intro">
               <p className="eyebrow">THE MEASURE JOY COLLECTION</p>
               <h1>
-                A camera for
-                <br />
-                <em>your kind of life.</em>
+                Find your <em>camera.</em>
                 <Spark />
               </h1>
               <p>
-                Digital nostalgia, film favorites, and the little extras.
-                <br />
-                Find the one that feels like you.
+                Vintage digital, film favorites, and the little extras.
               </p>
             </div>
             <div className="shop-tools">
@@ -715,7 +723,9 @@ export default function Storefront({
                 )}
                 {loading
                   ? "Loading your next favorite…"
-                  : `${filtered.length} ${filtered.length === 1 ? "find" : "finds"}`}
+                  : error
+                    ? "Collection unavailable"
+                    : `${filtered.length} ${filtered.length === 1 ? "find" : "finds"}`}
               </span>
               <label className="stock-toggle">
                 <input

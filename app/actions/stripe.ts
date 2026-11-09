@@ -4,6 +4,8 @@ import { createHash, randomBytes, randomUUID } from "node:crypto";
 import { isIP } from "node:net";
 import { auth } from "@clerk/nextjs/server";
 import { cookies, headers } from "next/headers";
+import { purchaseAnalytics } from "@/lib/purchase-analytics";
+import type { CommerceEvent } from "@/lib/analytics";
 import { stripe } from "@/lib/stripe";
 import { consumeRateLimit } from "@/lib/rate-limit";
 import { acknowledgeOwnedPaidCheckout, createReservedCheckout, inventorySnapshot, reconcileInventory, resumeOwnedCheckout, type ReservationItem } from "@/lib/inventory";
@@ -150,16 +152,26 @@ export async function startSingleProductCheckout(
   return createCheckout([{ productId, quantity }], `/product/${productId}`);
 }
 
-export async function getCheckoutSessionStatus(sessionId: string) {
+export async function getCheckoutSessionStatus(sessionId: string, includeAnalytics = false) {
   if (!/^cs_(test_|live_)?[A-Za-z0-9_]+$/.test(sessionId))
     throw new Error("Invalid checkout session.");
   const session = await stripe.checkout.sessions.retrieve(sessionId);
+  let purchase: CommerceEvent | null = null;
   if (session.status === "complete" && isPaidSession(session)) {
     const cookieStore = await cookies();
     const capability = cookieStore.get("mj_checkout")?.value;
-    if (capability && await acknowledgeOwnedPaidCheckout(session, capability, (await auth()).userId)) cookieStore.delete("mj_checkout");
+    if (capability && await acknowledgeOwnedPaidCheckout(session, capability, (await auth()).userId)) {
+      if (includeAnalytics === true) {
+        try {
+          const lines = await stripe.checkout.sessions.listLineItems(session.id, {limit: 100});
+          if (!lines.has_more) purchase = purchaseAnalytics(session, lines.data);
+        } catch { /* Optional measurement must not block payment acknowledgement. */ }
+      }
+      cookieStore.delete("mj_checkout");
+    }
   }
   return {
+    ...(purchase ? {purchase} : {}),
     status:
       session.status === "complete" && !isPaidSession(session)
         ? "pending"

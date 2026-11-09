@@ -584,7 +584,8 @@ html {
   height: 30px;
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: center;
+  gap: 12px;
   padding: 0 4.5%;
   background: var(--ink);
   color: var(--ivory);
@@ -604,6 +605,10 @@ html {
 .announcement > a {
   font-size: 10px;
   letter-spacing: 0.01em;
+}
+.announcement > a:hover {
+  text-decoration: underline;
+  text-underline-offset: 3px;
 }
 .site-header {
   height: 89px;
@@ -786,6 +791,10 @@ html {
   gap: 8px;
   margin-top: 19px;
   color: #56564e;
+}
+.hero-small a {
+  text-decoration: underline;
+  text-underline-offset: 3px;
 }
 .small-star {
   font-size: 19px;
@@ -1088,6 +1097,14 @@ html {
   font-size: 13px;
   font-weight: 500;
   margin-top: 7px;
+}
+.product-tested {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 8px;
+  color: var(--mj-muted);
+  font-size: 10px;
 }
 .collection-more {
   display: flex;
@@ -1454,21 +1471,21 @@ html {
   color: var(--ivory);
 }
 .shop-page {
-  padding-top: 60px;
+  padding-top: 32px;
   padding-bottom: 110px;
   min-height: 80vh;
 }
 .shop-intro {
   position: relative;
   border-bottom: 1px solid var(--line);
-  padding-bottom: 52px;
-  margin-bottom: 30px;
+  padding-bottom: 24px;
+  margin-bottom: 22px;
 }
 .shop-intro h1 {
-  font-size: clamp(52px, 6.8vw, 105px);
+  font-size: clamp(40px, 5vw, 68px);
   line-height: 0.98;
   letter-spacing: -0.06em;
-  margin: 27px 0 22px;
+  margin: 16px 0 12px;
   position: relative;
   width: max-content;
   max-width: 100%;
@@ -1480,9 +1497,9 @@ html {
 .shop-intro h1 > svg {
   position: absolute;
   top: 8px;
-  right: -130px;
-  width: 80px;
-  height: 80px;
+  right: -80px;
+  width: 50px;
+  height: 50px;
   transform: rotate(18deg);
   color: var(--coral);
 }
@@ -1518,8 +1535,8 @@ html {
   display: flex;
   align-items: center;
   gap: 22px;
-  margin-top: 30px;
-  padding: 18px 0 0;
+  margin-top: 20px;
+  padding: 15px 0 0;
   border-top: 1px solid var(--line);
   font-size: 10px;
 }
@@ -2123,11 +2140,12 @@ html {
   .announcement {
     height: 28px;
     padding: 0 5%;
-    font-size: 7px;
-    letter-spacing: 0.07em;
+    gap: 8px;
+    font-size: 10px;
+    letter-spacing: 0;
   }
   .announcement > a {
-    font-size: 8px;
+    font-size: 10px;
   }
   .announcement > span {
     gap: 6px;
@@ -2546,42 +2564,42 @@ html {
     width: 100%;
   }
   .shop-page {
-    padding-top: 37px;
+    padding-top: 20px;
   }
   .shop-intro {
-    padding-bottom: 34px;
-    margin-bottom: 23px;
+    padding-bottom: 16px;
+    margin-bottom: 16px;
   }
   .shop-intro > .eyebrow {
     font-size: 8px;
   }
   .shop-intro h1 {
-    font-size: 55px;
-    margin-top: 23px;
-    max-width: 90%;
+    font-size: 36px;
+    margin: 12px 0 10px;
+    max-width: calc(100% - 28px);
   }
   .shop-intro h1 > svg {
-    width: 35px;
-    height: 35px;
+    width: 24px;
+    height: 24px;
     top: 0;
-    right: -15px;
+    right: -36px;
   }
   .shop-intro > p:last-child {
     font-size: 11px;
-    line-height: 1.7;
+    line-height: 1.5;
   }
   .shop-tools {
-    gap: 23px;
+    gap: 12px;
   }
   .catalog-search {
     width: 100%;
     font-size: 12px;
   }
   .filter-row {
-    gap: 14px;
+    gap: 12px;
     flex-wrap: wrap;
-    margin-top: 22px;
-    padding-top: 15px;
+    margin-top: 12px;
+    padding-top: 12px;
     font-size: 9px;
   }
   .filter-count {
@@ -2596,6 +2614,9 @@ html {
   }
   .select-wrap:last-child {
     margin-left: auto;
+  }
+  .shop-page .product-grid {
+    margin-top: 16px;
   }
   .product-page {
     padding-top: 22px;
@@ -2723,7 +2744,7 @@ html {
     gap: 8px;
   }
   .announcement > a {
-    font-size: 7px;
+    font-size: 9px;
   }
   .hero h1 {
     font-size: 10.4vw;
@@ -2742,7 +2763,7 @@ html {
     font-size: 33px;
   }
   .shop-intro h1 {
-    font-size: 47px;
+    font-size: 34px;
   }
   .belief-strip > svg:nth-of-type(2) {
     display: none;

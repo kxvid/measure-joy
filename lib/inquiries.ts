@@ -4,6 +4,8 @@ import { createHash } from "node:crypto";
 import { Resend } from "resend";
 import { z } from "zod";
 import { consumeRateLimit } from "@/lib/rate-limit";
+import { REPAIR_SERVICE_VALUES, repairNeedsCamera, repairServiceLabel } from "@/lib/repair-intake";
+import { MAX_REPAIR_REQUEST_BYTES, repairPhotoSelectionError, repairPhotoType } from "@/lib/repair-photos";
 
 // Keep delivery routing on the server. Never accept a recipient from a public form.
 const INQUIRY_RECIPIENT = "christianvelasquez363@gmail.com";
@@ -45,9 +47,9 @@ export const repairSchema = z
   .object({
     ...formFields,
     name: singleLine(100),
-    service: z.enum(["repair", "restoration", "cleaning", "film-dev", "quote"]),
-    brand: singleLine(80),
-    model: singleLine(120),
+    service: z.enum(REPAIR_SERVICE_VALUES),
+    brand: z.union([singleLine(80), z.literal("")]),
+    model: z.union([singleLine(120), z.literal("")]),
     issues: z.array(singleLine(100)).max(12).default([]),
     description: z
       .string()
@@ -67,6 +69,15 @@ export const repairSchema = z
     }),
   })
   .superRefine((data, context) => {
+    if (repairNeedsCamera(data.service)) {
+      for (const key of ["brand", "model"] as const) {
+        if (!data[key]) context.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: [key],
+          message: `Enter your camera ${key}, or “Unknown”.`,
+        });
+      }
+    }
     if (
       data.preferredContact === "phone" &&
       data.phone.replace(/\D/g, "").length < 7
@@ -176,7 +187,7 @@ function allowedOrigins(request: Request) {
   return origins;
 }
 
-async function readJson(request: Request): Promise<unknown> {
+function requireFormOrigin(request: Request) {
   const origin = request.headers.get("origin");
   if (
     !origin ||
@@ -188,17 +199,11 @@ async function readJson(request: Request): Promise<unknown> {
       "Please submit this form from the Measure Joy website.",
     );
   }
-  if (
-    request.headers.get("content-type")?.split(";")[0].trim().toLowerCase() !==
-    "application/json"
-  ) {
-    throw new FormError(415, "Please submit this form as JSON.");
-  }
-  if (Number(request.headers.get("content-length")) > MAX_BODY_BYTES)
-    throw new FormError(
-      413,
-      "Your message is too long. Please shorten it and try again.",
-    );
+}
+
+async function readBoundedBody(request: Request, maximum: number) {
+  if (Number(request.headers.get("content-length")) > maximum)
+    throw new FormError(413, "Your submission is too large. Please shorten it or use smaller photos.");
   if (!request.body) throw new FormError(400, "Please complete the form.");
   const reader = request.body.getReader();
   const chunks: Uint8Array[] = [];
@@ -208,24 +213,34 @@ async function readJson(request: Request): Promise<unknown> {
       const { done, value } = await reader.read();
       if (done) break;
       length += value.byteLength;
-      if (length > MAX_BODY_BYTES) {
+      if (length > maximum) {
         await reader.cancel();
-        throw new FormError(
-          413,
-          "Your message is too long. Please shorten it and try again.",
-        );
+        throw new FormError(413, "Your submission is too large. Please shorten it or use smaller photos.");
       }
       chunks.push(value);
     }
-    return JSON.parse(Buffer.concat(chunks).toString("utf8")) as unknown;
+    return Buffer.concat(chunks);
+  } finally {
+    reader.releaseLock();
+  }
+}
+
+async function readJson(request: Request): Promise<unknown> {
+  requireFormOrigin(request);
+  if (
+    request.headers.get("content-type")?.split(";")[0].trim().toLowerCase() !==
+    "application/json"
+  ) {
+    throw new FormError(415, "Please submit this form as JSON.");
+  }
+  try {
+    return JSON.parse((await readBoundedBody(request, MAX_BODY_BYTES)).toString("utf8")) as unknown;
   } catch (error) {
     if (error instanceof FormError) throw error;
     throw new FormError(
       400,
       "We couldn't read this submission. Please try again.",
     );
-  } finally {
-    reader.releaseLock();
   }
 }
 
@@ -252,6 +267,14 @@ export async function readPublicForm<T extends z.ZodType<{ email: string; websit
 ): Promise<z.infer<T>> {
   // Reject cross-site/media/body violations before touching the shared quota.
   const raw = await readJson(request);
+  return validatePublicForm(request, schema, raw);
+}
+
+async function validatePublicForm<T extends z.ZodType<{ email: string; website?: string }>>(
+  request: Request,
+  schema: T,
+  raw: unknown,
+): Promise<z.infer<T>> {
   // Vercel supplies this trusted client address. Never trust an arbitrary forwarded header.
   const trustedIp =
     process.env.VERCEL === "1"
@@ -271,6 +294,48 @@ export async function readPublicForm<T extends z.ZodType<{ email: string; websit
     throw new FormError(400, "This submission could not be accepted.");
   await limitFormAttempts(`email:${parsed.data.email}`);
   return parsed.data;
+}
+
+export async function readPublicRepairForm(request: Request) {
+  const contentType = request.headers.get("content-type") || "";
+  if (contentType.split(";")[0].trim().toLowerCase() !== "multipart/form-data") {
+    return { data: await readPublicForm(request, repairSchema), photos: [] as File[] };
+  }
+  requireFormOrigin(request);
+  let multipart: FormData;
+  let raw: unknown;
+  try {
+    // Bound the stream before the multipart parser allocates any file buffers.
+    const bytes = await readBoundedBody(request, MAX_REPAIR_REQUEST_BYTES);
+    multipart = await new Response(bytes, { headers: { "content-type": contentType } }).formData();
+    const payload = multipart.get("payload");
+    if (typeof payload !== "string" || new TextEncoder().encode(payload).byteLength > MAX_BODY_BYTES ||
+        multipart.getAll("payload").length !== 1 ||
+        [...multipart.keys()].some((key) => key !== "payload" && key !== "photos")) {
+      throw new FormError(400, "Please check the form and try again.");
+    }
+    raw = JSON.parse(payload);
+  } catch (error) {
+    if (error instanceof FormError) throw error;
+    throw new FormError(400, "We couldn't read this submission. Please try again.");
+  }
+  const data = await validatePublicForm(request, repairSchema, raw);
+  const values = multipart.getAll("photos");
+  if (values.some((value) => typeof value === "string"))
+    throw new FormError(400, "Choose JPG or PNG photos.", { photos: ["Choose JPG or PNG photos."] });
+  const files = values as File[];
+  const selectionError = repairPhotoSelectionError(files);
+  if (selectionError) throw new FormError(400, selectionError, { photos: [selectionError] });
+  const photos: File[] = [];
+  for (const [index, file] of files.entries()) {
+    const bytes = new Uint8Array(await file.arrayBuffer());
+    const type = repairPhotoType(bytes);
+    if (!type || type !== file.type)
+      throw new FormError(400, "One of your photos is not a valid JPG or PNG.", { photos: ["Use an original JPG or PNG photo; renaming a file does not convert it."] });
+    // Do not forward caller-supplied filenames or create a public upload URL.
+    photos.push(new File([bytes], `camera-photo-${index + 1}.${type === "image/jpeg" ? "jpg" : "png"}`, { type }));
+  }
+  return { data, photos };
 }
 
 export function requireEmailDelivery() {
@@ -358,13 +423,13 @@ export async function sendContact(data: z.infer<typeof contactSchema>) {
   });
 }
 
-export async function sendRepair(data: z.infer<typeof repairSchema>) {
-  return sendFormSubmission({
+export async function sendRepair(data: z.infer<typeof repairSchema>, photos: File[] = []) {
+  const submission = {
     kind: "Service inquiry",
     sourcePage: "https://www.measurejoy.org/repair",
     token: data.requestToken,
     replyTo: data.email,
-    subject: `Measure Joy ${data.service}: ${data.brand} ${data.model}`,
+    subject: `Measure Joy ${repairServiceLabel(data.service)}${data.brand ? `: ${data.brand} ${data.model}` : ""}`,
     fields: [
       ["Service", data.service],
       ["Camera brand", data.brand],
@@ -376,8 +441,50 @@ export async function sendRepair(data: z.infer<typeof repairSchema>) {
       ["Phone", data.phone],
       ["Preferred contact", data.preferredContact],
       ["Permission to contact", "Yes"],
-    ],
-  });
+    ] as Array<[string, string]>,
+  };
+  if (!photos.length) return sendFormSubmission(submission);
+
+  // FormSubmit's AJAX API does not document attachments. Use the existing
+  // verified Resend sender for photo requests, with no second delivery attempt.
+  requireEmailDelivery();
+  try {
+    const response = await fetch("https://api.resend.com/emails", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${process.env.RESEND_API_KEY}`,
+        "Content-Type": "application/json",
+        "Idempotency-Key": `measurejoy-repair-${digest(data.requestToken)}`,
+      },
+      body: JSON.stringify({
+        from: "Measure Joy <orders@measurejoy.org>",
+        to: [INQUIRY_RECIPIENT],
+        reply_to: data.email,
+        subject: submission.subject,
+        text: [...submission.fields, ["Source page", submission.sourcePage], ["Request reference", data.requestToken]]
+          .map(([label, value]) => `${label}:\n${value || "Not provided"}`).join("\n\n"),
+        attachments: await Promise.all(photos.map(async (photo) => ({
+          filename: photo.name,
+          content: Buffer.from(await photo.arrayBuffer()).toString("base64"),
+          content_type: photo.type,
+        }))),
+      }),
+      signal: AbortSignal.timeout(12_000),
+      redirect: "error",
+      cache: "no-store",
+    });
+    if (response.status === 409)
+      throw new FormError(409, "This submission changed after it was sent. Please start a new request.");
+    if (!response.ok) throw new Error("Submission rejected");
+    const result: unknown = await response.json();
+    if (!result || typeof result !== "object" || !("id" in result) || typeof result.id !== "string" || !result.id.trim())
+      throw new Error("Invalid submission response");
+    return { status: "accepted" as const };
+  } catch (error) {
+    if (error instanceof FormError) throw error;
+    // Never log request data, attachments, credentials or provider error bodies.
+    throw new FormError(502, "We couldn't confirm your request was accepted. Your details are still here; please retry the same submission.");
+  }
 }
 
 const FORM_CANONICAL_URL = "https://www.measurejoy.org/";
@@ -397,6 +504,19 @@ async function sendFormSubmission({
   status: "accepted" | "activation_pending";
 }> {
   try {
+    const payload = {
+      ...Object.fromEntries(fields),
+      "Request kind": kind,
+      "Source page": sourcePage,
+      // A reference for recognizing retries, not duplicate suppression.
+      "Request reference": token,
+      email: replyTo,
+      _replyto: replyTo,
+      _subject: subject,
+      _template: "table",
+      _url: FORM_CANONICAL_URL,
+      _captcha: "false",
+    };
     const response = await fetch(
       `https://formsubmit.co/ajax/${INQUIRY_RECIPIENT}`,
       {
@@ -408,21 +528,7 @@ async function sendFormSubmission({
         },
         // These are plain form fields, never a caller-supplied HTML template.
         // Both forms share one activation URL; their page is only message content.
-        body: JSON.stringify({
-          ...Object.fromEntries(fields),
-          "Request kind": kind,
-          "Source page": sourcePage,
-          // FormSubmit documents no idempotency guarantee. This is a reference
-          // for recognizing retries, not a promise of duplicate suppression.
-          "Request reference": token,
-          email: replyTo,
-          _replyto: replyTo,
-          _subject: subject,
-          _template: "table",
-          _url: FORM_CANONICAL_URL,
-          // Public routes already enforce origin, validation, honeypot and limits.
-          _captcha: "false",
-        }),
+        body: JSON.stringify(payload),
         signal: AbortSignal.timeout(12_000),
         redirect: "error",
         cache: "no-store",

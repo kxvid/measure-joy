@@ -12,12 +12,14 @@ import {
   CAMERA_BRANDS,
   REPAIR_ISSUES,
   REPAIR_SERVICES,
+  repairNeedsCamera,
   repairServiceLabel,
   validateRepairInput,
   type RepairInput,
 } from "@/lib/repair-intake";
+import { repairPhotoSelectionError } from "@/lib/repair-photos";
 
-export function RepairForm() {
+export function RepairForm({ photosEnabled = false }: { photosEnabled?: boolean }) {
   const [saved, setSaved] = useState<RepairInput | null>(null);
   const [activationPending, setActivationPending] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -27,6 +29,9 @@ export function RepairForm() {
   );
   const [contact, setContact] = useState("email");
   const [description, setDescription] = useState("");
+  const [serviceChoice, setServiceChoice] = useState("");
+  const [photoCount, setPhotoCount] = useState(0);
+  const needsCamera = repairNeedsCamera(serviceChoice);
   const token = useRef<string | null>(null);
   const feedback = useRef<HTMLDivElement>(null);
   const form = useRef<HTMLFormElement>(null);
@@ -71,14 +76,25 @@ export function RepairForm() {
       focusFeedback();
       return;
     }
+    const photos = data.getAll("photos").filter((value): value is File => value instanceof File && value.size > 0);
+    const photoError = repairPhotoSelectionError(photos);
+    if (photoError) {
+      setFields({ photos: [photoError] });
+      setError(photoError);
+      focusFeedback();
+      return;
+    }
+    const multipart = new FormData();
+    multipart.set("payload", JSON.stringify(result.data));
+    photos.forEach((photo) => multipart.append("photos", photo));
     setSubmitting(true);
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 20_000);
     try {
       const response = await fetch("/api/repairs", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(result.data),
+        ...(photos.length ? {} : { headers: { "Content-Type": "application/json" } }),
+        body: photos.length ? multipart : JSON.stringify(result.data),
         signal: controller.signal,
         credentials: "same-origin",
       });
@@ -127,12 +143,12 @@ export function RepairForm() {
           is <em>{activationPending ? "queued." : "on its way."}</em>
         </h2>
         <dl className="repair-receipt">
-          <div>
+          {saved.brand && <div>
             <dt>Camera</dt>
             <dd>
               {saved.brand} {saved.model}
             </dd>
-          </div>
+          </div>}
           <div>
             <dt>Service</dt>
             <dd>{repairServiceLabel(saved.service)}</dd>
@@ -161,10 +177,10 @@ export function RepairForm() {
               ) : (
                 <>
                   Your request has been submitted to the workshop for review.
-                  Christian will get in touch about your camera. {" "}
+                  Christian will get in touch about your request. {" "}
                 </>
               )}
-              Please wait for agreed instructions before shipping your camera.
+              Please wait for agreed instructions before shipping a camera.
             </p>
           </div>
         </div>
@@ -182,6 +198,8 @@ export function RepairForm() {
               setDescription("");
               token.current = null;
               setContact("email");
+              setServiceChoice("");
+              setPhotoCount(0);
             }}
           >
             Start another request
@@ -232,13 +250,19 @@ export function RepairForm() {
           <legend>
             <span>01</span> What can we help with? *
           </legend>
-          <div className="repair-service-options">
-            {REPAIR_SERVICES.map((service) => (
-              <label className="repair-service-choice" key={service.value}>
+          {(["Camera care", "Other requests"] as const).map((group) => (
+            <div className="repair-service-category" key={group}>
+              <p className="repair-service-category-label">{group}</p>
+              <div className="repair-service-options">
+            {REPAIR_SERVICES.filter((service) => service.group === group).map((service) => (
+              <label className="repair-service-choice" key={service.value} htmlFor={`repair-service-${service.value}`}>
                 <input
+                  id={`repair-service-${service.value}`}
                   type="radio"
                   name="service"
                   value={service.value}
+                  checked={serviceChoice === service.value}
+                  onChange={(event) => setServiceChoice(event.target.value)}
                   required
                 />
                 <span>
@@ -248,21 +272,23 @@ export function RepairForm() {
                 <CheckCircle2 size={17} aria-hidden="true" />
               </label>
             ))}
-          </div>
+              </div>
+            </div>
+          ))}
           {errorText("service")}
         </fieldset>
         <fieldset className="repair-form-section">
           <legend>
-            <span>02</span> The camera
+            <span>02</span> {needsCamera ? "The camera" : "Your request"}
           </legend>
           <div className="repair-fields-grid">
             <label>
-              Brand *
+              Brand {needsCamera ? "*" : "(optional)"}
               <input
                 name="brand"
                 list="repair-camera-brands"
                 placeholder="e.g. Canon"
-                required
+                required={needsCamera}
                 maxLength={80}
                 {...errorProps("brand")}
               />
@@ -274,11 +300,11 @@ export function RepairForm() {
               {errorText("brand")}
             </label>
             <label>
-              Model *
+              Model {needsCamera ? "*" : "(optional)"}
               <input
                 name="model"
                 placeholder="e.g. PowerShot SD1000"
-                required
+                required={needsCamera}
                 maxLength={120}
                 {...errorProps("model")}
               />
@@ -286,10 +312,9 @@ export function RepairForm() {
             </label>
           </div>
           <p className="repair-hint">
-            Not sure of the model? Enter “Unknown”. For film, enter the film or
-            disposable camera details.
+            {needsCamera ? "Not sure of the model? Enter “Unknown”." : "No camera details needed for a rental or general enquiry."}
           </p>
-          <fieldset className="repair-issues">
+          <fieldset className="repair-issues" hidden={!needsCamera} disabled={!needsCamera}>
             <legend>
               Anything sound familiar? <span>Optional · choose any</span>
             </legend>
@@ -304,7 +329,7 @@ export function RepairForm() {
             {errorText("issues")}
           </fieldset>
           <label className="repair-description">
-            A few more details *
+            {serviceChoice === "rental-enquiry" ? "Your event plans *" : "A few more details *"}
             <textarea
               name="description"
               required
@@ -313,7 +338,7 @@ export function RepairForm() {
               rows={5}
               value={description}
               onChange={(event) => setDescription(event.target.value)}
-              placeholder="What’s happening? When did it start? For film or a quote, tell us what you have in mind."
+              placeholder={serviceChoice === "rental-enquiry" ? "Tell us your preferred date, location, and how many cameras you have in mind. Availability and pricing will be discussed before any booking." : "What’s happening? When did it start? Tell us what you have in mind and what help you need."}
               {...errorProps("description")}
             />
             {errorText("description")}
@@ -321,6 +346,22 @@ export function RepairForm() {
               {description.length.toLocaleString()} / 3,000
             </span>
           </label>
+          {photosEnabled ? <div className="repair-photos">
+            <label htmlFor="repair-photos">Camera photos <span>(optional)</span></label>
+            <p id="repair-photo-help">Add up to 3 JPG or PNG photos. Maximum 2 MB each, 3 MB total. Photos are emailed with your request; please leave out faces, documents, and personal information.</p>
+            <input
+              id="repair-photos"
+              name="photos"
+              type="file"
+              accept="image/jpeg,image/png"
+              multiple
+              onChange={(event) => setPhotoCount(event.target.files?.length || 0)}
+              aria-describedby={`repair-photo-help${fieldError("photos") ? " repair-error-photos" : ""}`}
+              aria-invalid={!!fieldError("photos")}
+            />
+            <p className="repair-hint" aria-live="polite">{photoCount ? `${photoCount} photo${photoCount === 1 ? "" : "s"} selected` : "A clear view of the camera and the issue helps us take a look."}</p>
+            {errorText("photos")}
+          </div> : <p className="repair-hint">You can send camera photos directly to <a href="mailto:christianvelasquez363@gmail.com">Christian by email</a>.</p>}
         </fieldset>
         <fieldset className="repair-form-section">
           <legend>

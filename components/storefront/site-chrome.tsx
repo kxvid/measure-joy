@@ -36,7 +36,6 @@ export function SiteHeader({
   onSearch?: () => void;
   onSaved?: () => void;
 }) {
-  const copy = useStorefrontCopy();
   const { totalItems } = useCart();
   const [menu, setMenu] = useState(false);
   const ref = useRef<HTMLDialogElement>(null);
@@ -63,11 +62,10 @@ export function SiteHeader({
       <a className="skip-link" href="#main-content">
         Skip to content
       </a>
-      <div className="announcement">
-        <span>✦ &nbsp; {copy.announcement}</span>
-        <a href="/brand">
-          Explore the new identity <ArrowUpRight size={13} />
-        </a>
+      <div className="announcement" aria-label="Shopping benefits">
+        <a href="/shipping">Free shipping over $75</a>
+        <span aria-hidden="true">·</span>
+        <a href="/returns">90-day camera warranty</a>
       </div>
       <header className="site-header">
         <Link href="/" className="brand-logo" aria-label="Measure Joy home">

@@ -6,6 +6,7 @@ import Link from "next/link";
 import { ArrowUpRight, Check, Clock3, Loader2, RefreshCw } from "lucide-react";
 import { getCheckoutSessionStatus } from "@/app/actions/stripe";
 import { CommerceShell } from "@/components/storefront/commerce-shell";
+import { currentConsent, trackCommerce, type CommerceEvent } from "@/lib/analytics";
 import { useCart } from "@/lib/cart-context";
 
 function CheckoutReturnContent() {
@@ -14,7 +15,13 @@ function CheckoutReturnContent() {
   const [status, setStatus] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [attempt, setAttempt] = useState(0);
+  const purchase = useRef<CommerceEvent | null>(null);
   const cleared = useRef<string | null>(null);
+  useEffect(() => {
+    const record = () => { if (trackCommerce('purchase', purchase.current)) purchase.current = null; };
+    window.addEventListener('measurejoy:analytics-ready', record);
+    return () => window.removeEventListener('measurejoy:analytics-ready', record);
+  }, []);
   useEffect(() => {
     let cancelled = false;
     if (!isHydrated) return;
@@ -24,10 +31,14 @@ function CheckoutReturnContent() {
       return;
     }
     setLoading(true);
-    getCheckoutSessionStatus(sessionId)
+    getCheckoutSessionStatus(sessionId, currentConsent().analytics)
       .then((result) => {
         if (cancelled) return;
         setStatus(result.status);
+        if (result.purchase) {
+          purchase.current = result.purchase;
+          if (trackCommerce('purchase', result.purchase)) purchase.current = null;
+        }
         if (result.status === "complete" && cleared.current !== sessionId) {
           cleared.current = sessionId;
           clearCart();

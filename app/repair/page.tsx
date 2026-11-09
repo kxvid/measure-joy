@@ -13,9 +13,9 @@ import "./repair.css";
 export const dynamic = "force-dynamic";
 export const metadata = {
   alternates: { canonical: "/repair" },
-  title: "Repairs & care",
+  title: "Camera repairs, cleaning & photo recovery",
   description:
-    "A little care for your favorite camera. Request a camera repair, restoration, cleaning, film development, or quote request.",
+    "Ask Measure Joy about camera cleaning, restoration, battery problems, photo recovery, trade-ins, or a party rental kit. Send your camera details to Christian.",
 };
 
 export default async function RepairPage() {
@@ -52,7 +52,7 @@ export default async function RepairPage() {
               </a>
             </div>
             <p className="repair-hero-footnote">
-              REPAIR · RESTORE · CLEAN · DEVELOP
+              REPAIR · RESTORE · CLEAN · RECOVER
             </p>
           </div>
           <div className="repair-service-art" aria-hidden="true">
@@ -113,7 +113,7 @@ export default async function RepairPage() {
               <em>New possibilities.</em>
             </h2>
             <p>
-              A sticky lens. A sleepy flash. A roll that’s waited long enough.
+              A sticky lens. A sleepy flash. Photos you want to find again.
               Every camera has a story — start with yours.
             </p>
             <div className="repair-aside-note">
@@ -122,6 +122,10 @@ export default async function RepairPage() {
               <p>
                 Repair options, pricing, and timing depend on your camera. Agree
                 on a plan with the workshop before shipping anything.
+              </p>
+              <p>
+                If we can’t repair it, we’ll help you explore a trusted repair
+                shop or possible trade-in credit.
               </p>
             </div>
             <div className="repair-aside-contact">
@@ -132,7 +136,7 @@ export default async function RepairPage() {
               <small>christianvelasquez363@gmail.com</small>
             </div>
           </aside>
-          <RepairForm />
+          <RepairForm photosEnabled={Boolean(process.env.RESEND_API_KEY?.trim())} />
         </section>
         <section className="repair-faq">
           <p className="repair-kicker">A FEW THINGS TO KNOW</p>
@@ -152,8 +156,9 @@ export default async function RepairPage() {
               <summary>Can you fix every camera?</summary>
               <p>
                 What’s possible depends on the model, its condition, and
-                available parts. Include as much detail as you can, then contact
-                the workshop for an assessment before sending your camera.
+                available parts. If we can’t repair it, we’ll help you explore a
+                trusted repair shop or possible trade-in credit. Contact the
+                workshop for an assessment before sending your camera.
               </p>
             </details>
             <details>
