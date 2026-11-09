@@ -9,6 +9,7 @@ import {
   useState,
 } from "react";
 import Link from "next/link";
+import Form from "next/form";
 import { useSearchParams } from "next/navigation";
 import { useCart } from "@/lib/cart-context";
 import { useSavedFinds } from "./use-saved-finds";
@@ -1068,7 +1069,12 @@ export default function Storefront({
               <h2 id="dialog-title">
                 What’s your <em>type?</em>
               </h2>
-              <form action="/shop" className="search-form">
+              <Form
+                action="/shop"
+                className="search-form"
+                prefetch={false}
+                onSubmit={closeModal}
+              >
                 <Search size={22} />
                 <input
                   name="search"
@@ -1081,7 +1087,7 @@ export default function Storefront({
                 <button aria-label="Search" type="submit">
                   <ArrowRight size={22} />
                 </button>
-              </form>
+              </Form>
               <p className="search-hint">
                 A brand. A color. A camera you’ve been dreaming of.
               </p>

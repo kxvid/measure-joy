@@ -72,6 +72,7 @@ function fixture() {
       jsxs: (type, props) => ({ type, props }),
     },
     "next/link": { __esModule: true, default: function Link() {} },
+    "next/form": { __esModule: true, default: function Form() {} },
     "next/navigation": { useSearchParams: () => url.searchParams },
     "@/lib/cart-context": { useCart: () => ({ items: [], itemCount: 0 }) },
     "./use-saved-finds": {
