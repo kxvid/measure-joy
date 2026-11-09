@@ -78,20 +78,25 @@ export function safePageLocation(href: string): string | null {
 }
 export function safeReferrer(referrer: string): string {
   try {
-    return referrer ? new URL(referrer).origin : "";
+    const url = new URL(referrer);
+    return ["https:", "http:"].includes(url.protocol) ? url.origin : "";
   } catch {
     return "";
   }
 }
+const campaignFields = [
+  ["utm_source", "campaign_source"],
+  ["utm_medium", "campaign_medium"],
+  ["utm_campaign", "campaign_name"],
+  ["utm_content", "campaign_content"],
+  ["utm_term", "campaign_term"],
+  ["utm_id", "campaign_id"],
+] as const;
 export function campaignParameters(href: string): Record<string, string> {
   try {
     const u = new URL(href);
     const result: Record<string, string> = {};
-    for (const [query, name] of [
-      ["utm_source", "campaign_source"],
-      ["utm_medium", "campaign_medium"],
-      ["utm_campaign", "campaign_name"],
-    ] as const) {
+    for (const [query, name] of campaignFields) {
       const value = u.searchParams.get(query);
       if (value && /^[a-z0-9_-]{1,60}$/i.test(value)) result[name] = value;
     }
@@ -99,6 +104,38 @@ export function campaignParameters(href: string): Record<string, string> {
   } catch {
     return {};
   }
+}
+export type TrafficAttribution = {
+  referrer: string;
+  campaign: Record<string, string>;
+};
+/** Keep only bounded labels and an origin, never a raw URL or browsing history. */
+export function rememberTrafficAttribution(
+  previous: TrafficAttribution | null,
+  href: string,
+  referrer: string,
+): TrafficAttribution | null {
+  try {
+    const url = new URL(href);
+    if (
+      !["https:", "http:"].includes(url.protocol) ||
+      !publicAnalyticsPath(url.pathname)
+    )
+      return previous;
+    const campaign = campaignParameters(href);
+    if (previous && !Object.keys(campaign).length) return previous;
+    return { referrer: previous?.referrer ?? safeReferrer(referrer), campaign };
+  } catch {
+    return previous;
+  }
+}
+/** Explicitly clear fields absent from a new campaign instead of mixing campaigns. */
+export function campaignContext(
+  campaign: Record<string, string> = {},
+): Record<string, string | undefined> {
+  return Object.fromEntries(
+    campaignFields.map(([, name]) => [name, campaign[name]]),
+  );
 }
 export function safeMetaPage(href: string, referrer = ""): boolean {
   try {

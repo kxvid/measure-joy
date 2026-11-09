@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   ArrowUpRight,
   ChevronDown,
@@ -37,6 +38,8 @@ export function SiteHeader({
   onSaved?: () => void;
 }) {
   const { totalItems } = useCart();
+  const router = useRouter();
+  const navRef = useRef<HTMLElement>(null);
   const [menu, setMenu] = useState(false);
   const ref = useRef<HTMLDialogElement>(null);
   const opener = useRef<HTMLButtonElement>(null);
@@ -52,6 +55,11 @@ export function SiteHeader({
       document.body.style.overflow = "";
     };
   }, [menu]);
+  function closeDropdowns() {
+    navRef.current?.querySelectorAll("details[open]").forEach((details) => {
+      details.removeAttribute("open");
+    });
+  }
   function close() {
     ref.current?.close();
     setMenu(false);
@@ -63,9 +71,9 @@ export function SiteHeader({
         Skip to content
       </a>
       <div className="announcement" aria-label="Shopping benefits">
-        <a href="/shipping">Free shipping over $75</a>
+        <Link prefetch={false} href="/shipping">Free shipping over $75</Link>
         <span aria-hidden="true">·</span>
-        <a href="/returns">90-day camera warranty</a>
+        <Link prefetch={false} href="/returns">90-day camera warranty</Link>
       </div>
       <header className="site-header">
         <Link href="/" className="brand-logo" aria-label="Measure Joy home">
@@ -76,7 +84,7 @@ export function SiteHeader({
             height="45"
           />
         </Link>
-        <nav aria-label="Main navigation">
+        <nav ref={navRef} aria-label="Main navigation">
           <details className="nav-dropdown">
             <summary>
               Shop cameras <ChevronDown size={12} />
@@ -84,16 +92,20 @@ export function SiteHeader({
             <div className="nav-panel">
               <p>FIND YOUR POINT OF VIEW</p>
               {cameraLinks.map(([label, href]) => (
-                <a key={label} href={href}>
+                <Link prefetch={false} key={label} href={href} onNavigate={closeDropdowns}>
                   {label}
                   <ArrowUpRight size={13} />
-                </a>
+                </Link>
               ))}
               <div className="nav-brands">
                 {["Canon", "Sony", "Nikon", "Fujifilm"].map((brand) => (
-                  <a href={`/shop?category=camera&brand=${brand}`} key={brand}>
+                  <Link prefetch={false}
+                    href={`/shop?category=camera&brand=${brand}`}
+                    key={brand}
+                    onNavigate={closeDropdowns}
+                  >
                     {brand}
-                  </a>
+                  </Link>
                 ))}
               </div>
             </div>
@@ -105,23 +117,27 @@ export function SiteHeader({
             <div className="nav-panel">
               <p>THE LITTLE THINGS</p>
               {extraLinks.map(([label, href]) => (
-                <a key={label} href={href}>
+                <Link prefetch={false} key={label} href={href} onNavigate={closeDropdowns}>
                   {label}
                   <ArrowUpRight size={13} />
-                </a>
+                </Link>
               ))}
             </div>
           </details>
           <a href="/repair">Repairs & care</a>
-          <Link href="/journal">Field notes</Link>
-          <a href="/about">Our story</a>
+          <Link href="/journal" onNavigate={closeDropdowns}>
+            Field notes
+          </Link>
+          <Link prefetch={false} href="/about" onNavigate={closeDropdowns}>
+            Our story
+          </Link>
         </nav>
         <div className="header-actions">
           <button
             aria-label="Search cameras"
             onClick={
               onSearch ||
-              (() => window.location.assign("/shop#collection-search"))
+              (() => router.push("/shop#collection-search"))
             }
           >
             <Search size={20} />
@@ -131,7 +147,7 @@ export function SiteHeader({
             aria-label={`Saved cameras${visibleSavedCount === null ? "" : `, ${visibleSavedCount} items`}`}
             onClick={
               onSaved ||
-              (() => window.location.assign("/shop?saved=1&stock=all"))
+              (() => router.push("/shop?saved=1&stock=all"))
             }
           >
             <Heart size={20} />
@@ -185,33 +201,33 @@ export function SiteHeader({
             <div>
               <p>THE CAMERAS</p>
               {cameraLinks.map(([label, href]) => (
-                <a key={label} href={href}>
+                <Link prefetch={false} key={label} href={href} onNavigate={close}>
                   {label}
                   <ArrowUpRight size={16} />
-                </a>
+                </Link>
               ))}
             </div>
             <div>
               <p>THE LITTLE EXTRAS</p>
               {extraLinks.map(([label, href]) => (
-                <a key={label} href={href}>
+                <Link prefetch={false} key={label} href={href} onNavigate={close}>
                   {label}
                   <ArrowUpRight size={16} />
-                </a>
+                </Link>
               ))}
             </div>
             <a href="/repair">
               Repairs & care <ArrowUpRight size={18} />
             </a>
-            <a href="/about">
+            <Link prefetch={false} href="/about" onNavigate={close}>
               Our story <ArrowUpRight size={18} />
-            </a>
-            <a href="/faq">
+            </Link>
+            <Link prefetch={false} href="/faq" onNavigate={close}>
               A little help <ArrowUpRight size={18} />
-            </a>
-            <a href="/brand">
+            </Link>
+            <Link prefetch={false} href="/brand" onNavigate={close}>
               Brand studio <ArrowUpRight size={18} />
-            </a>
+            </Link>
             <a href="/cart">
               Your shopping bag <ArrowUpRight size={18} />
             </a>
@@ -240,19 +256,19 @@ export function SiteFooter() {
         <div className="footer-links">
           <div>
             <p>FIND YOUR JOY</p>
-            <a href="/shop">Shop the collection</a>
-            <a href="/shop?category=digital">Digital cameras</a>
-            <a href="/shop?category=film">Film cameras</a>
-            <a href="/shop?category=accessory">The extras</a>
-            <a href="/brand">Brand studio</a>
+            <Link prefetch={false} href="/shop">Shop the collection</Link>
+            <Link prefetch={false} href="/shop?category=digital">Digital cameras</Link>
+            <Link prefetch={false} href="/shop?category=film">Film cameras</Link>
+            <Link prefetch={false} href="/shop?category=accessory">The extras</Link>
+            <Link prefetch={false} href="/brand">Brand studio</Link>
           </div>
           <div>
             <p>A LITTLE HELP</p>
             <a href="/contact">Contact us</a>
             <a href="/repair">Camera repair</a>
             <Link href="/account/orders">Your orders</Link>
-            <a href="/faq">Frequently asked</a>
-            <a href="/shipping">Shipping & returns</a>
+            <Link prefetch={false} href="/faq">Frequently asked</Link>
+            <Link prefetch={false} href="/shipping">Shipping & returns</Link>
           </div>
           <div>
             <p>FOLLOW ALONG</p>
@@ -263,10 +279,10 @@ export function SiteFooter() {
             >
               Instagram <ArrowUpRight size={12} />
             </a>
-            <a href={`${LIVE}/journal`}>
+            <Link prefetch={false} href={`${LIVE}/journal`}>
               Field notes <ArrowUpRight size={12} />
-            </a>
-            <a href="/about">Our story</a>
+            </Link>
+            <Link prefetch={false} href="/about">Our story</Link>
             <a href="/contact">
               Order help <ArrowUpRight size={12} />
             </a>
@@ -279,8 +295,8 @@ export function SiteFooter() {
       <div className="footer-bottom">
         <span>© {new Date().getFullYear()} MEASURE JOY</span>
         <span>{copy.footer_location}</span>
-        <a href={`${LIVE}/privacy`}>Privacy</a>
-        <a href={`${LIVE}/terms`}>Terms</a>
+        <Link prefetch={false} href={`${LIVE}/privacy`}>Privacy</Link>
+        <Link prefetch={false} href={`${LIVE}/terms`}>Terms</Link>
       </div>
     </footer>
   );

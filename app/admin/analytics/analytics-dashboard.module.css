@@ -63,6 +63,7 @@
   cursor: pointer;
 }
 .filter :focus-visible,
+.shareLinks input:focus-visible,
 .report a:focus-visible,
 .tableScroll:focus-visible,
 .dailyDetails summary:focus-visible {
@@ -234,6 +235,39 @@
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 24px;
 }
+.shareLinks {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px 24px;
+  padding: 0 22px 18px;
+}
+.shareLinks label {
+  display: grid;
+  min-width: 0;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 500;
+}
+.shareLinks input {
+  min-width: 0;
+  width: 100%;
+  min-height: 40px;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--background);
+  color: var(--foreground);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 400;
+}
+.shareHelp {
+  max-width: 100ch;
+  padding: 0 22px 20px;
+  color: var(--muted-foreground);
+  font-size: 12px;
+  line-height: 1.6;
+}
 .tableScroll {
   width: 100%;
   overflow-x: auto;
@@ -325,6 +359,9 @@
     grid-template-columns: 1fr;
     gap: 0;
   }
+  .shareLinks {
+    grid-template-columns: 1fr;
+  }
 }
 @media (max-width: 500px) {
   .report {
@@ -373,6 +410,11 @@
   }
   .dailyDetails summary {
     margin: 0 16px;
+  }
+  .shareLinks,
+  .shareHelp {
+    padding-left: 16px;
+    padding-right: 16px;
   }
   .state {
     padding: 28px 20px;

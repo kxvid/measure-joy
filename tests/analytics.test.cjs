@@ -141,6 +141,27 @@ test("only bounded campaign labels are forwarded; private query values are dropp
     0,
   );
 });
+test("campaign content, term and ID are bounded while non-web referrers are discarded", () => {
+  const a = setup();
+  assert.deepEqual(
+    JSON.parse(JSON.stringify(a.campaignParameters(
+      "https://www.measurejoy.org/shop?utm_source=instagram&utm_content=bio_link&utm_term=compact_camera&utm_id=drop_20261109",
+    ))),
+    {
+      campaign_source: "instagram",
+      campaign_content: "bio_link",
+      campaign_term: "compact_camera",
+      campaign_id: "drop_20261109",
+    },
+  );
+  for (const field of ["utm_content", "utm_term", "utm_id"]) {
+    for (const value of ["person%40example.invalid", "free%20text", "a".repeat(61)]) {
+      assert.equal(Object.keys(a.campaignParameters(`https://www.measurejoy.org/?${field}=${value}`)).length, 0);
+    }
+  }
+  assert.equal(a.safeReferrer("android-app://com.example/"), "");
+  assert.equal(a.safeReferrer("javascript:alert(1)"), "");
+});
 test("Meta stays off without marketing consent and never receives URLs with query strings", () => {
   const a = setup({ consent: granted, meta: "123456789" });
   a.trackCommerce("add_to_cart", a.commerceEvent([item]));

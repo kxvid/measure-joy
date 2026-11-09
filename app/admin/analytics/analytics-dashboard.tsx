@@ -4,6 +4,7 @@ import { ChartNoAxesCombined, Clock3, Info, RefreshCw } from "lucide-react";
 import styles from "./analytics-dashboard.module.css";
 
 import type { AnalyticsReport, ReportDays } from "@/lib/analytics-report-types";
+import { CAMPAIGN_LINKS } from "@/lib/campaign-links";
 
 type DailyPoint = AnalyticsReport["daily"][number];
 
@@ -107,6 +108,38 @@ function ReportTable({
     >
       <table className={styles.table}>{children}</table>
     </div>
+  );
+}
+
+function ShareLinks() {
+  return (
+    <Panel
+      id="share-links"
+      title="Share links"
+      description="Select and copy a link for your profile, video description, or weekly email. These tags help identify visits from each platform."
+    >
+      <div className={styles.shareLinks}>
+        {CAMPAIGN_LINKS.map(({ label, source, url }) => (
+          <label key={source} htmlFor={`share-link-${source}`}>
+            {label}
+            <input
+              id={`share-link-${source}`}
+              type="url"
+              value={url}
+              readOnly
+              spellCheck={false}
+              aria-describedby="share-links-help"
+            />
+          </label>
+        ))}
+      </div>
+      <p id="share-links-help" className={styles.shareHelp}>
+        Source / medium comes from referring websites or campaign tags in your
+        links. Direct / none can include visits from apps that hide the referring
+        source. Visitors must allow analytics for their activity to appear in
+        these reports.
+      </p>
+    </Panel>
   );
 }
 
@@ -485,6 +518,7 @@ export function AnalyticsDashboard({
           )}
         </Panel>
       </div>
+      <ShareLinks />
       <Panel
         id="product-performance"
         title="Product activity"

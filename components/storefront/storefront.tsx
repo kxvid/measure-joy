@@ -1,7 +1,16 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import {
+  Suspense,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import Link from "next/link";
+import Form from "next/form";
+import { useSearchParams } from "next/navigation";
 import { useCart } from "@/lib/cart-context";
 import { useSavedFinds } from "./use-saved-finds";
 import { useStorefrontCopy } from "./copy-provider";
@@ -108,9 +117,13 @@ function ProductCard({
   return (
     <article className="product-card">
       <div className="product-image-wrap">
-        <a href={productPath(product)} aria-label={`View ${product.name}`}>
+        <Link
+          prefetch={false}
+          href={productPath(product)}
+          aria-label={`View ${product.name}`}
+        >
           <ProductImage product={product} />
-        </a>
+        </Link>
         <div className="product-status">
           {isAvailable(product) ? (
             product.stockCount === 1 ? (
@@ -130,13 +143,14 @@ function ProductCard({
         >
           <Heart size={18} fill={saved ? "currentColor" : "none"} />
         </button>
-        <a
+        <Link
+          prefetch={false}
           className="card-explore"
           href={productPath(product)}
           aria-label={`Explore ${product.name}`}
         >
           <ArrowUpRight size={22} />
-        </a>
+        </Link>
       </div>
       <div className="product-meta">
         <span>
@@ -147,9 +161,13 @@ function ProductCard({
         </span>
         <span>{product.condition}</span>
       </div>
-      <a href={productPath(product)} className="product-name">
+      <Link
+        prefetch={false}
+        href={productPath(product)}
+        className="product-name"
+      >
         {product.name}
-      </a>
+      </Link>
       <p className="product-price">{formatPrice(product.priceInCents)}</p>
       {isTestedCamera(product) && (
         <p className="product-tested">
@@ -158,6 +176,18 @@ function ProductCard({
       )}
     </article>
   );
+}
+
+function StorefrontFilterSync({
+  onChange,
+}: {
+  onChange: (filters: ShopFilters) => void;
+}) {
+  const search = useSearchParams().toString();
+  useEffect(() => {
+    onChange(readFilters(search));
+  }, [search, onChange]);
+  return null;
 }
 
 export default function Storefront({
@@ -182,7 +212,6 @@ export default function Storefront({
   const [error, setError] = useState(initialError || "");
   const [retry, setRetry] = useState(0);
   const [filters, setFilters] = useState<ShopFilters>(DEFAULT_FILTERS);
-  const [filtersReady, setFiltersReady] = useState(false);
   const { category, brand, query, year, sort, onlyAvailable, savedOnly } =
     filters;
   const savedFinds = useSavedFinds();
@@ -216,23 +245,10 @@ export default function Storefront({
       });
     return () => abort.abort();
   }, [retry, initialProducts]);
-  useEffect(() => {
-    function restoreFilters() {
-      const next = readFilters(window.location.search);
-      setFilters(next);
-      setSearchDraft(next.query);
-      setFiltersReady(true);
-    }
-    restoreFilters();
-    window.addEventListener("popstate", restoreFilters);
-    return () => window.removeEventListener("popstate", restoreFilters);
+  const restoreFilters = useCallback((next: ShopFilters) => {
+    setFilters(next);
+    setSearchDraft(next.query);
   }, []);
-  useEffect(() => {
-    if (!filtersReady || mode !== "shop") return;
-    const next = filtersUrl(window.location.href, filters);
-    if (next !== window.location.href)
-      window.history.replaceState(window.history.state, "", next);
-  }, [filters, filtersReady, mode]);
   useEffect(() => {
     if (!toast) return;
     const t = setTimeout(() => setToast(""), 2300);
@@ -275,7 +291,16 @@ export default function Storefront({
     setRetry((previous) => previous + 1);
   }
   function updateFilters(patch: Partial<ShopFilters>) {
-    setFilters((previous) => ({ ...previous, ...patch }));
+    const next = {
+      ...(mode === "shop" ? readFilters(window.location.search) : filters),
+      ...patch,
+    };
+    setFilters(next);
+    if (mode === "shop") {
+      const nextUrl = filtersUrl(window.location.href, next);
+      if (nextUrl !== window.location.href)
+        window.history.replaceState(window.history.state, "", nextUrl);
+    }
   }
   function updateCategory(id: Category) {
     updateFilters({ category: id });
@@ -396,9 +421,9 @@ export default function Storefront({
         <button className="button button-dark" onClick={retryCatalog}>
           Try again <RefreshCw size={16} />
         </button>
-        <a href="/contact">
+        <Link prefetch={false} href="/contact">
           Ask the workshop <ArrowUpRight size={14} />
-        </a>
+        </Link>
       </div>
     ) : activeProducts.length === 0 ? (
       <div className="catalog-message">
@@ -408,7 +433,7 @@ export default function Storefront({
         <button
           className="button button-dark"
           onClick={() =>
-            setFilters({ ...DEFAULT_FILTERS, onlyAvailable: false })
+            updateFilters({ ...DEFAULT_FILTERS, onlyAvailable: false })
           }
         >
           See all finds <ArrowRight size={16} />
@@ -430,6 +455,9 @@ export default function Storefront({
 
   return (
     <div className="storefront">
+      <Suspense fallback={null}>
+        <StorefrontFilterSync onChange={restoreFilters} />
+      </Suspense>
       <SiteHeader
         savedCount={saved.length}
         onSearch={() => openModal("search")}
@@ -462,16 +490,22 @@ export default function Storefront({
                   </span>
                 </h1>
                 <p>{copy.hero_description}</p>
-                <a className="button button-dark hero-cta" href="/shop">
+                <Link
+                  prefetch={false}
+                  className="button button-dark hero-cta"
+                  href="/shop"
+                >
                   {copy.hero_button}{" "}
                   <span>
                     <ArrowUpRight size={20} />
                   </span>
-                </a>
+                </Link>
                 <div className="hero-small">
                   <Check size={14} aria-hidden="true" /> Tested cameras
                   <span aria-hidden="true">·</span>
-                  <a href="/returns">90-day warranty</a>
+                  <Link prefetch={false} href="/returns">
+                    90-day warranty
+                  </Link>
                 </div>
               </div>
               <div className="hero-sticker">
@@ -527,9 +561,9 @@ export default function Storefront({
                     <br className="mobile-break" /> <em>memory maker.</em>
                   </h2>
                 </div>
-                <a className="text-link" href="/shop">
+                <Link prefetch={false} className="text-link" href="/shop">
                   Explore all finds <ArrowUpRight size={19} />
-                </a>
+                </Link>
               </div>
               <div className="collection-tabs" aria-label="Product categories">
                 {CATEGORIES.map((c) => (
@@ -547,9 +581,13 @@ export default function Storefront({
                 </span>
               </div>
               {renderCatalog()}
-              <a className="button button-outline collection-more" href="/shop">
+              <Link
+                prefetch={false}
+                className="button button-outline collection-more"
+                href="/shop"
+              >
                 There’s more where that came from <ArrowRight size={18} />
-              </a>
+              </Link>
             </section>
             <section id="story" className="story-section">
               <div className="story-image">
@@ -574,9 +612,9 @@ export default function Storefront({
                 </h2>
                 <p className="story-description">{copy.story_paragraph1}</p>
                 <p className="story-description">{copy.story_paragraph2}</p>
-                <a className="text-link" href="/about">
+                <Link prefetch={false} className="text-link" href="/about">
                   A little more about us <ArrowUpRight size={20} />
-                </a>
+                </Link>
                 <div className="story-signature">
                   with love, measure joy <Spark />
                 </div>
@@ -611,9 +649,9 @@ export default function Storefront({
                     From choosing a camera to getting started, good advice is
                     just a conversation away.
                   </p>
-                  <a href="/contact">
+                  <Link prefetch={false} href="/contact">
                     Say hello <ArrowUpRight size={14} />
-                  </a>
+                  </Link>
                 </div>
               </div>
             </section>
@@ -626,9 +664,13 @@ export default function Storefront({
                 <p>
                   A whole world of color, character, and a little camera magic.
                 </p>
-                <a className="button button-dark" href="/brand">
+                <Link
+                  prefetch={false}
+                  className="button button-dark"
+                  href="/brand"
+                >
                   Meet the brand system <ArrowUpRight size={18} />
-                </a>
+                </Link>
               </div>
               <div className="brand-teaser-art">
                 <div className="brand-tile coral-tile">
@@ -660,9 +702,7 @@ export default function Storefront({
                 Find your <em>camera.</em>
                 <Spark />
               </h1>
-              <p>
-                Vintage digital, film favorites, and the little extras.
-              </p>
+              <p>Vintage digital, film favorites, and the little extras.</p>
             </div>
             <div className="shop-tools">
               <div className="collection-tabs">
@@ -772,9 +812,9 @@ export default function Storefront({
 
         {mode === "product" && (
           <section className="product-page section-shell">
-            <a href="/shop" className="back-link">
+            <Link prefetch={false} href="/shop" className="back-link">
               <ArrowLeft size={16} /> Back to the good stuff
-            </a>
+            </Link>
             {loading && !selected ? (
               <div className="product-loading">Finding your camera…</div>
             ) : error && !selected ? (
@@ -791,12 +831,16 @@ export default function Storefront({
                 <p>
                   Explore the current collection, or check the original listing.
                 </p>
-                <a className="button button-dark" href="/shop">
+                <Link
+                  prefetch={false}
+                  className="button button-dark"
+                  href="/shop"
+                >
                   Shop the collection <ArrowRight size={18} />
-                </a>
-                <a href="/contact">
+                </Link>
+                <Link prefetch={false} href="/contact">
                   Ask the workshop <ArrowUpRight size={15} />
-                </a>
+                </Link>
               </div>
             ) : (
               <>
@@ -947,15 +991,15 @@ export default function Storefront({
                       </a>
                     )}
                     <div className="detail-help">
-                      <a href="/shipping">
+                      <Link prefetch={false} href="/shipping">
                         Shipping <ArrowUpRight size={13} />
-                      </a>
-                      <a href="/returns">
+                      </Link>
+                      <Link prefetch={false} href="/returns">
                         Returns & warranty <ArrowUpRight size={13} />
-                      </a>
-                      <a href="/contact">
+                      </Link>
+                      <Link prefetch={false} href="/contact">
                         Ask us anything <ArrowUpRight size={13} />
-                      </a>
+                      </Link>
                     </div>
                   </div>
                 </div>
@@ -967,9 +1011,9 @@ export default function Storefront({
                     <h2>
                       A few more <em>good finds.</em>
                     </h2>
-                    <a href="/shop" className="text-link">
+                    <Link prefetch={false} href="/shop" className="text-link">
                       Explore all <ArrowUpRight size={18} />
-                    </a>
+                    </Link>
                   </div>
                   <div className="product-grid">
                     {products
@@ -1025,7 +1069,12 @@ export default function Storefront({
               <h2 id="dialog-title">
                 What’s your <em>type?</em>
               </h2>
-              <form action="/shop" className="search-form">
+              <Form
+                action="/shop"
+                className="search-form"
+                prefetch={false}
+                onSubmit={closeModal}
+              >
                 <Search size={22} />
                 <input
                   name="search"
@@ -1038,7 +1087,7 @@ export default function Storefront({
                 <button aria-label="Search" type="submit">
                   <ArrowRight size={22} />
                 </button>
-              </form>
+              </Form>
               <p className="search-hint">
                 A brand. A color. A camera you’ve been dreaming of.
               </p>
@@ -1088,29 +1137,43 @@ export default function Storefront({
                 <div className="saved-empty">
                   <Heart size={36} strokeWidth={1} />
                   <p>A good find is worth keeping close.</p>
-                  <button
+                  <Link
                     className="button button-dark"
-                    onClick={() => {
-                      closeModal();
-                      window.location.assign("/shop");
-                    }}
+                    href="/shop"
+                    prefetch={false}
+                    onClick={closeModal}
                   >
                     Find your favorite <ArrowUpRight size={18} />
-                  </button>
+                  </Link>
                 </div>
               ) : (
                 <div className="saved-list">
                   {savedProducts.map((p) => (
                     <div className="saved-item" key={p.id}>
-                      <a href={productPath(p)}>
+                      <Link
+                        prefetch={false}
+                        href={productPath(p)}
+                        onClick={closeModal}
+                      >
                         <ProductImage product={p} />
-                      </a>
+                      </Link>
                       <div>
-                        <a href={productPath(p)}>{p.name}</a>
+                        <Link
+                          prefetch={false}
+                          href={productPath(p)}
+                          onClick={closeModal}
+                        >
+                          {p.name}
+                        </Link>
                         <span>{formatPrice(p.priceInCents)}</span>
-                        <a className="saved-explore" href={productPath(p)}>
+                        <Link
+                          prefetch={false}
+                          className="saved-explore"
+                          href={productPath(p)}
+                          onClick={closeModal}
+                        >
                           Take a closer look <ArrowUpRight size={13} />
-                        </a>
+                        </Link>
                       </div>
                       <button
                         aria-label={`Remove ${p.name} from saved cameras`}
@@ -1127,12 +1190,14 @@ export default function Storefront({
                           This saved find is no longer in the current
                           collection.
                         </span>
-                        <a
+                        <Link
+                          prefetch={false}
                           className="saved-explore"
                           href={`${LIVE}/product/${encodeURIComponent(id)}`}
+                          onClick={closeModal}
                         >
                           View original listing <ArrowUpRight size={13} />
-                        </a>
+                        </Link>
                       </div>
                       <button
                         aria-label={`Remove unavailable saved item ${id}`}
@@ -1152,18 +1217,22 @@ export default function Storefront({
                 MEASURE JOY
               </p>
               <nav className="mobile-nav">
-                <a href="/shop">
+                <Link prefetch={false} href="/shop" onClick={closeModal}>
                   The collection <ArrowUpRight />
-                </a>
+                </Link>
                 <Link href="/#story" onClick={closeModal}>
                   Our story <ArrowUpRight />
                 </Link>
-                <a href={`${LIVE}/journal`}>
+                <Link
+                  prefetch={false}
+                  href={`${LIVE}/journal`}
+                  onClick={closeModal}
+                >
                   Field notes <ArrowUpRight />
-                </a>
-                <a href="/brand">
+                </Link>
+                <Link prefetch={false} href="/brand" onClick={closeModal}>
                   Brand studio <ArrowUpRight />
-                </a>
+                </Link>
               </nav>
               <p>Good cameras. Great stories.</p>
             </>
