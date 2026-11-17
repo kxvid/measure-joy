@@ -1,5 +1,10 @@
 # October 23, 2026 security remediation
 
+> Historical implementation and release record. PR #363 was merged on November 1;
+> the October 24 draft/runtime status below is not the current PR status. See the
+> [November 17 dependency follow-up](./security-audit-2026-11-17.md) for the newly
+> reported advisories, validation results, and outstanding release blockers.
+
 ## Release controls
 
 Stripe remains the source for camera listings, prices, stock metadata and payment state. Supabase now provides private reservation/fulfillment coordination and shared request quotas. The visual design and native checkout remain intact.
